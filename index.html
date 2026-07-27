@@ -254,14 +254,14 @@
     <section class="view active" id="v-overview">
       <div class="tiles" id="tiles"></div>
       <div class="card chartCard tilt">
-        <h3>पिछले 30 दिन का खर्च (₹ प्रतिदिन)</h3>
+        <h3>🟢 आया · 🔴 गया — दिन-दर-दिन</h3>
         <div class="chartBox"><canvas id="chDaily"></canvas></div>
       </div>
       <div class="grid2">
-        <div class="card chartCard tilt"><h3>Staff-wise खर्च</h3><div class="chartBox"><canvas id="chStaff"></canvas></div></div>
-        <div class="card chartCard tilt"><h3>Top दुकानें</h3><div class="chartBox"><canvas id="chVendor"></canvas></div></div>
-        <div class="card chartCard tilt"><h3>खाता-wise (reimbursed)</h3><div class="chartBox"><canvas id="chAccount"></canvas></div></div>
-        <div class="card chartCard tilt"><h3>यूनिट-wise</h3><div class="chartBox"><canvas id="chUnit"></canvas></div></div>
+        <div class="card chartCard tilt"><h3>महीने-दर-महीने चाल</h3><div class="chartBox"><canvas id="chStaff"></canvas></div></div>
+        <div class="card chartCard tilt"><h3>सबसे ज़्यादा पैसा किन्हें गया</h3><div class="chartBox"><canvas id="chVendor"></canvas></div></div>
+        <div class="card chartCard tilt"><h3>किस खाते से कितना गया</h3><div class="chartBox"><canvas id="chAccount"></canvas></div></div>
+        <div class="card chartCard tilt"><h3>यूनिट-wise (बिलों से)</h3><div class="chartBox"><canvas id="chUnit"></canvas></div></div>
       </div>
     </section>
 
@@ -274,7 +274,12 @@
           <label>तारीख<input id="aDate" type="date"></label>
         </div>
         <div class="frow">
-          <label>यूनिट<select id="aUnit"></select></label>
+          <label>किसके लिए?
+            <div style="display:flex;gap:8px">
+              <select id="aUnit" style="flex:1"></select>
+              <button type="button" onclick="addUnit()" title="नई यूनिट जोड़ें"
+                style="margin-top:5px;padding:10px 14px">＋</button>
+            </div></label>
           <label>किस खाते से<select id="aAccount"></select></label>
         </div>
 
@@ -355,9 +360,9 @@
         </select>
         <select id="lWhen">
           <option value="7">पिछले 7 दिन</option>
-          <option value="30" selected>पिछले 30 दिन</option>
+          <option value="30">पिछले 30 दिन</option>
           <option value="90">3 महीने</option>
-          <option value="0">सब</option>
+          <option value="0" selected>सब</option>
         </select>
         <select id="lBill">
           <option value="">बिल: सब</option>
@@ -381,7 +386,7 @@
         </select>
       </div>
       <div class="card" id="partyList"></div>
-      <div class="card" id="partyDetail" hidden style="margin-top:12px"></div>
+
     </section>
 
     <!-- ── मिलान: statement upload + auto-match (कोई AI नहीं, सब यहीं ब्राउज़र में) ── -->
@@ -406,6 +411,7 @@
             <button class="primary" style="margin-top:8px;width:100%" onclick="retryWithPassword()">खोलें</button>
           </div>
           <div id="rStatus" class="muted" style="margin-top:12px"></div>
+          <div id="rCoverage" style="margin-top:14px"></div>
         </div>
       </div>
 
@@ -432,6 +438,11 @@
          CSV upload और मिलान Telegram bot से होता है।</p>
       <div class="card" id="missingList"></div>
     </section>
+
+    <!-- ── पार्टी का पूरा लेखा (ऊपर खुलने वाला) ── -->
+    <div id="partyModal" class="modal" hidden>
+      <div class="card modalBox" id="partyDetail"></div>
+    </div>
 
     <!-- ── बिल जोड़ने का पर्दा ── -->
     <div id="billModal" class="modal" hidden>
@@ -580,25 +591,32 @@ function renderAll() {
 function monthKey(d) { return d ? d.toISOString().slice(0, 7) : ""; }
 
 function renderTiles() {
+  // The bank statement IS the money truth — Overview must count it, not just
+  // the bills. Showing zero after a full statement import was the whole
+  // problem: bills are a subset of what actually moved.
   const nowM = monthKey(new Date());
-  const thisMonth = EXP.filter(e => monthKey(e._date) === nowM);
-  const mTotal = thisMonth.reduce((a, e) => a + (e.billTotal || 0), 0);
+  const inAll = BANKTXNS.filter(t => t.type === "credit");
+  const outAll = BANKTXNS.filter(t => t.type === "debit");
+  const sum = (a) => a.reduce((x, t) => x + (t.amount || 0), 0);
+  const inSum = sum(inAll), outSum = sum(outAll);
+
+  const mIn = sum(inAll.filter(t => String(t.date).slice(0, 7) === nowM));
+  const mOut = sum(outAll.filter(t => String(t.date).slice(0, 7) === nowM));
+  const noBill = outAll.filter(t => !t.matchedReceiptId && !t.billPhotoId);
   const pend = EXP.filter(e => e.status === "pending" || e.status === "approved");
-  const pendAmt = pend.reduce((a, e) => a + (e.billTotal || 0), 0);
-  const reimb = thisMonth.filter(e => e.status === "reimbursed" || e.status === "delivered")
-    .reduce((a, e) => a + (e.billTotal || 0), 0);
-  const flagged = EXP.filter(e => (e.flags || []).length).length;
 
   $("tiles").innerHTML = [
-    ["इस महीने कुल", INR(mTotal), thisMonth.length + " बिल", "#3987e5"],
-    ["बकाया reimburse", INR(pendAmt), pend.length + " बिल pending/approved", "#fab219"],
-    ["इस महीने reimbursed", INR(reimb), "", "#0ca30c"],
-    ["Flag वाले बिल", String(flagged), MISSING.length + " बिना-बिल bank entries", "#d55181"]
-  ].map(([k, v, s, c]) => `
+    ["🟢 कुल आया", INR(inSum), inAll.length + " entries", "#0ca30c"],
+    ["🔴 कुल गया", INR(outSum), outAll.length + " entries", "#d03b3b"],
+    ["इस महीने", INR(mIn - mOut), `आया ${INR(mIn)} · गया ${INR(mOut)}`, "#3987e5"],
+    ["📎 बिल बाकी", INR(sum(noBill)), noBill.length + " भुगतान", "#fab219"],
+    ["🧾 बिल दर्ज", String(EXP.length), pend.length + " approve बाकी", "#199e70"],
+    ["🧑 पार्टियाँ", String(Object.keys(PARTIES || {}).length || new Set(BANKTXNS.map(t => t.partyKey).filter(Boolean)).size), "जिनसे लेन-देन हुआ", "#d55181"]
+  ].map(([k, v, s2, c]) => `
     <div class="card tile tilt">
       <div class="k">${k}</div>
       <div class="v">${v}</div>
-      <div class="s">${s || "&nbsp;"}</div>
+      <div class="s">${s2 || "&nbsp;"}</div>
       <div class="bar"><i style="width:70%;background:${c}"></i></div>
     </div>`).join("");
   attachTilt();
@@ -623,76 +641,91 @@ function topN(map, n) {
 }
 
 function renderCharts() {
-  // 30-day spend — single series (no legend), thin bars, rounded data-ends
-  const days = [], totals = [];
-  const byDay = sumBy(EXP, e => e._date && e._date.toISOString().slice(0, 10), e => e.billTotal);
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+  const money = (t) => t.amount || 0;
+
+  // Day-by-day in vs out — the two directions must never share a scale trick;
+  // same axis, two series, colours that mean what they say.
+  const days = [], inD = [], outD = [];
+  const seen = {};
+  BANKTXNS.forEach(t => {
+    const d = String(t.date).slice(0, 10);
+    if (!d) return;
+    seen[d] = seen[d] || { in: 0, out: 0 };
+    seen[d][t.type === "credit" ? "in" : "out"] += money(t);
+  });
+  Object.keys(seen).sort().slice(-45).forEach(d => {
     days.push(d.slice(8) + "/" + d.slice(5, 7));
-    totals.push(byDay[d] || 0);
-  }
+    inD.push(seen[d].in); outD.push(seen[d].out);
+  });
   mkChart("chDaily", {
     type: "bar",
-    data: { labels: days, datasets: [{ data: totals, backgroundColor: SERIES[0],
-      borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom",
-      maxBarThickness: 14, categoryPercentage: 0.7 }] },
-    options: { plugins: { legend: { display: false },
-        tooltip: { callbacks: { label: c => INR(c.raw) } } },
+    data: { labels: days, datasets: [
+      { label: "आया", data: inD, backgroundColor: "#0ca30c",
+        borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom", maxBarThickness: 12 },
+      { label: "गया", data: outD, backgroundColor: "#d03b3b",
+        borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom", maxBarThickness: 12 }
+    ] },
+    options: { plugins: { legend: { display: true },
+        tooltip: { callbacks: { label: c => c.dataset.label + ": " + INR(c.raw) } } },
       scales: { x: { ...gridOpts, grid: { display: false }, ticks: { maxTicksLimit: 8 } },
-        y: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? (v / 1000) + "k" : v) } } } }
+        y: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? Math.round(v / 1000) + "k" : v) } } } }
   });
 
-  // Staff-wise — identity job → categorical slots in fixed order, top 4 + अन्य
-  const staff = topN(sumBy(EXP, e => e.submittedBy && e.submittedBy.name, e => e.billTotal), 4);
-  mkChart("chStaff", {
+  const outs = BANKTXNS.filter(t => t.type === "debit");
+  const byParty = sumBy(outs, t => t.party, money);
+  const pt = topN(byParty, 6);
+  mkChart("chVendor", {
+    type: "bar",
+    data: { labels: pt.labels, datasets: [{ data: pt.values, backgroundColor: SERIES[0],
+      borderRadius: { topRight: 4, bottomRight: 4 }, borderSkipped: "left", maxBarThickness: 16 }] },
+    options: { indexAxis: "y", plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => INR(c.raw) } } },
+      scales: { x: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? Math.round(v / 1000) + "k" : v) } },
+        y: { ...gridOpts, grid: { display: false } } } }
+  });
+
+  const byAcc = sumBy(outs, t => accLabel(t.accountId), money);
+  const at = topN(byAcc, 6);
+  mkChart("chAccount", {
     type: "doughnut",
-    data: { labels: staff.labels, datasets: [{ data: staff.values,
-      backgroundColor: SERIES.slice(0, staff.labels.length),
-      borderColor: "#1a1a19", borderWidth: 2 }] },
+    data: { labels: at.labels, datasets: [{ data: at.values,
+      backgroundColor: SERIES.slice(0, at.labels.length), borderColor: "#1a1a19", borderWidth: 2 }] },
     options: { cutout: "62%", plugins: { legend: { position: "right" },
       tooltip: { callbacks: { label: c => c.label + ": " + INR(c.raw) } } } }
   });
 
-  // Top vendors — magnitude job → single hue
-  const vend = topN(sumBy(EXP, e => e.vendor && e.vendor.name, e => e.billTotal), 6);
-  mkChart("chVendor", {
-    type: "bar",
-    data: { labels: vend.labels, datasets: [{ data: vend.values, backgroundColor: SERIES[0],
-      borderRadius: { topRight: 4, bottomRight: 4 }, borderSkipped: "left",
-      maxBarThickness: 14 }] },
-    options: { indexAxis: "y", plugins: { legend: { display: false },
-        tooltip: { callbacks: { label: c => INR(c.raw) } } },
-      scales: { x: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? (v / 1000) + "k" : v) } },
-        y: { ...gridOpts, grid: { display: false } } } }
+  const byMonth = {};
+  BANKTXNS.forEach(t => {
+    const m = String(t.date).slice(0, 7);
+    if (!m) return;
+    byMonth[m] = byMonth[m] || { in: 0, out: 0 };
+    byMonth[m][t.type === "credit" ? "in" : "out"] += money(t);
+  });
+  const months = Object.keys(byMonth).sort();
+  mkChart("chStaff", {
+    type: "line",
+    data: { labels: months, datasets: [
+      { label: "आया", data: months.map(m => byMonth[m].in), borderColor: "#0ca30c",
+        borderWidth: 2, pointRadius: 4, tension: .25, fill: false },
+      { label: "गया", data: months.map(m => byMonth[m].out), borderColor: "#d03b3b",
+        borderWidth: 2, pointRadius: 4, tension: .25, fill: false }
+    ] },
+    options: { interaction: { mode: "index", intersect: false },
+      plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ": " + INR(c.raw) } } },
+      scales: { x: gridOpts, y: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? Math.round(v / 1000) + "k" : v) } } } }
   });
 
-  // Account-wise (reimbursed) — magnitude → single hue
-  const acc = sumBy(EXP.filter(e => e.paidFromAccountId),
-    e => (ACCOUNTS[e.paidFromAccountId] || {}).label || e.paidFromAccountId,
-    e => (e.payment && e.payment.amount != null) ? e.payment.amount : e.billTotal);
-  const accT = topN(acc, 6);
-  mkChart("chAccount", {
-    type: "bar",
-    data: { labels: accT.labels, datasets: [{ data: accT.values, backgroundColor: SERIES[4],
-      borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom", maxBarThickness: 20 }] },
-    options: { plugins: { legend: { display: false },
-        tooltip: { callbacks: { label: c => INR(c.raw) } } },
-      scales: { x: { ...gridOpts, grid: { display: false } },
-        y: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? (v / 1000) + "k" : v) } } } }
-  });
-
-  // Unit-wise — magnitude → single hue
-  const unit = topN(sumBy(EXP, e => e.unit, e => e.billTotal), 6);
+  const byUnit = sumBy(EXP, e => e.unit, e => e.billTotal);
+  const ut = topN(byUnit, 6);
   mkChart("chUnit", {
     type: "bar",
-    data: { labels: unit.labels.length ? unit.labels : ["(यूनिट सेट नहीं)"],
-      datasets: [{ data: unit.values.length ? unit.values : [0],
-        backgroundColor: SERIES[3],
-        borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom", maxBarThickness: 20 }] },
+    data: { labels: ut.labels.length ? ut.labels : ["(यूनिट अभी नहीं चुनी)"],
+      datasets: [{ data: ut.values.length ? ut.values : [0], backgroundColor: SERIES[3],
+        borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom", maxBarThickness: 22 }] },
     options: { plugins: { legend: { display: false },
         tooltip: { callbacks: { label: c => INR(c.raw) } } },
       scales: { x: { ...gridOpts, grid: { display: false } },
-        y: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? (v / 1000) + "k" : v) } } } }
+        y: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? Math.round(v / 1000) + "k" : v) } } } }
   });
 }
 
@@ -855,13 +888,33 @@ function recalcTotal() {
   if (sum > 0) $("aTotal").value = sum;
 }
 
+/** Units come from what has been used plus whatever the owner adds — the list
+    must never be a closed set. */
+function allUnits() {
+  const saved = JSON.parse(localStorage.getItem("vbeUnits") || "[]");
+  const used = EXP.map((e) => e.unit).filter(Boolean);
+  return [...new Set([...UNITS_FALLBACK, ...saved, ...used])];
+}
+
+function addUnit() {
+  const name = (prompt("नई यूनिट / जगह का नाम लिखें\n(जैसे: मारवाड़ रसोई, MH कैंटीन, 414 Engineer)") || "").trim();
+  if (!name) return;
+  const saved = JSON.parse(localStorage.getItem("vbeUnits") || "[]");
+  if (!saved.includes(name)) saved.push(name);
+  localStorage.setItem("vbeUnits", JSON.stringify(saved));
+  initEntryForm();
+  $("aUnit").value = name;
+}
+
 function initEntryForm() {
-  $("aDate").value = new Date().toISOString().slice(0, 10);
-  const units = [...new Set(EXP.map(e => e.unit).filter(Boolean))];
-  $("aUnit").innerHTML = '<option value="">— यूनिट चुनें —</option>' +
-    (units.length ? units : UNITS_FALLBACK).map(u => `<option>${esc(u)}</option>`).join("");
+  if (!$("aDate").value) $("aDate").value = new Date().toISOString().slice(0, 10);
+  const keepU = $("aUnit").value, keepA = $("aAccount").value;
+  $("aUnit").innerHTML = '<option value="">— किसके लिए? —</option>' +
+    allUnits().map(u => `<option>${esc(u)}</option>`).join("");
+  if (keepU) $("aUnit").value = keepU;
   $("aAccount").innerHTML = '<option value="">— बाद में चुनूँगा —</option>' +
     Object.keys(ACCOUNTS).map(id => `<option value="${esc(id)}">${esc(ACCOUNTS[id].label || id)}</option>`).join("");
+  if (keepA) $("aAccount").value = keepA;
   if (!document.querySelectorAll("#aItems .irow").length) { addItemRow(); addItemRow(); }
 }
 
@@ -1486,6 +1539,39 @@ async function commitRecon() {
   }
 }
 
+/**
+ * What each account already has, so the owner knows exactly which period to
+ * export next instead of guessing and re-importing the same months.
+ */
+function renderCoverage() {
+  const byAcc = {};
+  BANKTXNS.forEach((t) => {
+    const a = t.accountId || "?";
+    const d = String(t.date || "").slice(0, 10);
+    if (!d) return;
+    byAcc[a] = byAcc[a] || { from: d, to: d, n: 0 };
+    if (d < byAcc[a].from) byAcc[a].from = d;
+    if (d > byAcc[a].to) byAcc[a].to = d;
+    byAcc[a].n++;
+  });
+  const ids = Object.keys(ACCOUNTS).length ? Object.keys(ACCOUNTS) : Object.keys(byAcc);
+  const today = new Date().toISOString().slice(0, 10);
+  $("rCoverage").innerHTML = ids.map((id) => {
+    const c = byAcc[id];
+    if (!c) return `<div class="mrow"><div class="mx"><b>${esc(accLabel(id))}</b>
+      <br><span class="badge lo">अभी कोई statement नहीं — पहली बार डालें</span></div></div>`;
+    const gapDays = Math.round((new Date(today) - new Date(c.to)) / 86400000);
+    return `<div class="mrow">
+      <div class="mx">
+        <div class="pname">${esc(accLabel(id))}</div>
+        <span class="muted">${esc(c.from)} से ${esc(c.to)} तक मौजूद · ${c.n} entries</span>
+        <br><span class="badge ${gapDays > 1 ? "lo" : "hi"}">
+          ${gapDays > 1 ? `📥 ${esc(c.to)} के आगे का statement डालें` : "✅ आज तक पूरा"}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
 function initRecon() {
   // Keep whatever the owner already picked — a refresh after saving must not
   // silently drop the account and stall the next upload.
@@ -1493,6 +1579,7 @@ function initRecon() {
   $("rAccount").innerHTML = '<option value="">— खाता चुनें —</option>' +
     Object.keys(ACCOUNTS).map(id => `<option value="${esc(id)}">${esc(ACCOUNTS[id].label || id)}</option>`).join("");
   if (keep) $("rAccount").value = keep;
+  renderCoverage();
   const zone = $("dropZone").querySelector(".drop");
   $("rFile").onchange = (e) => { if (e.target.files[0]) handleStatementFile(e.target.files[0]); };
   ["dragenter", "dragover"].forEach(ev => zone.addEventListener(ev, (e) => {
@@ -1656,15 +1743,24 @@ function renderParties() {
   }).join("") : '<div class="empty">कोई पार्टी नहीं मिली</div>';
 }
 
+function closeParty() { $("partyModal").hidden = true; }
+
 function showParty(key) {
   const p = PARTIES[key];
   if (!p) return;
+  const accs = Object.keys(p.accounts);
   const box = $("partyDetail");
-  box.hidden = false;
+  $("partyModal").hidden = false;
   box.innerHTML = `
     <div class="itemsHead" style="margin-top:0">
-      <span>🧾 ${esc(p.name)} — पूरा लेखा (${p.rows.length})</span>
-      <button type="button" onclick="document.getElementById('partyDetail').hidden=true">✕ बंद</button>
+      <span class="pname" style="font-size:17px">${esc(p.name)}</span>
+      <button type="button" onclick="closeParty()">✕</button>
+    </div>
+    <div class="tiles" style="margin-bottom:10px">
+      <div class="card tile"><div class="k">कुल</div><div class="v">${INR(p.total)}</div>
+        <div class="s">${p.count} बार</div></div>
+      <div class="card tile"><div class="k">आख़िरी</div><div class="v" style="font-size:18px">${esc(p.last || "—")}</div>
+        <div class="s">${accs.length} खाते से</div></div>
     </div>
     ${p.rows.slice(0, 200).map(r => `
       <div class="mrow">
@@ -1677,7 +1773,6 @@ function showParty(key) {
           ${r.narration ? '<br><span class="muted">' + esc(String(r.narration).slice(0, 70)) + "</span>" : ""}
         </div>
       </div>`).join("")}`;
-  box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function initParties() {
