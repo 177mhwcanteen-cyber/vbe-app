@@ -227,6 +227,7 @@
       <button data-v="bills">🧾 बिल</button>
       <button data-v="price">💹 Pricebook</button>
       <button data-v="flags">⚠️ Flags</button>
+      <button data-v="party">🧑 पार्टी</button>
       <button data-v="recon">🏦 मिलान</button>
       <button data-v="missing">❓ बकाया</button>
     </nav>
@@ -325,18 +326,32 @@
       <div class="card" id="flagList"></div>
     </section>
 
+    <!-- ── पार्टी: हर दुकान/व्यक्ति का पूरा लेखा, सारे खातों को मिलाकर ── -->
+    <section class="view" id="v-party">
+      <div class="filters">
+        <input id="pSearch" type="search" placeholder="नाम से खोजें — जैसे: राणा राम, chopra…">
+        <select id="pSort">
+          <option value="total">सबसे ज़्यादा पैसा</option>
+          <option value="count">सबसे ज़्यादा बार</option>
+          <option value="last">सबसे हाल का</option>
+        </select>
+      </div>
+      <div class="card" id="partyList"></div>
+      <div class="card" id="partyDetail" hidden style="margin-top:12px"></div>
+    </section>
+
     <!-- ── मिलान: statement upload + auto-match (कोई AI नहीं, सब यहीं ब्राउज़र में) ── -->
     <section class="view" id="v-recon">
       <div class="card tilt" id="dropZone">
         <div class="drop">
           <div class="dicon">🏦</div>
           <h3>बैंक / PhonePe की statement यहाँ डालें</h3>
-          <p class="muted">CSV file — यहीं आपके फ़ोन में पढ़ी जाएगी, कहीं नहीं जाती।<br>
+          <p class="muted">PDF या CSV — यहीं आपके फ़ोन में पढ़ी जाएगी, कहीं नहीं जाती।<br>
             पैसा अपने-आप बिलों से मिल जाएगा।</p>
           <div class="frow" style="max-width:420px;margin:14px auto 0">
             <label>किस खाते की?<select id="rAccount"></select></label>
             <label style="align-self:end">
-              <input type="file" id="rFile" accept=".csv,.txt" hidden>
+              <input type="file" id="rFile" accept=".csv,.txt,.pdf" hidden>
               <button class="primary" style="width:100%" onclick="document.getElementById('rFile').click()">📄 File चुनें</button>
             </label>
           </div>
@@ -375,6 +390,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>
 /* ═══════════ CONFIG — यह दो चीज़ें भरें ═══════════
    1) Firebase console → Project settings (⚙️) → "Your apps" → Web app config से
@@ -399,7 +415,7 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let EXP = [], ACCOUNTS = {}, PRICEBOOK = [], MISSING = [];
+let EXP = [], ACCOUNTS = {}, PRICEBOOK = [], MISSING = [], BANKTXNS = [];
 const charts = {};
 
 /* ── Auth gate ── */
@@ -439,7 +455,7 @@ async function loadData() {
     db.collection("vbe_expenses").orderBy("submittedAt", "desc").limit(500).get(),
     db.collection("vbe_accounts").get(),
     db.collection("vbe_pricebook").limit(300).get(),
-    db.collection("vbe_bank_txns").where("matched", "==", false).limit(300).get()
+    db.collection("vbe_bank_txns").limit(1500).get()
   ]);
   EXP = expSnap.docs.map(d => {
     const x = d.data(); x._id = d.id; x._date = toDate(x.submittedAt); return x;
@@ -450,7 +466,8 @@ async function loadData() {
     .filter(d => d.id !== "_index")
     .map(d => ({ id: d.id, ...d.data() }))
     .sort((a, b) => String(a.canonicalName).localeCompare(String(b.canonicalName), "hi"));
-  MISSING = bankSnap.docs.map(d => d.data()).filter(t => t.type === "debit")
+  BANKTXNS = bankSnap.docs.map(d => Object.assign({ _id: d.id }, d.data()));
+  MISSING = BANKTXNS.filter(t => t.type === "debit" && !t.matched)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 
@@ -484,6 +501,7 @@ function renderAll() {
   renderMissing();
   initEntryForm();
   initRecon();
+  initParties();
 }
 
 function monthKey(d) { return d ? d.toISOString().slice(0, 7) : ""; }
@@ -853,6 +871,173 @@ async function saveEntry() {
 /* ══════════ 🏦 मिलान — statement पढ़ना और बिलों से जोड़ना ══════════
    HARD RULE (VISION.md): बैंक का डेटा कभी AI को नहीं जाता। सब यहीं ब्राउज़र में। */
 
+/* Strict numeric cell test (a statement cell is a number only if it is
+   entirely a number) and a date alias, both used by the PDF parser. */
+const num = (v) => {
+  const t = String(v).replace(/[₹,\s]/g, "");
+  return /^-?\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null;
+};
+const toISO = (v) => parseDay(v);
+
+/** UTR / reference — the key that stops one payment being counted twice. */
+function utrOf(text) {
+  let m = String(text).match(/\b(?:UPI|IMPS|NEFT|RTGS)\/[A-Z]{2}\/(\d{9,22})/i);
+  if (m) return m[1];
+  m = String(text).match(/\b(?:UTR|RRN|REF)[:\s#-]*([A-Za-z0-9]{9,22})\b/i);
+  if (m) return m[1].toUpperCase();
+  m = String(text).match(/\b(\d{12,22})\b/);
+  return m ? m[1] : null;
+}
+
+/** Party name out of a UPI/NEFT narration. */
+function partyOf(text) {
+  let s = String(text).replace(/\s+/g, " ").trim();
+  // UPI/DR/<utr>/<NAME>/<BANK>/<acct>/<remark>
+  let m = s.match(/\b(?:UPI|IMPS)\/(?:DR|CR)\/\d+\/(.+)/i);
+  if (m) {
+    let rest = m[1];
+    // name runs until the bank code segment (3-6 uppercase letters between slashes)
+    const stop = rest.search(/\/[A-Z]{3,6}\//);
+    if (stop > 0) rest = rest.slice(0, stop);
+    else rest = rest.split("/")[0];
+    return clean(rest);
+  }
+  m = s.match(/\b(?:NEFT|RTGS)[\/\s-]+(?:CR|DR)?[\/\s-]*(?:[A-Z0-9]+[\/\s-]+)?([A-Za-z][A-Za-z .&-]{3,})/i);
+  if (m) return clean(m[1]);
+  return clean(s.split("/")[0]);
+}
+function clean(s) {
+  return String(s).replace(/[^A-Za-z0-9 .&\-()]/g, " ").replace(/\s+/g, " ").trim()
+    .replace(/\b(MR|MRS|SHRI|SMT)\b\.?\s*/gi, "")
+    .replace(/^(MR|MRS|SMT|SHRI)(?=[A-Z]{3})/, "").trim().slice(0, 60);
+}
+
+/**
+ * Column positions taken from the DATA, not the header labels — header text is
+ * centred over its column and would mis-place the boundaries.
+ * The two busiest text columns are narration (left) and reference (right).
+ */
+function detectCols(items) {
+  const hist = {};
+  items.forEach((i) => {
+    const s = i.str.trim();
+    if (s.length < 4 || num(s) != null) return;
+    const x = Math.round(i.transform[4] / 4) * 4;
+    if (x < 120) return;
+    hist[x] = (hist[x] || 0) + 1;
+  });
+  const top = Object.keys(hist).map(Number)
+    .sort((a, b) => hist[b] - hist[a]).slice(0, 2).sort((a, b) => a - b);
+  return { narr: top[0], ref: top[1] };
+}
+
+/**
+ * pdf.js text items → transactions.
+ * Rows are anchored by the line carrying the dates and amounts; the narration
+ * wraps across the lines above and below it, so each anchor claims the loose
+ * narration-column text nearest to it. A fragment reaching the column's right
+ * edge was cut mid-word, so it joins the next one without a space. Debit vs
+ * credit comes from which side of the row's "-" the amount sits on.
+ */
+function parsePage(items, cols) {
+  const narrLeft = (cols.narr || 159) - 6;
+  const narrRight = (cols.ref || 278) - 6;
+  const fullEdge = narrRight - 16;
+
+  const lines = {};
+  items.forEach((i) => {
+    if (!i.str.trim()) return;
+    const y = Math.round(i.transform[5]);
+    (lines[y] = lines[y] || []).push({
+      x: i.transform[4], r: i.transform[4] + i.width, s: i.str.trim()
+    });
+  });
+  const ys = Object.keys(lines).map(Number).sort((a, b) => b - a);
+  ys.forEach((y) => lines[y].sort((a, b) => a.x - b.x));
+
+  const anchors = [];
+  ys.forEach((y) => {
+    const cells = lines[y];
+    const date = toISO(cells[0] && cells[0].s);
+    if (!date) return;
+    const right = cells.filter((c) => c.x > narrRight);
+    if (right.filter((c) => num(c.s) != null).length < 2) return;
+    anchors.push({ y, date, right });
+  });
+
+  // Narration text in reading order, headers dropped.
+  const HEAD = /description|narration|debit|credit|balance|value date|reference|cheque|statement|opening|closing|page \d/i;
+  const narrLines = [];
+  ys.forEach((y) => {
+    const parts = lines[y].filter((c) => c.x >= narrLeft && c.x < narrRight);
+    if (!parts.length) return;
+    const text = parts.map((c) => c.s).join(" ");
+    if (HEAD.test(text)) return;
+    narrLines.push({ y, parts });
+  });
+
+  // Each transaction's narration starts with its channel keyword, so the lines
+  // group cleanly — far more reliable than splitting on vertical midpoints,
+  // since a row's height varies with how much text it carries.
+  const START = /^(UPI|IMPS|NEFT|RTGS|ATM|POS|CHQ|CASH|EMI|ACH|NACH|BIL|MMT|INF|TPT|SI |CMS|CC )/i;
+  const groups = [];
+  narrLines.forEach((ln) => {
+    const first = ln.parts[0].s;
+    if (START.test(first) || !groups.length) groups.push([]);
+    groups[groups.length - 1].push(ln);
+  });
+
+  const joinGroup = (g) => {
+    let out = "", glue = false;
+    (g || []).forEach((ln) => ln.parts.forEach((c) => {
+      out += (out && !glue ? " " : "") + c.s;
+      glue = c.r >= fullEdge;
+    }));
+    return out.replace(/\s+/g, " ").trim();
+  };
+
+  const byMidpoint = (a, k) => {
+    const hiY = k > 0 ? (a.y + anchors[k - 1].y) / 2 : a.y + 40;
+    const loY = k < anchors.length - 1 ? (a.y + anchors[k + 1].y) / 2 : a.y - 40;
+    return joinGroup(narrLines.filter((ln) => ln.y <= hiY && ln.y >= loY));
+  };
+
+  const aligned = groups.length === anchors.length;
+  const out = [];
+  anchors.forEach((a, k) => {
+    const narration = aligned ? joinGroup(groups[k]) : byMidpoint(a, k);
+
+    const money = a.right.filter((c) => num(c.s) != null).sort((p, q) => p.r - q.r);
+    if (money.length < 2) return;
+    const amt = money[money.length - 2];
+    const value = num(amt.s);
+    if (!value) return;
+
+    const dash = a.right.filter((c) => /^[-\u2013\u2014]$/.test(c.s))[0];
+    const type = dash ? (dash.r > amt.r ? "debit" : "credit")
+      : (amt.r <= (money[money.length - 1].r - 90) ? "debit" : "credit");
+
+    out.push({
+      date: a.date, amount: value, type,
+      balance: num(money[money.length - 1].s),
+      narration: narration.slice(0, 200),
+      utr: utrOf(narration), party: partyOf(narration)
+    });
+  });
+  return out;
+}
+
+function parsePdfStatement(pages) {
+  const all = [];
+  let cols = {};
+  pages.forEach((items) => {
+    const c = detectCols(items);
+    if (c.narr) cols = c;
+    all.push.apply(all, parsePage(items, cols));
+  });
+  return all;
+}
+
 function csvRows(text) {
   const rows = []; let row = [], cell = "", q = false;
   for (let i = 0; i < text.length; i++) {
@@ -990,14 +1175,40 @@ function matchStatement(txns, accountId) {
   return { matched, maybe, noBill };
 }
 
+/** PDF statement → transactions, a page at a time so a 100-page file
+    reports progress instead of looking frozen on a phone. */
+async function readPdfStatement(file, onProgress) {
+  if (!window.pdfjsLib) throw new Error("PDF reader लोड नहीं हुआ — internet देखें");
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+  const buf = await file.arrayBuffer();
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+  const pages = [];
+  const limit = Math.min(doc.numPages, 300);
+  for (let i = 1; i <= limit; i++) {
+    const page = await doc.getPage(i);
+    pages.push((await page.getTextContent()).items);
+    page.cleanup();
+    if (onProgress && (i % 5 === 0 || i === limit)) {
+      onProgress(i, limit);
+      await new Promise((r) => setTimeout(r));   // let the screen repaint
+    }
+  }
+  return parsePdfStatement(pages);
+}
+
 async function handleStatementFile(file) {
   const status = $("rStatus");
   const accountId = $("rAccount").value;
   if (!accountId) { status.className = "bad"; status.textContent = "पहले खाता चुनें"; return; }
   status.className = "muted"; status.textContent = "पढ़ रहा हूँ…";
   try {
-    const text = await file.text();
-    const txns = parseStatement(text);
+    const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
+    const txns = isPdf
+      ? await readPdfStatement(file, (i, n) => {
+          status.textContent = `पन्ना ${i} / ${n} पढ़ा…`;
+        })
+      : parseStatement(await file.text());
     if (!txns || !txns.length) {
       status.className = "bad";
       status.textContent = "यह file समझ नहीं आई — उसमें तारीख़ और रकम वाले column होने चाहिए।";
@@ -1069,6 +1280,7 @@ async function commitRecon() {
       await db.collection("vbe_bank_txns").doc(id).set({
         accountId: RECON.account, date: m.t.date, amount: m.t.amount, type: m.t.type,
         narration: m.t.narration, utr: m.t.utr || null,
+        party: m.t.party || null, partyKey: pKey(m.t.party || m.t.narration),
         matched: !!keep, matchedReceiptId: keep ? m.e.receiptId : null,
         matchConfidence: keep ? (sel.dataset.sure === "1" ? "high" : "low") : null,
         importedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1080,11 +1292,13 @@ async function commitRecon() {
       }
     }
     // Debits with no bill still belong in the ledger — that IS the बकाया list.
-    for (const m of RECON.noBill) {
+    // Credits are income; stored too, so the party view sees both directions.
+    for (const m of RECON.noBill.concat((RECON.txns || []).filter(t => t.type === "credit").map(t => ({ t })))) {
       const id = txnId(RECON.account, m.t);
       await db.collection("vbe_bank_txns").doc(id).set({
         accountId: RECON.account, date: m.t.date, amount: m.t.amount, type: m.t.type,
         narration: m.t.narration, utr: m.t.utr || null,
+        party: m.t.party || null, partyKey: pKey(m.t.party || m.t.narration),
         matched: false, matchedReceiptId: null, matchConfidence: null,
         importedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
@@ -1122,6 +1336,115 @@ function initRecon() {
     if (f) handleStatementFile(f);
   });
 }
+
+/* ══════════ 🧑 पार्टी — एक ही नाम, सारे खाते, सारा इतिहास ══════════
+   बिल और बैंक दोनों तरफ़ से जोड़कर, ताकि किसी को चार अलग खातों से पैसा गया
+   हो तो भी एक ही जगह दिखे। */
+
+const pKey = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9\u0900-\u097F]/g, "");
+
+function buildParties() {
+  const map = {};
+  const touch = (name) => {
+    const k = pKey(name);
+    if (!k) return null;
+    if (!map[k]) map[k] = { key: k, name: String(name).trim(), total: 0, count: 0,
+      accounts: {}, last: "", rows: [] };
+    if (String(name).trim().length > map[k].name.length) map[k].name = String(name).trim();
+    return map[k];
+  };
+
+  EXP.forEach((e) => {
+    const p = touch(e.vendor && e.vendor.name);
+    if (!p) return;
+    const amt = (e.payment && e.payment.amount != null) ? e.payment.amount : (e.billTotal || 0);
+    const date = String(e.billDate || e.submittedAt || "").slice(0, 10);
+    p.total += amt; p.count++;
+    if (date > p.last) p.last = date;
+    const acc = e.paidFromAccountId;
+    if (acc) p.accounts[acc] = (p.accounts[acc] || 0) + amt;
+    p.rows.push({ kind: "bill", date, amount: amt, account: acc,
+      ref: e.receiptId, status: e.status, unit: e.unit, id: e._id });
+  });
+
+  BANKTXNS.forEach((t) => {
+    if (t.type !== "debit") return;
+    const p = touch(t.party || t.narration);
+    if (!p) return;
+    // A matched debit is the same money as its bill — count it once.
+    const dup = t.matchedReceiptId &&
+      p.rows.some((r) => r.kind === "bill" && r.ref === t.matchedReceiptId);
+    if (!dup) {
+      p.total += t.amount || 0; p.count++;
+      if (t.accountId) p.accounts[t.accountId] = (p.accounts[t.accountId] || 0) + (t.amount || 0);
+    }
+    if (String(t.date) > p.last) p.last = String(t.date);
+    p.rows.push({ kind: "bank", date: t.date, amount: t.amount, account: t.accountId,
+      ref: t.matchedReceiptId || (t.utr ? "UTR " + t.utr : ""), status: t.matched ? "मिला" : "बिल नहीं",
+      narration: t.narration });
+  });
+
+  Object.values(map).forEach((p) => p.rows.sort((a, b) => String(b.date).localeCompare(String(a.date))));
+  return map;
+}
+
+let PARTIES = {};
+const accLabel = (id) => (ACCOUNTS[id] && ACCOUNTS[id].label) || id || "—";
+
+function renderParties() {
+  const q = pKey($("pSearch").value);
+  const sort = $("pSort").value;
+  let list = Object.values(PARTIES);
+  if (q) list = list.filter((p) => p.key.includes(q));
+  list.sort((a, b) => sort === "count" ? b.count - a.count
+    : sort === "last" ? String(b.last).localeCompare(String(a.last))
+    : b.total - a.total);
+
+  $("partyList").innerHTML = list.length ? list.slice(0, 100).map((p) => {
+    const accs = Object.keys(p.accounts);
+    return `
+    <div class="mrow" style="cursor:pointer" onclick="showParty('${esc(p.key)}')">
+      <div class="amt">${INR(p.total)}</div>
+      <div class="mx">
+        <b>${esc(p.name)}</b>
+        <br><span class="muted">${p.count} बार · आख़िरी ${esc(p.last || "—")}</span>
+        ${accs.length ? "<br>" + accs.map(a =>
+          `<span class="badge">${esc(accLabel(a))} · ${INR(p.accounts[a])}</span>`).join(" ") : ""}
+        ${accs.length > 1 ? '<br><span class="badge lo">⚠️ ' + accs.length + ' अलग खातों से</span>' : ""}
+      </div>
+    </div>`;
+  }).join("") : '<div class="empty">कोई पार्टी नहीं मिली</div>';
+}
+
+function showParty(key) {
+  const p = PARTIES[key];
+  if (!p) return;
+  const box = $("partyDetail");
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="itemsHead" style="margin-top:0">
+      <span>🧾 ${esc(p.name)} — पूरा लेखा (${p.rows.length})</span>
+      <button type="button" onclick="document.getElementById('partyDetail').hidden=true">✕ बंद</button>
+    </div>
+    ${p.rows.slice(0, 200).map(r => `
+      <div class="mrow">
+        <div class="amt">${INR(r.amount)}</div>
+        <div class="mx">
+          <b>${esc(r.date || "—")}</b> · ${r.kind === "bill" ? "🧾 बिल" : "🏦 बैंक"}
+          ${r.ref ? " · " + esc(r.ref) : ""}
+          <br><span class="muted">${esc(accLabel(r.account))}${r.unit ? " · " + esc(r.unit) : ""}
+            ${r.status ? " · " + esc(r.status) : ""}</span>
+          ${r.narration ? '<br><span class="muted">' + esc(String(r.narration).slice(0, 70)) + "</span>" : ""}
+        </div>
+      </div>`).join("")}`;
+  box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function initParties() {
+  PARTIES = buildParties();
+  renderParties();
+}
+["pSearch", "pSort"].forEach(id => $(id).addEventListener("input", renderParties));
 
 /* ── Tabs + 3D tilt ── */
 $("tabs").addEventListener("click", e => {
