@@ -185,10 +185,17 @@
 
   /* AI capture buttons */
   .aiRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-  .aiBtn { display: flex; align-items: center; gap: 10px; text-align: left; padding: 14px;
-    border-radius: 14px; border: 1px solid var(--border); line-height: 1.25; }
-  .aiBtn .ico { font-size: 22px; }
-  .aiBtn small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+  @media (max-width: 560px) { .aiRow { grid-template-columns: 1fr; } }
+  .aiBtn { display: flex; align-items: flex-start; gap: 10px; text-align: left; padding: 14px;
+    border-radius: 14px; border: 1px solid var(--border); line-height: 1.25;
+    font-size: 14px; font-weight: 600; }
+  .aiBtn .ico { font-size: 22px; line-height: 1; }
+  .aiBtn .aiTxt { flex: 1; min-width: 0; }
+  .aiBtn small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 3px; }
+  /* Camera vs gallery — both offered, never one forced. */
+  .pick { display: flex; gap: 8px; margin-top: 10px; }
+  .pick button { flex: 1; padding: 8px 6px; font-size: 12.5px; border-radius: 10px;
+    background: rgba(255,255,255,.07); white-space: nowrap; }
   .aiBtn.bill { background: linear-gradient(160deg, rgba(57,135,229,.28), rgba(57,135,229,.08)); border-color: rgba(57,135,229,.45); }
   .aiBtn.recv { background: linear-gradient(160deg, rgba(25,158,112,.28), rgba(25,158,112,.08)); border-color: rgba(25,158,112,.45); }
   .shots { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -200,10 +207,12 @@
   @keyframes pulse { 0%,100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
   .card.vcard { background: linear-gradient(150deg, rgba(57,135,229,.18), rgba(213,81,129,.10)); }
 
+  /* A class-level `display` beats the browser's [hidden] rule, so say it once,
+     loudly. Without this the closed modal swallows every tap and the hidden
+     file inputs show up as raw grey "Choose file" boxes. */
+  [hidden] { display: none !important; }
+
   /* बिल जोड़ने का पर्दा */
-  /* A class-level display: grid beats [hidden], so say it explicitly —
-     otherwise the closed modal keeps covering (and swallowing taps on) the app. */
-  .modal[hidden] { display: none; }
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(6px);
     display: grid; place-items: center; padding: 16px; z-index: 50; animation: rise .2s ease; }
   .modalBox { width: 100%; max-width: 480px; max-height: 88vh; overflow: auto; }
@@ -287,12 +296,26 @@
       <div class="card form tilt">
         <h3 style="margin-bottom:14px">➕ नया खर्चा जोड़ें</h3>
         <div class="aiRow">
-          <input type="file" id="aBillFile" accept="image/*" capture="environment" hidden>
-          <input type="file" id="aRecvFile" accept="image/*" capture="environment" hidden>
-          <button type="button" class="aiBtn bill" onclick="document.getElementById('aBillFile').click()">
-            <span class="ico">🧾</span><span>बिल की फोटो<small>AI पढ़कर भर देगा</small></span></button>
-          <button type="button" class="aiBtn recv" onclick="document.getElementById('aRecvFile').click()">
-            <span class="ico">💳</span><span>पेमेंट रसीद<small>UTR अपने-आप</small></span></button>
+          <input type="file" id="aBillFile" accept="image/*" hidden>
+          <input type="file" id="aRecvFile" accept="image/*" hidden>
+          <div class="aiBtn bill">
+            <span class="ico">🧾</span>
+            <div class="aiTxt">बिल की फोटो<small>AI पढ़कर दुकान, सामान, रेट भर देगा</small>
+              <div class="pick">
+                <button type="button" onclick="pickPhoto('aBillFile', true)">📷 कैमरा</button>
+                <button type="button" onclick="pickPhoto('aBillFile', false)">🖼️ गैलरी</button>
+              </div>
+            </div>
+          </div>
+          <div class="aiBtn recv">
+            <span class="ico">💳</span>
+            <div class="aiTxt">पेमेंट रसीद<small>UTR अपने-आप निकल जाएगा</small>
+              <div class="pick">
+                <button type="button" onclick="pickPhoto('aRecvFile', true)">📷 कैमरा</button>
+                <button type="button" onclick="pickPhoto('aRecvFile', false)">🖼️ गैलरी</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div id="aAiMsg" class="muted" style="margin-bottom:10px"></div>
         <div id="aShots" class="shots"></div>
@@ -328,7 +351,7 @@
           <button type="button" onclick="resetEntry()">साफ़ करें</button>
           <span id="aMsg" class="muted"></span>
         </div>
-        <p class="muted" style="margin-top:12px">फोटो वाला बिल Telegram bot पर भेजें — वहाँ AI अपने-आप पढ़ लेता है। यह form हाथ से जोड़ने के लिए है।</p>
+        <p class="muted" style="margin-top:12px">ऊपर से फोटो लें या गैलरी से पुरानी फोटो चुनें — AI पढ़कर सब भर देगा, फिर आप जाँचकर सुधार लें। Telegram bot पर भेजा बिल भी यहीं आ जाता है।</p>
       </div>
     </section>
 
@@ -482,9 +505,11 @@
           <button type="button" onclick="closeBill()">✕</button>
         </div>
         <div id="bmTxn" class="muted" style="margin-bottom:12px"></div>
-        <input type="file" id="bmFile" accept="image/*" capture="environment" hidden>
-        <button class="primary" style="width:100%" onclick="document.getElementById('bmFile').click()">
-          📷 बिल की फोटो चुनें / खींचें</button>
+        <input type="file" id="bmFile" accept="image/*" hidden>
+        <div class="pick">
+          <button type="button" onclick="pickPhoto('bmFile', true)">📷 कैमरा से खींचें</button>
+          <button type="button" onclick="pickPhoto('bmFile', false)">🖼️ गैलरी से चुनें</button>
+        </div>
         <img id="bmPreview" hidden style="width:100%;border-radius:12px;margin-top:12px">
         <div id="bmAI" class="muted" style="margin-top:10px"></div>
         <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
@@ -1694,6 +1719,21 @@ function showShots() {
   $("aShots").innerHTML = ["bill", "receipt"].filter(k => ENTRY_SHOTS[k])
     .map(k => `<img src="${ENTRY_SHOTS[k]}" title="${k === "bill" ? "बिल" : "रसीद"}">`).join("");
 }
+/**
+ * Open a file input as either the camera or the gallery. `capture` is what
+ * forces the camera, so it is added or removed per tap instead of being baked
+ * into the markup — one input, two doors. Clearing `.value` first means picking
+ * the same photo twice still fires `change` (a retry after a failed read).
+ */
+function pickPhoto(id, fromCamera) {
+  const el = $(id);
+  if (!el) return;
+  if (fromCamera) el.setAttribute("capture", "environment");
+  else el.removeAttribute("capture");
+  el.value = "";
+  el.click();
+}
+
 function aiSay(html, cls) { $("aAiMsg").className = cls || "muted"; $("aAiMsg").innerHTML = html; }
 
 /** Bill photo → vendor, items, total. Every field stays editable afterwards. */
@@ -2003,10 +2043,10 @@ function renderVcard(p) {
     box.innerHTML = `
       <div class="card vcard" style="margin-bottom:10px">
         <div class="muted">इस पार्टी का बिज़नेस कार्ड नहीं है</div>
-        <input type="file" id="vcFile" accept="image/*" capture="environment" hidden>
+        <input type="file" id="vcFile" accept="image/*" hidden>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <button type="button" class="primary mini" onclick="document.getElementById('vcFile').click()">
-            📇 कार्ड की फोटो — AI भर देगा</button>
+          <button type="button" class="primary mini" onclick="pickPhoto('vcFile', true)">📷 कार्ड खींचें</button>
+          <button type="button" class="primary mini" onclick="pickPhoto('vcFile', false)">🖼️ गैलरी से</button>
           <button type="button" class="mini" onclick="editVcard()">✍️ हाथ से भरें</button>
         </div>
         <div id="vcMsg" class="muted" style="margin-top:8px"></div>
