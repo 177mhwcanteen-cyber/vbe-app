@@ -355,6 +355,12 @@
               <button class="primary" style="width:100%" onclick="document.getElementById('rFile').click()">📄 File चुनें</button>
             </label>
           </div>
+          <div id="rPassBox" hidden style="max-width:420px;margin:12px auto 0">
+            <label>🔒 इस PDF पर password लगा है — वही डालें
+              <input id="rPass" type="text" autocomplete="off"
+                placeholder="जैसे: जन्मतिथि DDMMYYYY, PAN, या मोबाइल के अंक"></label>
+            <button class="primary" style="margin-top:8px;width:100%" onclick="retryWithPassword()">खोलें</button>
+          </div>
           <div id="rStatus" class="muted" style="margin-top:12px"></div>
         </div>
       </div>
@@ -1177,12 +1183,16 @@ function matchStatement(txns, accountId) {
 
 /** PDF statement → transactions, a page at a time so a 100-page file
     reports progress instead of looking frozen on a phone. */
-async function readPdfStatement(file, onProgress) {
+async function readPdfStatement(file, onProgress, password) {
   if (!window.pdfjsLib) throw new Error("PDF reader लोड नहीं हुआ — internet देखें");
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
   const buf = await file.arrayBuffer();
-  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+  // Bank PDFs are often encrypted. An owner-password-only file opens with an
+  // empty password; a real user password has to come from the owner.
+  const doc = await pdfjsLib.getDocument({
+    data: new Uint8Array(buf), password: password || ""
+  }).promise;
   const pages = [];
   const limit = Math.min(doc.numPages, 300);
   for (let i = 1; i <= limit; i++) {
@@ -1197,7 +1207,10 @@ async function readPdfStatement(file, onProgress) {
   return parsePdfStatement(pages);
 }
 
-async function handleStatementFile(file) {
+let PENDING_FILE = null;
+
+async function handleStatementFile(file, password) {
+  PENDING_FILE = file;
   const status = $("rStatus");
   const accountId = $("rAccount").value;
   if (!accountId) { status.className = "bad"; status.textContent = "पहले खाता चुनें"; return; }
@@ -1207,7 +1220,7 @@ async function handleStatementFile(file) {
     const txns = isPdf
       ? await readPdfStatement(file, (i, n) => {
           status.textContent = `पन्ना ${i} / ${n} पढ़ा…`;
-        })
+        }, password)
       : parseStatement(await file.text());
     if (!txns || !txns.length) {
       status.className = "bad";
@@ -1217,12 +1230,32 @@ async function handleStatementFile(file) {
     const res = matchStatement(txns, accountId);
     RECON = Object.assign({ account: accountId, txns }, res);
     renderRecon(txns.length);
+    $("rPassBox").hidden = true;
+    $("rPass").value = "";
     status.className = "ok";
     status.textContent = `✅ ${txns.length} entries पढ़ीं — नीचे नतीजा देखें`;
   } catch (err) {
+    const needsPass = err && (err.name === "PasswordException" ||
+      /password/i.test(err.message || ""));
+    if (needsPass) {
+      $("rPassBox").hidden = false;
+      $("rPass").focus();
+      status.className = "bad";
+      status.textContent = password
+        ? "❌ password ग़लत लगा — दुबारा डालकर देखें"
+        : "🔒 यह PDF password से बंद है — नीचे password डालें";
+      return;
+    }
     status.className = "bad";
     status.textContent = "नहीं पढ़ पाया: " + err.message;
   }
+}
+
+/** Owner typed the PDF password — open the same file again with it. */
+function retryWithPassword() {
+  const pass = $("rPass").value.trim();
+  if (!pass || !PENDING_FILE) return;
+  handleStatementFile(PENDING_FILE, pass);
 }
 
 function renderRecon(total) {
