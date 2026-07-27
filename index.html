@@ -173,6 +173,23 @@
   .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); white-space: nowrap; }
   .badge.hi { color: #fff; background: rgba(12,163,12,.25); border-color: rgba(12,163,12,.5); }
   .badge.lo { color: #fff; background: rgba(250,178,25,.22); border-color: rgba(250,178,25,.5); }
+
+  /* हिसाब — money in vs out reads at a glance */
+  .amt.in  { color: var(--good); }
+  .amt.out { color: #ff7b7b; }
+  .mrow.txn { border-left: 3px solid transparent; padding-left: 10px; border-radius: 0 10px 10px 0; }
+  .mrow.txn.in  { border-left-color: var(--good); background: linear-gradient(90deg, rgba(12,163,12,.10), transparent 40%); }
+  .mrow.txn.out { border-left-color: #d03b3b; background: linear-gradient(90deg, rgba(208,59,59,.10), transparent 40%); }
+  .pname { font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: .2px; margin-bottom: 2px; }
+  button.mini { padding: 6px 12px; font-size: 12px; border-radius: 9px; }
+
+  /* बिल जोड़ने का पर्दा */
+  /* A class-level display: grid beats [hidden], so say it explicitly —
+     otherwise the closed modal keeps covering (and swallowing taps on) the app. */
+  .modal[hidden] { display: none; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(6px);
+    display: grid; place-items: center; padding: 16px; z-index: 50; animation: rise .2s ease; }
+  .modalBox { width: 100%; max-width: 480px; max-height: 88vh; overflow: auto; }
   .empty { color: var(--muted); padding: 26px 0; text-align: center; }
 
   /* Login / gate screens */
@@ -227,6 +244,7 @@
       <button data-v="bills">🧾 बिल</button>
       <button data-v="price">💹 Pricebook</button>
       <button data-v="flags">⚠️ Flags</button>
+      <button data-v="ledger">📜 हिसाब</button>
       <button data-v="party">🧑 पार्टी</button>
       <button data-v="recon">🏦 मिलान</button>
       <button data-v="missing">❓ बकाया</button>
@@ -326,6 +344,32 @@
       <div class="card" id="flagList"></div>
     </section>
 
+    <!-- ── हिसाब: हर पैसा, समय के हिसाब से, रंगों में ── -->
+    <section class="view" id="v-ledger">
+      <div class="filters">
+        <select id="lAccount"><option value="">सारे खाते</option></select>
+        <select id="lType">
+          <option value="">आया + गया</option>
+          <option value="debit">🔴 गया</option>
+          <option value="credit">🟢 आया</option>
+        </select>
+        <select id="lWhen">
+          <option value="7">पिछले 7 दिन</option>
+          <option value="30" selected>पिछले 30 दिन</option>
+          <option value="90">3 महीने</option>
+          <option value="0">सब</option>
+        </select>
+        <select id="lBill">
+          <option value="">बिल: सब</option>
+          <option value="no">📎 बिल बाकी</option>
+          <option value="yes">✅ बिल लगा</option>
+        </select>
+        <input id="lSearch" type="search" placeholder="पार्टी, रकम या UTR से खोजें…">
+      </div>
+      <div class="tiles" id="lTiles"></div>
+      <div class="card"><div id="ledgerRows"></div></div>
+    </section>
+
     <!-- ── पार्टी: हर दुकान/व्यक्ति का पूरा लेखा, सारे खातों को मिलाकर ── -->
     <section class="view" id="v-party">
       <div class="filters">
@@ -374,6 +418,7 @@
           </div>
           <div id="rMaybe"></div>
         </div>
+        <div class="card" id="rDupesCard" style="margin-bottom:12px"><div id="rDupes"></div></div>
         <div class="card">
           <div class="itemsHead" style="margin-top:0"><span>❓ इनका बिल नहीं मिला</span></div>
           <div id="rNoBill"></div>
@@ -387,6 +432,26 @@
          CSV upload और मिलान Telegram bot से होता है।</p>
       <div class="card" id="missingList"></div>
     </section>
+
+    <!-- ── बिल जोड़ने का पर्दा ── -->
+    <div id="billModal" class="modal" hidden>
+      <div class="card modalBox">
+        <div class="itemsHead" style="margin-top:0">
+          <span>📎 बिल जोड़ें</span>
+          <button type="button" onclick="closeBill()">✕</button>
+        </div>
+        <div id="bmTxn" class="muted" style="margin-bottom:12px"></div>
+        <input type="file" id="bmFile" accept="image/*" capture="environment" hidden>
+        <button class="primary" style="width:100%" onclick="document.getElementById('bmFile').click()">
+          📷 बिल की फोटो चुनें / खींचें</button>
+        <img id="bmPreview" hidden style="width:100%;border-radius:12px;margin-top:12px">
+        <div id="bmAI" class="muted" style="margin-top:10px"></div>
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+          <button class="primary" id="bmSave" onclick="saveBill()" disabled>💾 जोड़ दें</button>
+          <button type="button" onclick="closeBill()">रहने दें</button>
+        </div>
+      </div>
+    </div>
 
     <footer>VBE खरीद-हिसाब · Telegram bot + यह app, दोनों एक ही हिसाब पर</footer>
   </div>
@@ -444,6 +509,7 @@ auth.onAuthStateChanged(async user => {
   $("userBox").hidden = false;
   show("gateLoading");
   try {
+    await loadAppConfig();
     await loadData();
     renderAll();
     show("app");
@@ -507,6 +573,7 @@ function renderAll() {
   renderMissing();
   initEntryForm();
   initRecon();
+  initLedger();
   initParties();
 }
 
@@ -1132,12 +1199,49 @@ function parseStatement(text) {
   return out;
 }
 
-/** Stable id from the row's own content, so re-uploading the same file is a no-op. */
+function hash36(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+/**
+ * One payment must exist exactly once, no matter how many statements it turns
+ * up in. A UTR is globally unique, so it alone identifies the money; without
+ * one, date + amount + party (per account) is the fingerprint. Re-importing
+ * the same file, or the same period from a second source, therefore changes
+ * nothing.
+ */
 function txnId(accountId, t) {
-  const s = [accountId, t.date, t.amount, t.type, t.narration].join("|");
-  let h = 0;
-  for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
-  return accountId + "-" + (h >>> 0).toString(36) + "-" + Math.round(t.amount);
+  if (t.utr) return "utr-" + String(t.utr).toUpperCase();
+  return accountId + "-" + t.date + "-" + Math.round(t.amount * 100) + "-" +
+    hash36(pKey(t.party || t.narration || "") + "|" + (t.type || ""));
+}
+
+/**
+ * Is this row already recorded? Returns the reason, so the owner can see WHY
+ * something was skipped rather than silently losing rows.
+ *  - same UTR                       → certainly the same money
+ *  - same date + amount + party     → same money seen from another source
+ *  - same date + time + amount      → same money, party spelled differently
+ */
+function findExisting(t, accountId) {
+  const id = txnId(accountId, t);
+  const byId = BANKTXNS.filter((b) => b._id === id)[0];
+  if (byId) return { row: byId, why: t.utr ? "वही UTR" : "वही तारीख़-रकम-पार्टी" };
+
+  if (t.utr) {
+    const u = BANKTXNS.filter((b) => b.utr && String(b.utr).toUpperCase() === String(t.utr).toUpperCase())[0];
+    if (u) return { row: u, why: "वही UTR" };
+  }
+  const key = pKey(t.party || t.narration || "");
+  const same = BANKTXNS.filter((b) =>
+    b.date === t.date && Math.abs((b.amount || 0) - t.amount) < 0.01 && b.type === t.type);
+  const byParty = same.filter((b) => key && pKey(b.party || b.narration || "") === key)[0];
+  if (byParty) return { row: byParty, why: "वही तारीख़, रकम और पार्टी" };
+  const byTime = t.time ? same.filter((b) => b.time && b.time === t.time)[0] : null;
+  if (byTime) return { row: byTime, why: "वही तारीख़, समय और रकम" };
+  return null;
 }
 
 let RECON = { account: "", matched: [], maybe: [], noBill: [], skipped: 0 };
@@ -1153,6 +1257,14 @@ function expenseAmount(e) {
 
 /** Match debits to bills: UTR first, then amount + date, then amount alone. */
 function matchStatement(txns, accountId) {
+  // Anything already recorded is set aside first — it must not be matched,
+  // saved, or counted a second time.
+  const fresh = [], dupes = [];
+  txns.forEach((t) => {
+    const seen = findExisting(t, accountId);
+    if (seen) dupes.push({ t, why: seen.why, row: seen.row }); else fresh.push(t);
+  });
+  txns = fresh;
   const open = EXP.filter(e => !e.reconciled && e.status !== "rejected" && expenseAmount(e) != null);
   const used = new Set();
   const matched = [], maybe = [], noBill = [];
@@ -1178,7 +1290,7 @@ function matchStatement(txns, accountId) {
     else noBill.push({ t });
   });
 
-  return { matched, maybe, noBill };
+  return { matched, maybe, noBill, dupes, credits: txns.filter((t) => t.type === "credit") };
 }
 
 /** PDF statement → transactions, a page at a time so a 100-page file
@@ -1262,10 +1374,12 @@ function renderRecon(total) {
   $("rResult").hidden = false;
   const sum = (a) => a.reduce((x, m) => x + m.t.amount, 0);
   $("rTiles").innerHTML = [
-    ["पढ़ी गईं", String(total), "बैंक entries", "#3987e5"],
-    ["✅ मिल गए", INR(sum(RECON.matched)), RECON.matched.length + " entries", "#0ca30c"],
-    ["🤔 शायद", INR(sum(RECON.maybe)), RECON.maybe.length + " देखने हैं", "#fab219"],
-    ["❓ बिना बिल", INR(sum(RECON.noBill)), RECON.noBill.length + " entries", "#d55181"]
+    ["पढ़ी गईं", String(total), "statement की entries", "#3987e5"],
+    ["🆕 नई", String(RECON.matched.length + RECON.maybe.length + RECON.noBill.length +
+      (RECON.credits || []).length), "जुड़ने वाली", "#199e70"],
+    ["🔁 पहले से थीं", String((RECON.dupes || []).length), "दुबारा नहीं जुड़ेंगी", "#898781"],
+    ["✅ बिल मिला", INR(sum(RECON.matched)), RECON.matched.length + " entries", "#0ca30c"],
+    ["❓ बिल बाकी", INR(sum(RECON.noBill)), RECON.noBill.length + " entries", "#d55181"]
   ].map(([k, v, s, c]) => `
     <div class="card tile tilt"><div class="k">${k}</div><div class="v">${v}</div>
       <div class="s">${s}</div><div class="bar"><i style="width:70%;background:${c}"></i></div></div>`).join("");
@@ -1290,11 +1404,37 @@ function renderRecon(total) {
   $("rMaybe").innerHTML = rows.length ? rows.join("")
     : '<div class="empty">कोई मिलान नहीं मिला</div>';
 
+  $("rDupes").innerHTML = (RECON.dupes || []).length
+    ? '<div class="itemsHead" style="margin-top:0"><span>🔁 यह पहले से दर्ज हैं — दुबारा नहीं जुड़ेंगी</span></div>' +
+      RECON.dupes.slice(0, 40).map(d => `
+      <div class="mrow">
+        <div class="amt ${d.t.type === "credit" ? "in" : "out"}">${INR(d.t.amount)}</div>
+        <div class="mx"><b>${esc(d.t.party || "—")}</b> · ${esc(d.t.date)}
+          <br><span class="badge">${esc(d.why)}</span></div>
+      </div>`).join("") +
+      (RECON.dupes.length > 40 ? `<div class="muted" style="padding:8px 0">… और ${RECON.dupes.length - 40}</div>` : "")
+    : "";
+
   $("rNoBill").innerHTML = RECON.noBill.length ? RECON.noBill.map(m => `
     <div class="mrow"><div class="amt">${INR(m.t.amount)}</div>
       <div class="mx"><b>${esc(m.t.date)}</b> ${esc((m.t.narration || "").slice(0, 60))}
       <br><span class="muted">इसका बिल अभी दर्ज नहीं है</span></div></div>`).join("")
     : '<div class="empty">🎉 सबका बिल मिल गया</div>';
+}
+
+/** One shape for every stored bank row, whatever source it came from. */
+function txnDoc(t, accountId, receiptId, confidence) {
+  return {
+    accountId, date: t.date, time: t.time || null,
+    amount: t.amount, type: t.type,
+    narration: t.narration || "", utr: t.utr || null,
+    party: t.party || null, partyKey: pKey(t.party || t.narration || ""),
+    source: t.source || "statement",
+    matched: !!receiptId, matchedReceiptId: receiptId || null,
+    matchConfidence: receiptId ? confidence : null,
+    billPhotoId: null, aiSummary: null,
+    importedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
 }
 
 async function commitRecon() {
@@ -1304,46 +1444,39 @@ async function commitRecon() {
   try {
     const all = RECON.matched.concat(RECON.maybe);
     const picks = [...document.querySelectorAll("#rMaybe select")];
-    let saved = 0;
+    let saved = 0, linked = 0;
     for (const sel of picks) {
       const m = all[Number(sel.dataset.i)];
       if (!m) continue;
       const id = txnId(RECON.account, m.t);
       const keep = sel.value;                        // "" = owner said no
-      await db.collection("vbe_bank_txns").doc(id).set({
-        accountId: RECON.account, date: m.t.date, amount: m.t.amount, type: m.t.type,
-        narration: m.t.narration, utr: m.t.utr || null,
-        party: m.t.party || null, partyKey: pKey(m.t.party || m.t.narration),
-        matched: !!keep, matchedReceiptId: keep ? m.e.receiptId : null,
-        matchConfidence: keep ? (sel.dataset.sure === "1" ? "high" : "low") : null,
-        importedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      await db.collection("vbe_bank_txns").doc(id).set(
+        txnDoc(m.t, RECON.account, keep ? m.e.receiptId : null,
+               sel.dataset.sure === "1" ? "high" : "low"), { merge: true });
+      saved++;
       if (keep) {
         await db.collection("vbe_expenses").doc(keep)
           .update({ reconciled: true, matchedBankTxnId: id });
-        saved++;
+        linked++;
       }
     }
-    // Debits with no bill still belong in the ledger — that IS the बकाया list.
-    // Credits are income; stored too, so the party view sees both directions.
-    for (const m of RECON.noBill.concat((RECON.txns || []).filter(t => t.type === "credit").map(t => ({ t })))) {
-      const id = txnId(RECON.account, m.t);
-      await db.collection("vbe_bank_txns").doc(id).set({
-        accountId: RECON.account, date: m.t.date, amount: m.t.amount, type: m.t.type,
-        narration: m.t.narration, utr: m.t.utr || null,
-        party: m.t.party || null, partyKey: pKey(m.t.party || m.t.narration),
-        matched: false, matchedReceiptId: null, matchConfidence: null,
-        importedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+    // Unmatched debits (the बकाया list) and every credit are stored too, so the
+    // timeline and party views hold the whole picture, not just matched money.
+    for (const m of RECON.noBill.concat((RECON.credits || []).map((t) => ({ t })))) {
+      await db.collection("vbe_bank_txns").doc(txnId(RECON.account, m.t))
+        .set(txnDoc(m.t, RECON.account, null, null), { merge: true });
+      saved++;
     }
     await db.collection("_audit_logs").add({
       at: firebase.firestore.FieldValue.serverTimestamp(),
       actorTelegramId: "dashboard-" + auth.currentUser.uid,
       action: "reconcile", receiptId: null, before: null,
-      after: { accountId: RECON.account, matched: saved, unmatched: RECON.noBill.length }
+      after: { accountId: RECON.account, saved, linked,
+               skipped: (RECON.dupes || []).length }
     });
     status.className = "ok";
-    status.textContent = `✅ ${saved} बिल मिला दिए · ${RECON.noBill.length} बिना-बिल दर्ज`;
+    status.textContent = `✅ ${saved} entries हमेशा के लिए सहेजीं · ${linked} बिल से जुड़ीं` +
+      ((RECON.dupes || []).length ? ` · 🔁 ${RECON.dupes.length} पहले से थीं (दुबारा नहीं जोड़ीं)` : "");
     await loadData(); renderAll();
   } catch (err) {
     status.className = "bad";
@@ -1354,8 +1487,12 @@ async function commitRecon() {
 }
 
 function initRecon() {
+  // Keep whatever the owner already picked — a refresh after saving must not
+  // silently drop the account and stall the next upload.
+  const keep = $("rAccount").value;
   $("rAccount").innerHTML = '<option value="">— खाता चुनें —</option>' +
     Object.keys(ACCOUNTS).map(id => `<option value="${esc(id)}">${esc(ACCOUNTS[id].label || id)}</option>`).join("");
+  if (keep) $("rAccount").value = keep;
   const zone = $("dropZone").querySelector(".drop");
   $("rFile").onchange = (e) => { if (e.target.files[0]) handleStatementFile(e.target.files[0]); };
   ["dragenter", "dragover"].forEach(ev => zone.addEventListener(ev, (e) => {
@@ -1369,6 +1506,76 @@ function initRecon() {
     if (f) handleStatementFile(f);
   });
 }
+
+/* ══════════ 📜 हिसाब — हर पैसा, समय के हिसाब से ══════════ */
+
+function ledgerRows() {
+  const acc = $("lAccount").value, type = $("lType").value;
+  const days = Number($("lWhen").value), bill = $("lBill").value;
+  const q = $("lSearch").value.trim().toLowerCase();
+  const from = days ? new Date(Date.now() - days * 86400000).toISOString().slice(0, 10) : "";
+
+  return BANKTXNS.filter((t) => {
+    if (acc && t.accountId !== acc) return false;
+    if (type && t.type !== type) return false;
+    if (from && String(t.date) < from) return false;
+    if (bill === "no" && (t.matchedReceiptId || t.billPhotoId)) return false;
+    if (bill === "yes" && !(t.matchedReceiptId || t.billPhotoId)) return false;
+    if (q) {
+      const hay = [t.party, t.narration, t.utr, t.amount, t.date].join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a, b) => String(b.date + (b.time || "")).localeCompare(String(a.date + (a.time || ""))));
+}
+
+function renderLedger() {
+  const rows = ledgerRows();
+  const inSum = rows.filter((t) => t.type === "credit").reduce((a, t) => a + (t.amount || 0), 0);
+  const outSum = rows.filter((t) => t.type === "debit").reduce((a, t) => a + (t.amount || 0), 0);
+  const noBill = rows.filter((t) => t.type === "debit" && !t.matchedReceiptId && !t.billPhotoId).length;
+
+  $("lTiles").innerHTML = [
+    ["🟢 आया", INR(inSum), rows.filter(t => t.type === "credit").length + " entries", "#0ca30c"],
+    ["🔴 गया", INR(outSum), rows.filter(t => t.type === "debit").length + " entries", "#d03b3b"],
+    ["बचा", INR(inSum - outSum), "इस अवधि में", "#3987e5"],
+    ["📎 बिल बाकी", String(noBill), "इन पर बिल लगाना है", "#fab219"]
+  ].map(([k, v, s2, c]) => `
+    <div class="card tile tilt"><div class="k">${k}</div><div class="v">${v}</div>
+      <div class="s">${s2}</div><div class="bar"><i style="width:70%;background:${c}"></i></div></div>`).join("");
+  attachTilt();
+
+  $("ledgerRows").innerHTML = rows.length ? rows.slice(0, 300).map((t) => {
+    const paid = t.type === "debit";
+    const hasBill = t.matchedReceiptId || t.billPhotoId;
+    return `
+    <div class="mrow txn ${paid ? "out" : "in"}">
+      <div class="amt ${paid ? "out" : "in"}">${paid ? "−" : "+"}${INR(t.amount)}</div>
+      <div class="mx">
+        <div class="pname">${esc(t.party || "—")}</div>
+        <span class="muted">${esc(t.date)}${t.time ? " · " + esc(t.time) : ""} ·
+          ${esc(accLabel(t.accountId))}</span>
+        ${t.utr ? `<br><span class="muted">UTR ${esc(t.utr)}</span>` : ""}
+        ${t.aiSummary ? `<br><span class="badge">🧠 ${esc(t.aiSummary)}</span>` : ""}
+        <div style="margin-top:7px">
+          ${hasBill
+            ? `<span class="badge hi">✅ ${esc(t.matchedReceiptId || "बिल लगा")}</span>`
+            : `<button type="button" class="mini" onclick="openBillFor('${esc(t._id)}')">📎 बिल जोड़ें</button>`}
+        </div>
+      </div>
+    </div>`;
+  }).join("") : '<div class="empty">इस filter में कुछ नहीं</div>';
+}
+
+function initLedger() {
+  const keep = $("lAccount").value;
+  $("lAccount").innerHTML = '<option value="">सारे खाते</option>' +
+    Object.keys(ACCOUNTS).map((id) => `<option value="${esc(id)}">${esc(accLabel(id))}</option>`).join("");
+  if (keep) $("lAccount").value = keep;
+  renderLedger();
+}
+["lAccount", "lType", "lWhen", "lBill", "lSearch"].forEach((id) =>
+  $(id).addEventListener("input", renderLedger));
 
 /* ══════════ 🧑 पार्टी — एक ही नाम, सारे खाते, सारा इतिहास ══════════
    बिल और बैंक दोनों तरफ़ से जोड़कर, ताकि किसी को चार अलग खातों से पैसा गया
@@ -1478,6 +1685,138 @@ function initParties() {
   renderParties();
 }
 ["pSearch", "pSort"].forEach(id => $(id).addEventListener("input", renderParties));
+
+/* ══════════ 📎 बिल जोड़ना + 🧠 Gemini ══════════
+   चाबी कभी code में नहीं — Firestore के owner-only doc से आती है, इसलिए
+   public repo में कुछ नहीं जाता। बैंक का डेटा AI को कभी नहीं भेजा जाता,
+   सिर्फ़ बिल की फोटो। */
+
+let GEMINI_KEY = null, BILL_TXN = null, BILL_DATA = null, BILL_PARSED = null;
+
+async function loadAppConfig() {
+  try {
+    const d = await db.collection("vbe_meta").doc("app_config").get();
+    GEMINI_KEY = d.exists ? (d.data().geminiKey || null) : null;
+  } catch (e) { GEMINI_KEY = null; }
+}
+
+/** Shrink to something a phone uploads quickly and Firestore can hold. */
+function shrinkImage(file, maxSide = 1400, quality = 0.72) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/jpeg", quality));
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+const BILL_PROMPT =
+  'You read Indian purchase bills. Return STRICT JSON only: ' +
+  '{"vendor":string|null,"billDate":"YYYY-MM-DD"|null,"total":number|null,' +
+  '"items":[{"name":string,"qty":number|null,"rate":number|null,"amount":number|null}],' +
+  '"summary":string}. summary is ONE short Hindi line naming what was bought. ' +
+  'Use null when unreadable. Amounts are plain numbers.';
+
+async function readBillWithAI(dataUrl) {
+  if (!GEMINI_KEY) return null;
+  const model = "gemini-2.5-flash";
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { text: BILL_PROMPT },
+          { inline_data: { mime_type: "image/jpeg", data: dataUrl.split(",")[1] } }
+        ] }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0 }
+      })
+    });
+  if (!res.ok) throw new Error("AI " + res.status);
+  const body = await res.json();
+  const text = (((body.candidates || [])[0] || {}).content || {}).parts
+    .map((p) => p.text || "").join("");
+  return JSON.parse(text.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, ""));
+}
+
+function openBillFor(txnId) {
+  BILL_TXN = BANKTXNS.filter((t) => t._id === txnId)[0];
+  if (!BILL_TXN) return;
+  BILL_DATA = null; BILL_PARSED = null;
+  $("bmPreview").hidden = true;
+  $("bmAI").textContent = GEMINI_KEY ? "" : "(AI बंद है — बिल फिर भी जुड़ जाएगा)";
+  $("bmSave").disabled = true;
+  $("bmTxn").innerHTML = `<b class="pname">${esc(BILL_TXN.party || "—")}</b>
+    ${INR(BILL_TXN.amount)} · ${esc(BILL_TXN.date)} · ${esc(accLabel(BILL_TXN.accountId))}`;
+  $("billModal").hidden = false;
+}
+function closeBill() { $("billModal").hidden = true; }
+
+$("bmFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const ai = $("bmAI");
+  ai.className = "muted"; ai.textContent = "फोटो तैयार कर रहा हूँ…";
+  try {
+    BILL_DATA = await shrinkImage(f);
+    $("bmPreview").src = BILL_DATA;
+    $("bmPreview").hidden = false;
+    $("bmSave").disabled = false;
+    if (GEMINI_KEY) {
+      ai.textContent = "🧠 AI बिल पढ़ रहा है…";
+      BILL_PARSED = await readBillWithAI(BILL_DATA);
+      ai.className = "ok";
+      ai.textContent = "🧠 " + (BILL_PARSED.summary || "पढ़ लिया") +
+        (BILL_PARSED.total != null ? ` · कुल ${INR(BILL_PARSED.total)}` : "");
+    }
+  } catch (err) {
+    ai.className = "bad";
+    ai.textContent = "AI नहीं पढ़ पाया (बिल फिर भी जुड़ जाएगा): " + err.message;
+  }
+});
+
+async function saveBill() {
+  const btn = $("bmSave"), ai = $("bmAI");
+  if (!BILL_TXN || !BILL_DATA) return;
+  btn.disabled = true;
+  ai.className = "muted"; ai.textContent = "जोड़ रहा हूँ…";
+  try {
+    const photoId = BILL_TXN._id;
+    await db.collection("vbe_bill_photos").doc(photoId).set({
+      dataUrl: BILL_DATA, txnId: BILL_TXN._id,
+      at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const patch = {
+      billPhotoId: photoId,
+      aiSummary: (BILL_PARSED && BILL_PARSED.summary) || null,
+      billVendor: (BILL_PARSED && BILL_PARSED.vendor) || null,
+      billTotal: (BILL_PARSED && BILL_PARSED.total) != null ? BILL_PARSED.total : null,
+      billItems: (BILL_PARSED && BILL_PARSED.items) || []
+    };
+    await db.collection("vbe_bank_txns").doc(BILL_TXN._id).update(patch);
+    await db.collection("_audit_logs").add({
+      at: firebase.firestore.FieldValue.serverTimestamp(),
+      actorTelegramId: "dashboard-" + auth.currentUser.uid,
+      action: "attach_bill", receiptId: null, before: null,
+      after: { txnId: BILL_TXN._id, amount: BILL_TXN.amount, party: BILL_TXN.party }
+    });
+    Object.assign(BILL_TXN, patch);
+    closeBill();
+    renderLedger();
+    initParties();
+  } catch (err) {
+    ai.className = "bad";
+    ai.textContent = "नहीं जुड़ा: " + err.message;
+    btn.disabled = false;
+  }
+}
 
 /* ── Tabs + 3D tilt ── */
 $("tabs").addEventListener("click", e => {
