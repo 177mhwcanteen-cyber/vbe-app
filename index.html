@@ -183,6 +183,23 @@
   .pname { font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: .2px; margin-bottom: 2px; }
   button.mini { padding: 6px 12px; font-size: 12px; border-radius: 9px; }
 
+  /* AI capture buttons */
+  .aiRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .aiBtn { display: flex; align-items: center; gap: 10px; text-align: left; padding: 14px;
+    border-radius: 14px; border: 1px solid var(--border); line-height: 1.25; }
+  .aiBtn .ico { font-size: 22px; }
+  .aiBtn small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+  .aiBtn.bill { background: linear-gradient(160deg, rgba(57,135,229,.28), rgba(57,135,229,.08)); border-color: rgba(57,135,229,.45); }
+  .aiBtn.recv { background: linear-gradient(160deg, rgba(25,158,112,.28), rgba(25,158,112,.08)); border-color: rgba(25,158,112,.45); }
+  .shots { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .shots img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); }
+  .hint { display: block; font-size: 11.5px; margin-top: 3px; }
+  .hint.up { color: #ff9d9d; } .hint.down { color: #7de07d; } .hint.same { color: var(--muted); }
+  .thinking { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--s1); margin-right: 6px; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
+  .card.vcard { background: linear-gradient(150deg, rgba(57,135,229,.18), rgba(213,81,129,.10)); }
+
   /* बिल जोड़ने का पर्दा */
   /* A class-level display: grid beats [hidden], so say it explicitly —
      otherwise the closed modal keeps covering (and swallowing taps on) the app. */
@@ -269,6 +286,17 @@
     <section class="view" id="v-add">
       <div class="card form tilt">
         <h3 style="margin-bottom:14px">➕ नया खर्चा जोड़ें</h3>
+        <div class="aiRow">
+          <input type="file" id="aBillFile" accept="image/*" capture="environment" hidden>
+          <input type="file" id="aRecvFile" accept="image/*" capture="environment" hidden>
+          <button type="button" class="aiBtn bill" onclick="document.getElementById('aBillFile').click()">
+            <span class="ico">🧾</span><span>बिल की फोटो<small>AI पढ़कर भर देगा</small></span></button>
+          <button type="button" class="aiBtn recv" onclick="document.getElementById('aRecvFile').click()">
+            <span class="ico">💳</span><span>पेमेंट रसीद<small>UTR अपने-आप</small></span></button>
+        </div>
+        <div id="aAiMsg" class="muted" style="margin-bottom:10px"></div>
+        <div id="aShots" class="shots"></div>
+
         <div class="frow">
           <label>दुकान / पार्टी<input id="aVendor" placeholder="जैसे: राम सब्ज़ी भंडार"></label>
           <label>तारीख<input id="aDate" type="date"></label>
@@ -290,8 +318,10 @@
           <label>कुल ₹<input id="aTotal" type="number" inputmode="decimal" placeholder="अपने-आप जुड़ जाएगा"></label>
           <label>बिल नं. (optional)<input id="aInvoice" placeholder="—"></label>
         </div>
-        <label style="display:block;margin-top:10px">टिप्पणी (optional)
-          <input id="aNote" placeholder="जैसे: challan 42"></label>
+        <div class="frow">
+          <label>UTR / Ref (रसीद से)<input id="aUtr" placeholder="अपने-आप भरेगा"></label>
+          <label>टिप्पणी<input id="aNote" placeholder="जैसे: challan 42"></label>
+        </div>
 
         <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
           <button class="primary" id="aSave" onclick="saveEntry()">💾 दर्ज करें</button>
@@ -550,6 +580,11 @@ async function loadData() {
     .map(d => ({ id: d.id, ...d.data() }))
     .sort((a, b) => String(a.canonicalName).localeCompare(String(b.canonicalName), "hi"));
   BANKTXNS = bankSnap.docs.map(d => Object.assign({ _id: d.id }, d.data()));
+  try {
+    const vs = await db.collection("vbe_parties").limit(500).get();
+    VCARDS = {};
+    vs.docs.forEach(d => { VCARDS[d.id] = d.data(); });
+  } catch (e) { VCARDS = {}; }
   MISSING = BANKTXNS.filter(t => t.type === "debit" && !t.matched)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
@@ -862,12 +897,12 @@ function addItemRow(it) {
   d.className = "irow";
   d.innerHTML = `
     <input placeholder="सामान" class="iName" value="${it ? esc(it.name) : ""}">
-    <input placeholder="मात्रा" class="iQty" type="number" inputmode="decimal" step="any">
-    <input placeholder="इकाई (kg)" class="iUnit">
-    <input placeholder="रेट ₹" class="iRate" type="number" inputmode="decimal" step="any">
+    <input placeholder="मात्रा" class="iQty" type="number" inputmode="decimal" step="any" value="${it && it.qty != null ? it.qty : ""}">
+    <input placeholder="इकाई" class="iUnit" value="${it && it.unit ? esc(it.unit) : ""}">
+    <input placeholder="रेट ₹" class="iRate" type="number" inputmode="decimal" step="any" value="${it && it.rate != null ? it.rate : ""}">
     <button type="button" title="हटाएँ">✕</button>`;
   d.querySelector("button").onclick = () => { d.remove(); recalcTotal(); };
-  d.querySelectorAll("input").forEach(i => i.addEventListener("input", recalcTotal));
+  d.querySelectorAll("input").forEach(i => i.addEventListener("input", () => { recalcTotal(); priceHints(); }));
   $("aItems").appendChild(d);
 }
 
@@ -919,10 +954,12 @@ function initEntryForm() {
 }
 
 function resetEntry() {
-  ["aVendor", "aTotal", "aInvoice", "aNote"].forEach(id => $(id).value = "");
+  ["aVendor", "aTotal", "aInvoice", "aNote", "aUtr"].forEach(id => $(id).value = "");
+  ENTRY_SHOTS = { bill: null, receipt: null };
+  showShots();
+  aiSay("");
   $("aItems").innerHTML = "";
   addItemRow(); addItemRow();
-  $("aMsg").textContent = "";
 }
 
 function fyLabel(d) {
@@ -972,6 +1009,23 @@ async function saveEntry() {
       statusHistory: [{ status: "pending", at: firebase.firestore.Timestamp.fromDate(when), by: "dashboard" }]
     };
 
+    // Photos live in Drive (Firebase's free tier is not for images); the app
+    // only keeps the link.
+    if (ENTRY_SHOTS.bill || ENTRY_SHOTS.receipt) {
+      msg.textContent = "फोटो Drive में भेज रहा हूँ…";
+      if (ENTRY_SHOTS.bill) {
+        const up = await driveUpload(ENTRY_SHOTS.bill, docId + "_bill");
+        if (up.ok) rec.billPhotoDriveUrl = up.url;
+      }
+      if (ENTRY_SHOTS.receipt) {
+        const up = await driveUpload(ENTRY_SHOTS.receipt, docId + "_receipt");
+        if (up.ok) rec.paymentPhotoDriveUrl = up.url;
+      }
+    }
+    const utr = $("aUtr").value.trim();
+    if (utr) rec.payment = { mode: "upi", paidToName: vendorName || null,
+      amount: total, upiRef: utr, paidAt: $("aDate").value || null };
+
     await db.collection("vbe_expenses").doc(docId).set(rec);
     await db.collection("_audit_logs").add({
       at: firebase.firestore.FieldValue.serverTimestamp(),
@@ -980,9 +1034,25 @@ async function saveEntry() {
       after: { status: rec.status, source: "dashboard" }
     });
 
-    msg.className = "ok";
-    msg.textContent = `✅ दर्ज हो गया — ${receiptId}`;
+    // A card on Telegram, so the entry is on the owner's phone forever.
+    tgNotify(
+      `✅ <b>नई एंट्री दर्ज</b>\n` +
+      `🧾 <b>${receiptId}</b>\n` +
+      (vendorName ? `🏪 ${vendorName}\n` : "") +
+      (total != null ? `💰 <b>₹${total}</b>\n` : "") +
+      (items.length ? items.slice(0, 6).map(i =>
+        `• ${i.name}${i.qty != null ? " — " + i.qty + (i.unit || "") : ""}${i.rate != null ? " @₹" + i.rate : ""}`).join("\n") + "\n" : "") +
+      (rec.unit ? `🏷️ ${rec.unit}\n` : "") +
+      (utr ? `🔗 UTR ${utr}\n` : "") +
+      (rec.billPhotoDriveUrl ? `📷 <a href="${rec.billPhotoDriveUrl}">बिल</a>  ` : "") +
+      (rec.paymentPhotoDriveUrl ? `💳 <a href="${rec.paymentPhotoDriveUrl}">रसीद</a>` : "")
+    );
+
     resetEntry();
+    // After the reset, so the confirmation survives — clearing the form used to
+    // wipe this very line.
+    msg.className = "ok";
+    msg.textContent = `✅ दर्ज हो गया — ${receiptId} · Telegram पर भी भेज दिया`;
     await loadData();
     renderAll();
   } catch (err) {
@@ -1594,6 +1664,144 @@ function initRecon() {
   });
 }
 
+/* ══════════ 🧠 AI से entry — बिल + रसीद पढ़कर, सब सुधारने लायक ══════════ */
+
+let ENTRY_SHOTS = { bill: null, receipt: null };   // data URLs, uploaded on save
+
+const RECEIPT_PROMPT =
+  'You read Indian UPI/bank payment receipts (PhonePe, GPay, Paytm, bank apps). ' +
+  'Return STRICT JSON only: {"paidTo":string|null,"amount":number|null,' +
+  '"utr":string|null,"paidAt":"YYYY-MM-DD"|null,"mode":string|null,"summary":string}. ' +
+  'utr is the UTR / UPI transaction / reference number exactly as printed. ' +
+  'summary is ONE short Hindi line. null for anything unreadable.';
+
+async function askGemini(prompt, dataUrl) {
+  if (!GEMINI_KEY) throw new Error("AI की चाबी नहीं मिली (vbe_meta/app_config)");
+  const parts = [{ text: prompt }];
+  if (dataUrl) parts.push({ inline_data: { mime_type: "image/jpeg", data: dataUrl.split(",")[1] } });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+    { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0 } }) });
+  if (!res.ok) throw new Error("AI " + res.status);
+  const body = await res.json();
+  const text = (((body.candidates || [])[0] || {}).content || {}).parts.map(p => p.text || "").join("");
+  return JSON.parse(text.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, ""));
+}
+
+function showShots() {
+  $("aShots").innerHTML = ["bill", "receipt"].filter(k => ENTRY_SHOTS[k])
+    .map(k => `<img src="${ENTRY_SHOTS[k]}" title="${k === "bill" ? "बिल" : "रसीद"}">`).join("");
+}
+function aiSay(html, cls) { $("aAiMsg").className = cls || "muted"; $("aAiMsg").innerHTML = html; }
+
+/** Bill photo → vendor, items, total. Every field stays editable afterwards. */
+$("aBillFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  aiSay('<span class="thinking"></span> बिल पढ़ रहा हूँ…');
+  try {
+    ENTRY_SHOTS.bill = await shrinkImage(f);
+    showShots();
+    const r = await askGemini(BILL_PROMPT, ENTRY_SHOTS.bill);
+    if (r.vendor) $("aVendor").value = r.vendor;
+    if (r.billDate) $("aDate").value = r.billDate;
+    if (r.total != null) $("aTotal").value = r.total;
+    if (r.items && r.items.length) {
+      $("aItems").innerHTML = "";
+      r.items.forEach((it) => addItemRow(it));
+      recalcTotal();
+      if (r.total != null) $("aTotal").value = r.total;
+    }
+    aiSay("✅ " + esc(r.summary || "बिल पढ़ लिया") +
+      " — <b>नीचे जाँचकर सुधार लें</b>, फिर दर्ज करें", "ok");
+    priceHints();
+  } catch (err) {
+    aiSay("AI नहीं पढ़ पाया: " + esc(err.message) + " — हाथ से भर सकते हैं", "bad");
+  }
+});
+
+/** Receipt photo → UTR, party, amount. This is what makes a bill permanent. */
+$("aRecvFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  aiSay('<span class="thinking"></span> रसीद पढ़ रहा हूँ…');
+  try {
+    ENTRY_SHOTS.receipt = await shrinkImage(f);
+    showShots();
+    const r = await askGemini(RECEIPT_PROMPT, ENTRY_SHOTS.receipt);
+    if (r.utr) $("aUtr").value = r.utr;
+    if (r.paidTo && !$("aVendor").value) $("aVendor").value = r.paidTo;
+    if (r.amount != null && !$("aTotal").value) $("aTotal").value = r.amount;
+    if (r.paidAt) $("aDate").value = r.paidAt;
+    aiSay("✅ " + esc(r.summary || "रसीद पढ़ ली") +
+      (r.utr ? ` · UTR <b>${esc(r.utr)}</b>` : ""), "ok");
+  } catch (err) {
+    aiSay("रसीद नहीं पढ़ पाया: " + esc(err.message), "bad");
+  }
+});
+
+/**
+ * What did this item cost last time, and from whom? Straight out of the data —
+ * no model call, so it appears the moment a name is typed or read.
+ */
+function lastPriceOf(name) {
+  const k = pKey(name);
+  if (!k) return null;
+  let best = null;
+  EXP.forEach((e) => (e.items || []).forEach((it) => {
+    if (pKey(it.name) !== k || it.rate == null) return;
+    const d = String(e.billDate || e.submittedAt || "").slice(0, 10);
+    if (!best || d > best.date) best = { date: d, rate: it.rate, party: (e.vendor || {}).name || "" };
+  }));
+  return best;
+}
+
+function priceHints() {
+  document.querySelectorAll("#aItems .irow").forEach((row) => {
+    const name = row.querySelector(".iName").value.trim();
+    const rate = parseFloat(row.querySelector(".iRate").value);
+    let el = row.querySelector(".hint");
+    const prev = lastPriceOf(name);
+    if (!prev) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("span");
+      el.className = "hint";
+      row.querySelector(".iName").after(el);
+    }
+    if (isNaN(rate)) {
+      el.className = "hint same";
+      el.textContent = `पिछली बार ₹${prev.rate}${prev.party ? " — " + prev.party : ""}`;
+      return;
+    }
+    const diff = Math.round((rate - prev.rate) / prev.rate * 100);
+    el.className = "hint " + (diff > 4 ? "up" : diff < -4 ? "down" : "same");
+    el.textContent = diff > 4
+      ? `⚠️ पिछली बार ₹${prev.rate}${prev.party ? " (" + prev.party + ")" : ""} — आज ${diff}% ज़्यादा`
+      : diff < -4
+      ? `👍 पिछली बार ₹${prev.rate} — आज ${Math.abs(diff)}% सस्ता`
+      : `पिछली बार भी लगभग ₹${prev.rate}`;
+  });
+}
+
+/* ══════════ ☁️ Drive + 📣 Telegram — bot के ज़रिए ══════════ */
+
+async function botCall(action, payload) {
+  const cfg = APP_CFG || {};
+  if (!cfg.appsUrl || !cfg.webhookToken) return { ok: false, error: "bot bridge not configured" };
+  try {
+    const res = await fetch(`${cfg.appsUrl}?action=${action}&token=${encodeURIComponent(cfg.webhookToken)}`,
+      { method: "POST", body: JSON.stringify(payload) });   // text/plain avoids preflight
+    return await res.json();
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+const driveUpload = (dataUrl, name) => botCall("upload", { dataUrl, name });
+const tgNotify = (text) => botCall("notify", { text });
+
 /* ══════════ 📜 हिसाब — हर पैसा, समय के हिसाब से ══════════ */
 
 function ledgerRows() {
@@ -1715,7 +1923,7 @@ function buildParties() {
   return map;
 }
 
-let PARTIES = {};
+let PARTIES = {}, VCARDS = {};
 const accLabel = (id) => (ACCOUNTS[id] && ACCOUNTS[id].label) || id || "—";
 
 function renderParties() {
@@ -1762,6 +1970,7 @@ function showParty(key) {
       <div class="card tile"><div class="k">आख़िरी</div><div class="v" style="font-size:18px">${esc(p.last || "—")}</div>
         <div class="s">${accs.length} खाते से</div></div>
     </div>
+    <div id="vcardBox"></div>
     ${p.rows.slice(0, 200).map(r => `
       <div class="mrow">
         <div class="amt">${INR(r.amount)}</div>
@@ -1773,6 +1982,89 @@ function showParty(key) {
           ${r.narration ? '<br><span class="muted">' + esc(String(r.narration).slice(0, 70)) + "</span>" : ""}
         </div>
       </div>`).join("")}`;
+  renderVcard(p);
+}
+
+/* ══════════ 💼 बिज़नेस कार्ड — कॉल, WhatsApp, GSTIN ══════════ */
+
+const VCARD_PROMPT =
+  'You read Indian business cards and shop bills for contact details. Return ' +
+  'STRICT JSON only: {"firm":string|null,"person":string|null,"phone":string|null,' +
+  '"gstin":string|null,"address":string|null}. phone is digits only (10 digits ' +
+  'if Indian mobile). null for anything not printed.';
+
+let VCARD_PARTY = null;
+
+function renderVcard(p) {
+  VCARD_PARTY = p;
+  const c = (VCARDS && VCARDS[p.key]) || null;
+  const box = $("vcardBox");
+  if (!c) {
+    box.innerHTML = `
+      <div class="card vcard" style="margin-bottom:10px">
+        <div class="muted">इस पार्टी का बिज़नेस कार्ड नहीं है</div>
+        <input type="file" id="vcFile" accept="image/*" capture="environment" hidden>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button type="button" class="primary mini" onclick="document.getElementById('vcFile').click()">
+            📇 कार्ड की फोटो — AI भर देगा</button>
+          <button type="button" class="mini" onclick="editVcard()">✍️ हाथ से भरें</button>
+        </div>
+        <div id="vcMsg" class="muted" style="margin-top:8px"></div>
+      </div>`;
+    $("vcFile").addEventListener("change", vcardFromPhoto);
+    return;
+  }
+  const wa = c.phone ? String(c.phone).replace(/\D/g, "").slice(-10) : "";
+  box.innerHTML = `
+    <div class="card vcard" style="margin-bottom:10px">
+      <div class="pname">${esc(c.firm || p.name)}</div>
+      ${c.person ? `<div class="muted">${esc(c.person)}</div>` : ""}
+      ${c.gstin ? `<div class="muted">GSTIN: ${esc(c.gstin)}</div>` : ""}
+      ${c.address ? `<div class="muted">${esc(c.address)}</div>` : ""}
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        ${wa ? `<a class="badge hi" style="padding:8px 14px" href="tel:+91${wa}">📞 कॉल</a>
+                <a class="badge hi" style="padding:8px 14px" target="_blank"
+                   href="https://wa.me/91${wa}?text=${encodeURIComponent("नमस्ते " + (c.firm || p.name) + " जी, विक्रम चरण — VBE बाड़मेर")}">💬 WhatsApp</a>` : ""}
+        <button type="button" class="mini" onclick="editVcard()">✍️ सुधारें</button>
+      </div>
+    </div>`;
+}
+
+async function vcardFromPhoto(e) {
+  const f = e.target.files[0];
+  if (!f || !VCARD_PARTY) return;
+  const m = $("vcMsg");
+  m.className = "muted"; m.innerHTML = '<span class="thinking"></span> कार्ड पढ़ रहा हूँ…';
+  try {
+    const img = await shrinkImage(f);
+    const r = await askGemini(VCARD_PROMPT, img);
+    const up = await driveUpload(img, "card_" + VCARD_PARTY.key);
+    await saveVcard(Object.assign({}, r, { cardUrl: up.ok ? up.url : null }));
+  } catch (err) {
+    m.className = "bad"; m.textContent = "नहीं पढ़ पाया: " + err.message;
+  }
+}
+
+function editVcard() {
+  const c = (VCARDS && VCARDS[VCARD_PARTY.key]) || {};
+  const firm = prompt("फर्म का नाम", c.firm || VCARD_PARTY.name);
+  if (firm === null) return;
+  const person = prompt("व्यक्ति का नाम", c.person || "") || "";
+  const phone = prompt("मोबाइल नंबर", c.phone || "") || "";
+  const gstin = prompt("GSTIN", c.gstin || "") || "";
+  const address = prompt("पता", c.address || "") || "";
+  saveVcard({ firm, person, phone, gstin, address });
+}
+
+async function saveVcard(data) {
+  const key = VCARD_PARTY.key;
+  const doc = Object.assign({ partyKey: key, name: VCARD_PARTY.name,
+    at: firebase.firestore.FieldValue.serverTimestamp() }, data);
+  await db.collection("vbe_parties").doc(key).set(doc, { merge: true });
+  VCARDS[key] = doc;
+  renderVcard(VCARD_PARTY);
+  tgNotify(`💼 <b>बिज़नेस कार्ड सहेजा</b>\n${data.firm || VCARD_PARTY.name}` +
+    (data.phone ? `\n📞 ${data.phone}` : "") + (data.gstin ? `\nGSTIN ${data.gstin}` : ""));
 }
 
 function initParties() {
@@ -1786,13 +2078,14 @@ function initParties() {
    public repo में कुछ नहीं जाता। बैंक का डेटा AI को कभी नहीं भेजा जाता,
    सिर्फ़ बिल की फोटो। */
 
-let GEMINI_KEY = null, BILL_TXN = null, BILL_DATA = null, BILL_PARSED = null;
+let GEMINI_KEY = null, APP_CFG = null, BILL_TXN = null, BILL_DATA = null, BILL_PARSED = null;
 
 async function loadAppConfig() {
   try {
     const d = await db.collection("vbe_meta").doc("app_config").get();
-    GEMINI_KEY = d.exists ? (d.data().geminiKey || null) : null;
-  } catch (e) { GEMINI_KEY = null; }
+    APP_CFG = d.exists ? d.data() : {};
+    GEMINI_KEY = APP_CFG.geminiKey || null;
+  } catch (e) { APP_CFG = {}; GEMINI_KEY = null; }
 }
 
 /** Shrink to something a phone uploads quickly and Firestore can hold. */
