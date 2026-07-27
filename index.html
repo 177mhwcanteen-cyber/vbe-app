@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>VBE खरीद-हिसाब Dashboard</title>
+<style>
+  /* ── Palette (validated: dataviz reference, dark mode) ─────────────── */
+  :root {
+    color-scheme: dark;
+    --page:        #0d0d0d;
+    --surface:     #1a1a19;
+    --surface-2:   #222221;
+    --ink:         #ffffff;
+    --ink-2:       #c3c2b7;
+    --muted:       #898781;
+    --grid:        #2c2c2a;
+    --border:      rgba(255,255,255,0.10);
+    --s1: #3987e5;  /* blue    */
+    --s2: #008300;  /* green   */
+    --s3: #d55181;  /* magenta */
+    --s4: #c98500;  /* yellow  */
+    --s5: #199e70;  /* aqua    */
+    --good:     #0ca30c;
+    --warning:  #fab219;
+    --serious:  #ec835a;
+    --critical: #d03b3b;
+    --glow-a: rgba(57,135,229,0.22);
+    --glow-b: rgba(213,81,129,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page);
+    color: var(--ink);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(1100px 500px at 85% -10%, var(--glow-a), transparent 60%),
+      radial-gradient(900px 500px at -10% 40%, var(--glow-b), transparent 55%);
+    background-attachment: fixed;
+  }
+  a { color: var(--s1); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── 3D glass cards ────────────────────────────────────────────────── */
+  .card {
+    background: linear-gradient(160deg, rgba(255,255,255,0.055), rgba(255,255,255,0.015));
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.06) inset,
+      0 12px 30px rgba(0,0,0,0.45),
+      0 2px 6px rgba(0,0,0,0.35);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 18px;
+  }
+  .tilt { transform-style: preserve-3d; transition: transform .18s ease, box-shadow .18s ease; will-change: transform; }
+  .tilt:hover { box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 22px 44px rgba(0,0,0,0.55), 0 4px 10px rgba(0,0,0,0.4); }
+  @media (prefers-reduced-motion: reduce) { .tilt { transition: none !important; transform: none !important; } }
+
+  /* ── Layout ────────────────────────────────────────────────────────── */
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 18px 14px 60px; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 44px; height: 44px; border-radius: 13px; flex: 0 0 auto;
+    background: conic-gradient(from 210deg, #3987e5, #d55181, #c98500, #3987e5);
+    box-shadow: 0 6px 18px rgba(57,135,229,0.45), 0 0 0 1px rgba(255,255,255,0.12) inset;
+    display: grid; place-items: center; font-size: 21px;
+  }
+  .brand h1 { font-size: 18px; letter-spacing: .2px; }
+  .brand small { color: var(--muted); font-size: 12px; display: block; font-weight: 400; }
+  #userBox { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; }
+  #userBox button { font-size: 12px; }
+
+  button {
+    font: inherit; color: var(--ink); cursor: pointer;
+    background: var(--surface-2); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 10px;
+  }
+  button.primary {
+    background: linear-gradient(160deg, #3987e5, #256abf);
+    border-color: rgba(255,255,255,0.18);
+    box-shadow: 0 8px 20px rgba(57,135,229,0.35);
+    font-weight: 600;
+  }
+
+  /* Tabs */
+  nav.tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px; -webkit-overflow-scrolling: touch; }
+  nav.tabs button { white-space: nowrap; border-radius: 999px; padding: 8px 16px; color: var(--ink-2); }
+  nav.tabs button.active {
+    color: #fff; background: linear-gradient(160deg, rgba(57,135,229,.35), rgba(57,135,229,.12));
+    border-color: rgba(57,135,229,.5); font-weight: 600;
+  }
+  .view { display: none; animation: rise .25s ease; }
+  .view.active { display: block; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* Stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .tile .k { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .tile .v { font-size: 26px; font-weight: 700; line-height: 1.1; }
+  .tile .s { color: var(--ink-2); font-size: 12px; margin-top: 4px; }
+  .tile .bar { height: 3px; border-radius: 2px; margin-top: 10px; background: var(--grid); overflow: hidden; }
+  .tile .bar i { display: block; height: 100%; border-radius: 2px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .chartCard h3 { font-size: 13px; color: var(--ink-2); font-weight: 600; margin-bottom: 10px; }
+  .chartBox { position: relative; height: 240px; }
+  .chartCard { margin-bottom: 12px; }
+
+  /* Filters + table */
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .filters select, .filters input {
+    font: inherit; color: var(--ink); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; min-width: 120px;
+  }
+  .filters input { flex: 1; min-width: 150px; }
+  .tableWrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:hover td { background: rgba(255,255,255,0.025); }
+
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); }
+  .chip i { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+  .chip.pending    i { background: var(--warning); }
+  .chip.approved   i { background: var(--s1); }
+  .chip.reimbursed i { background: var(--good); }
+  .chip.delivered  i { background: var(--s5); }
+  .chip.rejected   i { background: var(--critical); }
+
+  .flagRow { display: flex; gap: 10px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid var(--grid); }
+  .flagRow .fi { font-size: 17px; line-height: 1.2; }
+  .flagRow .ft { font-size: 13px; color: var(--ink-2); }
+  .flagRow .ft b { color: var(--ink); }
+  .muted { color: var(--muted); font-size: 12.5px; }
+
+  /* Entry form */
+  .form label { display: block; font-size: 12px; color: var(--muted); }
+  .form input, .form select {
+    display: block; width: 100%; margin-top: 5px; font: inherit; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .form input:focus, .form select:focus { outline: 2px solid var(--s1); outline-offset: 1px; }
+  .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  @media (max-width: 560px) { .frow { grid-template-columns: 1fr; } }
+  .itemsHead { display: flex; justify-content: space-between; align-items: center;
+    margin: 16px 0 8px; font-size: 12px; color: var(--muted); }
+  .itemsHead button { padding: 5px 12px; font-size: 12px; border-radius: 8px; }
+  .irow { display: grid; grid-template-columns: 2fr 0.8fr 0.9fr 0.9fr auto; gap: 8px; margin-bottom: 8px; }
+  @media (max-width: 560px) { .irow { grid-template-columns: 1fr 1fr; } }
+  .irow button { padding: 8px 10px; border-radius: 10px; color: var(--muted); }
+  .ok { color: var(--good); } .bad { color: var(--critical); }
+
+  /* मिलान (reconciliation) */
+  .drop { text-align: center; padding: 26px 10px; border: 2px dashed var(--border); border-radius: 14px; transition: border-color .2s, background .2s; }
+  .drop.over { border-color: var(--s1); background: rgba(57,135,229,.08); }
+  .drop .dicon { font-size: 40px; line-height: 1; margin-bottom: 10px; }
+  .drop h3 { font-size: 15px; margin-bottom: 6px; }
+  .mrow { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--grid); }
+  .mrow:last-child { border-bottom: 0; }
+  .mrow .mx { flex: 1; font-size: 13px; color: var(--ink-2); }
+  .mrow .mx b { color: var(--ink); }
+  .mrow .amt { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+  .mrow select { font: inherit; color: var(--ink); background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 7px 9px; margin-top: 6px; max-width: 100%; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); white-space: nowrap; }
+  .badge.hi { color: #fff; background: rgba(12,163,12,.25); border-color: rgba(12,163,12,.5); }
+  .badge.lo { color: #fff; background: rgba(250,178,25,.22); border-color: rgba(250,178,25,.5); }
+  .empty { color: var(--muted); padding: 26px 0; text-align: center; }
+
+  /* Login / gate screens */
+  .gate { max-width: 420px; margin: 12vh auto 0; text-align: center; padding: 34px 26px; }
+  .gate .logo { width: 64px; height: 64px; font-size: 30px; margin: 0 auto 16px; border-radius: 18px; }
+  .gate h2 { margin-bottom: 6px; }
+  .gate p { color: var(--ink-2); font-size: 13.5px; margin-bottom: 18px; }
+  .gate code { background: var(--surface-2); padding: 3px 8px; border-radius: 7px; font-size: 12.5px; word-break: break-all; display: inline-block; margin-top: 8px; }
+  .spin { width: 26px; height: 26px; margin: 0 auto; border-radius: 50%; border: 3px solid var(--grid); border-top-color: var(--s1); animation: sp 1s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  footer { color: var(--muted); font-size: 11.5px; text-align: center; margin-top: 26px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">🧾</div>
+      <div>
+        <h1>VBE खरीद-हिसाब<small>Vande Bharat Enterprises · Barmer</small></h1>
+      </div>
+    </div>
+    <div id="userBox" hidden>
+      <span id="userName"></span>
+      <button onclick="signOut()">Logout</button>
+    </div>
+  </header>
+
+  <div id="gateLoading" class="card gate"><div class="spin"></div><p style="margin-top:14px">लोड हो रहा है…</p></div>
+
+  <div id="gateLogin" class="card gate" hidden>
+    <div class="logo">🧾</div>
+    <h2>VBE Dashboard</h2>
+    <p>सिर्फ़ authorized owner के लिए। Google से sign-in करें।</p>
+    <button class="primary" onclick="signIn()">Google से Sign in</button>
+  </div>
+
+  <div id="gateDenied" class="card gate" hidden>
+    <div class="logo">⛔</div>
+    <h2>Access नहीं है</h2>
+    <p>यह Google account whitelist में नहीं है। नीचे वाली UID को
+       <b>ALLOWED_UIDS</b> (इस file में) और <b>firestore.rules</b> दोनों में डालें:</p>
+    <code id="deniedUid"></code>
+    <p style="margin-top:16px"><button onclick="signOut()">दूसरे account से try करें</button></p>
+  </div>
+
+  <div id="app" hidden>
+    <nav class="tabs" id="tabs">
+      <button data-v="overview" class="active">📊 Overview</button>
+      <button data-v="add">➕ नई एंट्री</button>
+      <button data-v="bills">🧾 बिल</button>
+      <button data-v="price">💹 Pricebook</button>
+      <button data-v="flags">⚠️ Flags</button>
+      <button data-v="recon">🏦 मिलान</button>
+      <button data-v="missing">❓ बकाया</button>
+    </nav>
+
+    <!-- ── Overview ── -->
+    <section class="view active" id="v-overview">
+      <div class="tiles" id="tiles"></div>
+      <div class="card chartCard tilt">
+        <h3>पिछले 30 दिन का खर्च (₹ प्रतिदिन)</h3>
+        <div class="chartBox"><canvas id="chDaily"></canvas></div>
+      </div>
+      <div class="grid2">
+        <div class="card chartCard tilt"><h3>Staff-wise खर्च</h3><div class="chartBox"><canvas id="chStaff"></canvas></div></div>
+        <div class="card chartCard tilt"><h3>Top दुकानें</h3><div class="chartBox"><canvas id="chVendor"></canvas></div></div>
+        <div class="card chartCard tilt"><h3>खाता-wise (reimbursed)</h3><div class="chartBox"><canvas id="chAccount"></canvas></div></div>
+        <div class="card chartCard tilt"><h3>यूनिट-wise</h3><div class="chartBox"><canvas id="chUnit"></canvas></div></div>
+      </div>
+    </section>
+
+    <!-- ── नई एंट्री ── -->
+    <section class="view" id="v-add">
+      <div class="card form tilt">
+        <h3 style="margin-bottom:14px">➕ नया खर्चा जोड़ें</h3>
+        <div class="frow">
+          <label>दुकान / पार्टी<input id="aVendor" placeholder="जैसे: राम सब्ज़ी भंडार"></label>
+          <label>तारीख<input id="aDate" type="date"></label>
+        </div>
+        <div class="frow">
+          <label>यूनिट<select id="aUnit"></select></label>
+          <label>किस खाते से<select id="aAccount"></select></label>
+        </div>
+
+        <div class="itemsHead"><span>सामान</span><button type="button" onclick="addItemRow()">+ और जोड़ें</button></div>
+        <div id="aItems"></div>
+
+        <div class="frow">
+          <label>कुल ₹<input id="aTotal" type="number" inputmode="decimal" placeholder="अपने-आप जुड़ जाएगा"></label>
+          <label>बिल नं. (optional)<input id="aInvoice" placeholder="—"></label>
+        </div>
+        <label style="display:block;margin-top:10px">टिप्पणी (optional)
+          <input id="aNote" placeholder="जैसे: challan 42"></label>
+
+        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
+          <button class="primary" id="aSave" onclick="saveEntry()">💾 दर्ज करें</button>
+          <button type="button" onclick="resetEntry()">साफ़ करें</button>
+          <span id="aMsg" class="muted"></span>
+        </div>
+        <p class="muted" style="margin-top:12px">फोटो वाला बिल Telegram bot पर भेजें — वहाँ AI अपने-आप पढ़ लेता है। यह form हाथ से जोड़ने के लिए है।</p>
+      </div>
+    </section>
+
+    <!-- ── Bills ── -->
+    <section class="view" id="v-bills">
+      <div class="filters">
+        <select id="fStatus">
+          <option value="">सब status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="reimbursed">Reimbursed</option>
+          <option value="delivered">Delivered</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <select id="fStaff"><option value="">सब staff</option></select>
+        <input id="fSearch" type="search" placeholder="खोजें: दुकान, आइटम, receipt…">
+      </div>
+      <div class="card tableWrap">
+        <table>
+          <thead><tr>
+            <th>Receipt</th><th>तारीख</th><th>Staff</th><th>दुकान</th>
+            <th class="num">₹</th><th>यूनिट</th><th>Status</th><th>Flags</th><th>फोटो</th>
+          </tr></thead>
+          <tbody id="billRows"></tbody>
+        </table>
+        <div id="billEmpty" class="empty" hidden>कुछ नहीं मिला</div>
+      </div>
+    </section>
+
+    <!-- ── Pricebook ── -->
+    <section class="view" id="v-price">
+      <div class="filters"><select id="fItem" style="flex:1"></select></div>
+      <div class="tiles" id="priceTiles"></div>
+      <div class="card chartCard tilt">
+        <h3 id="priceChartTitle">रेट history</h3>
+        <div class="chartBox"><canvas id="chPrice"></canvas></div>
+      </div>
+      <div class="card tableWrap">
+        <table>
+          <thead><tr><th>तारीख</th><th>दुकान</th><th class="num">मात्रा</th><th class="num">रेट ₹</th><th class="num">राशि ₹</th><th>Receipt</th></tr></thead>
+          <tbody id="priceRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Flags ── -->
+    <section class="view" id="v-flags">
+      <div class="card" id="flagList"></div>
+    </section>
+
+    <!-- ── मिलान: statement upload + auto-match (कोई AI नहीं, सब यहीं ब्राउज़र में) ── -->
+    <section class="view" id="v-recon">
+      <div class="card tilt" id="dropZone">
+        <div class="drop">
+          <div class="dicon">🏦</div>
+          <h3>बैंक / PhonePe की statement यहाँ डालें</h3>
+          <p class="muted">CSV file — यहीं आपके फ़ोन में पढ़ी जाएगी, कहीं नहीं जाती।<br>
+            पैसा अपने-आप बिलों से मिल जाएगा।</p>
+          <div class="frow" style="max-width:420px;margin:14px auto 0">
+            <label>किस खाते की?<select id="rAccount"></select></label>
+            <label style="align-self:end">
+              <input type="file" id="rFile" accept=".csv,.txt" hidden>
+              <button class="primary" style="width:100%" onclick="document.getElementById('rFile').click()">📄 File चुनें</button>
+            </label>
+          </div>
+          <div id="rStatus" class="muted" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div id="rResult" hidden>
+        <div class="tiles" id="rTiles"></div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="itemsHead" style="margin-top:0">
+            <span>🤔 शायद यही हैं — देखकर जोड़ें</span>
+            <button type="button" id="rSaveBtn" class="primary" onclick="commitRecon()">💾 मिलान पक्का करें</button>
+          </div>
+          <div id="rMaybe"></div>
+        </div>
+        <div class="card">
+          <div class="itemsHead" style="margin-top:0"><span>❓ इनका बिल नहीं मिला</span></div>
+          <div id="rNoBill"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Missing (unmatched bank debits) ── -->
+    <section class="view" id="v-missing">
+      <p class="muted" style="margin-bottom:10px">बैंक की वे debit entries जिनका कोई बिल नहीं मिला।
+         CSV upload और मिलान Telegram bot से होता है।</p>
+      <div class="card" id="missingList"></div>
+    </section>
+
+    <footer>VBE खरीद-हिसाब · Telegram bot + यह app, दोनों एक ही हिसाब पर</footer>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+/* ═══════════ CONFIG — यह दो चीज़ें भरें ═══════════
+   1) Firebase console → Project settings (⚙️) → "Your apps" → Web app config से
+      apiKey / authDomain / projectId तीनों यहाँ भरें।
+      ⚠️ projectId वही होना चाहिए जो bot के FIREBASE_PROJECT_ID Script Property में है
+      (नया project बनाया हो — जैसे Manoj-business-os — तो उसकी ID)।
+   2) पहली बार login के बाद जो UID दिखे, उसे ALLOWED_UIDS + firestore.rules में डालें */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDdrWFkm7hizUpkNIozOANiG5SDFWNLo6s",
+  authDomain: "manoj-business-os.firebaseapp.com",
+  projectId: "manoj-business-os",
+  appId: "1:574587426179:web:9c88a4062f53e32aa4d2b6"
+};
+const ALLOWED_UIDS = ["PASTE_OWNER_FIREBASE_UID_HERE"];
+/* ════════════════════════════════════════════════ */
+
+const SERIES = ["#3987e5", "#008300", "#d55181", "#c98500", "#199e70"]; // validated dark palette
+const INR = n => "₹" + Number(n || 0).toLocaleString("en-IN");
+const $ = id => document.getElementById(id);
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let EXP = [], ACCOUNTS = {}, PRICEBOOK = [], MISSING = [];
+const charts = {};
+
+/* ── Auth gate ── */
+function show(id) {
+  ["gateLoading", "gateLogin", "gateDenied", "app"].forEach(x => $(x).hidden = (x !== id));
+}
+function signIn() {
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message));
+}
+function signOut() { auth.signOut(); }
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { show("gateLogin"); $("userBox").hidden = true; return; }
+  if (!ALLOWED_UIDS.includes(user.uid)) {
+    $("deniedUid").textContent = user.uid;
+    show("gateDenied");
+    return;
+  }
+  $("userName").textContent = user.displayName || user.email;
+  $("userBox").hidden = false;
+  show("gateLoading");
+  try {
+    await loadData();
+    renderAll();
+    show("app");
+  } catch (e) {
+    alert("Data load नहीं हुआ: " + e.message + "\n(firestore.rules में UID डाली है?)");
+    show("gateLogin");
+  }
+});
+
+/* ── Data ── */
+const toDate = v => (v && v.toDate) ? v.toDate() : (v ? new Date(v) : null);
+
+async function loadData() {
+  const [expSnap, accSnap, pbSnap, bankSnap] = await Promise.all([
+    db.collection("vbe_expenses").orderBy("submittedAt", "desc").limit(500).get(),
+    db.collection("vbe_accounts").get(),
+    db.collection("vbe_pricebook").limit(300).get(),
+    db.collection("vbe_bank_txns").where("matched", "==", false).limit(300).get()
+  ]);
+  EXP = expSnap.docs.map(d => {
+    const x = d.data(); x._id = d.id; x._date = toDate(x.submittedAt); return x;
+  });
+  ACCOUNTS = {};
+  accSnap.docs.forEach(d => ACCOUNTS[d.id] = d.data());
+  PRICEBOOK = pbSnap.docs
+    .filter(d => d.id !== "_index")
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => String(a.canonicalName).localeCompare(String(b.canonicalName), "hi"));
+  MISSING = bankSnap.docs.map(d => d.data()).filter(t => t.type === "debit")
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+
+/* ── Chart defaults (mark specs: thin marks, 4px rounded ends, hairline grid) ── */
+Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+Chart.defaults.color = "#c3c2b7";
+Chart.defaults.borderColor = "#2c2c2a";
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
+Chart.defaults.plugins.legend.labels.boxHeight = 10;
+Chart.defaults.plugins.tooltip.backgroundColor = "#222221";
+Chart.defaults.plugins.tooltip.borderColor = "rgba(255,255,255,0.12)";
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.titleColor = "#ffffff";
+Chart.defaults.plugins.tooltip.bodyColor = "#c3c2b7";
+Chart.defaults.maintainAspectRatio = false;
+
+function mkChart(id, cfg) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart($(id), cfg);
+}
+const gridOpts = { grid: { color: "#2c2c2a" }, border: { color: "#383835" } };
+
+/* ── Renders ── */
+function renderAll() {
+  renderTiles();
+  renderCharts();
+  renderBillFilters();
+  renderBills();
+  renderPricebook();
+  renderFlags();
+  renderMissing();
+  initEntryForm();
+  initRecon();
+}
+
+function monthKey(d) { return d ? d.toISOString().slice(0, 7) : ""; }
+
+function renderTiles() {
+  const nowM = monthKey(new Date());
+  const thisMonth = EXP.filter(e => monthKey(e._date) === nowM);
+  const mTotal = thisMonth.reduce((a, e) => a + (e.billTotal || 0), 0);
+  const pend = EXP.filter(e => e.status === "pending" || e.status === "approved");
+  const pendAmt = pend.reduce((a, e) => a + (e.billTotal || 0), 0);
+  const reimb = thisMonth.filter(e => e.status === "reimbursed" || e.status === "delivered")
+    .reduce((a, e) => a + (e.billTotal || 0), 0);
+  const flagged = EXP.filter(e => (e.flags || []).length).length;
+
+  $("tiles").innerHTML = [
+    ["इस महीने कुल", INR(mTotal), thisMonth.length + " बिल", "#3987e5"],
+    ["बकाया reimburse", INR(pendAmt), pend.length + " बिल pending/approved", "#fab219"],
+    ["इस महीने reimbursed", INR(reimb), "", "#0ca30c"],
+    ["Flag वाले बिल", String(flagged), MISSING.length + " बिना-बिल bank entries", "#d55181"]
+  ].map(([k, v, s, c]) => `
+    <div class="card tile tilt">
+      <div class="k">${k}</div>
+      <div class="v">${v}</div>
+      <div class="s">${s || "&nbsp;"}</div>
+      <div class="bar"><i style="width:70%;background:${c}"></i></div>
+    </div>`).join("");
+  attachTilt();
+}
+
+function sumBy(rows, keyFn, valFn) {
+  const m = {};
+  rows.forEach(r => {
+    const k = keyFn(r);
+    if (!k) return;
+    m[k] = (m[k] || 0) + (valFn(r) || 0);
+  });
+  return m;
+}
+function topN(map, n) {
+  const keys = Object.keys(map).sort((a, b) => map[b] - map[a]);
+  const top = keys.slice(0, n);
+  const rest = keys.slice(n).reduce((a, k) => a + map[k], 0);
+  const labels = [...top], values = top.map(k => map[k]);
+  if (rest > 0) { labels.push("अन्य"); values.push(rest); }
+  return { labels, values };
+}
+
+function renderCharts() {
+  // 30-day spend — single series (no legend), thin bars, rounded data-ends
+  const days = [], totals = [];
+  const byDay = sumBy(EXP, e => e._date && e._date.toISOString().slice(0, 10), e => e.billTotal);
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    days.push(d.slice(8) + "/" + d.slice(5, 7));
+    totals.push(byDay[d] || 0);
+  }
+  mkChart("chDaily", {
+    type: "bar",
+    data: { labels: days, datasets: [{ data: totals, backgroundColor: SERIES[0],
+      borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom",
+      maxBarThickness: 14, categoryPercentage: 0.7 }] },
+    options: { plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => INR(c.raw) } } },
+      scales: { x: { ...gridOpts, grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+        y: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? (v / 1000) + "k" : v) } } } }
+  });
+
+  // Staff-wise — identity job → categorical slots in fixed order, top 4 + अन्य
+  const staff = topN(sumBy(EXP, e => e.submittedBy && e.submittedBy.name, e => e.billTotal), 4);
+  mkChart("chStaff", {
+    type: "doughnut",
+    data: { labels: staff.labels, datasets: [{ data: staff.values,
+      backgroundColor: SERIES.slice(0, staff.labels.length),
+      borderColor: "#1a1a19", borderWidth: 2 }] },
+    options: { cutout: "62%", plugins: { legend: { position: "right" },
+      tooltip: { callbacks: { label: c => c.label + ": " + INR(c.raw) } } } }
+  });
+
+  // Top vendors — magnitude job → single hue
+  const vend = topN(sumBy(EXP, e => e.vendor && e.vendor.name, e => e.billTotal), 6);
+  mkChart("chVendor", {
+    type: "bar",
+    data: { labels: vend.labels, datasets: [{ data: vend.values, backgroundColor: SERIES[0],
+      borderRadius: { topRight: 4, bottomRight: 4 }, borderSkipped: "left",
+      maxBarThickness: 14 }] },
+    options: { indexAxis: "y", plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => INR(c.raw) } } },
+      scales: { x: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? (v / 1000) + "k" : v) } },
+        y: { ...gridOpts, grid: { display: false } } } }
+  });
+
+  // Account-wise (reimbursed) — magnitude → single hue
+  const acc = sumBy(EXP.filter(e => e.paidFromAccountId),
+    e => (ACCOUNTS[e.paidFromAccountId] || {}).label || e.paidFromAccountId,
+    e => (e.payment && e.payment.amount != null) ? e.payment.amount : e.billTotal);
+  const accT = topN(acc, 6);
+  mkChart("chAccount", {
+    type: "bar",
+    data: { labels: accT.labels, datasets: [{ data: accT.values, backgroundColor: SERIES[4],
+      borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom", maxBarThickness: 20 }] },
+    options: { plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => INR(c.raw) } } },
+      scales: { x: { ...gridOpts, grid: { display: false } },
+        y: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? (v / 1000) + "k" : v) } } } }
+  });
+
+  // Unit-wise — magnitude → single hue
+  const unit = topN(sumBy(EXP, e => e.unit, e => e.billTotal), 6);
+  mkChart("chUnit", {
+    type: "bar",
+    data: { labels: unit.labels.length ? unit.labels : ["(यूनिट सेट नहीं)"],
+      datasets: [{ data: unit.values.length ? unit.values : [0],
+        backgroundColor: SERIES[3],
+        borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom", maxBarThickness: 20 }] },
+    options: { plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => INR(c.raw) } } },
+      scales: { x: { ...gridOpts, grid: { display: false } },
+        y: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? (v / 1000) + "k" : v) } } } }
+  });
+}
+
+/* ── Bills table ── */
+function renderBillFilters() {
+  const staffSet = [...new Set(EXP.map(e => e.submittedBy && e.submittedBy.name).filter(Boolean))];
+  $("fStaff").innerHTML = '<option value="">सब staff</option>' +
+    staffSet.map(s => `<option>${esc(s)}</option>`).join("");
+}
+const esc = s => String(s == null ? "" : s)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const FLAG_ICONS = {
+  amount_mismatch: "💥", double_payment: "🔁", name_mismatch: "🪪",
+  unknown_vendor: "🆕", over_threshold: "💰", price_spike: "📈"
+};
+
+function renderBills() {
+  const st = $("fStatus").value, sf = $("fStaff").value,
+    q = $("fSearch").value.trim().toLowerCase();
+  const rows = EXP.filter(e => {
+    if (st && e.status !== st) return false;
+    if (sf && !(e.submittedBy && e.submittedBy.name === sf)) return false;
+    if (q) {
+      const hay = [e.receiptId, e.vendor && e.vendor.name, e.extractedText, e.unit,
+        (e.items || []).map(i => i.name).join(" ")].join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }).slice(0, 200);
+
+  $("billEmpty").hidden = rows.length > 0;
+  $("billRows").innerHTML = rows.map(e => `
+    <tr>
+      <td><b>${esc(e.receiptId)}</b></td>
+      <td>${e._date ? e._date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : ""}</td>
+      <td>${esc(e.submittedBy && e.submittedBy.name)}</td>
+      <td>${esc(e.vendor && e.vendor.name || "—")}</td>
+      <td class="num">${e.billTotal != null ? INR(e.billTotal) : "—"}</td>
+      <td>${esc(e.unit || "—")}</td>
+      <td><span class="chip ${esc(e.status)}"><i></i>${esc(e.status)}</span></td>
+      <td>${(e.flags || []).map(f => `<span title="${esc(f)}">${FLAG_ICONS[f] || "⚠️"}</span>`).join(" ")}</td>
+      <td>${e.billPhotoDriveUrl ? `<a href="${esc(e.billPhotoDriveUrl)}" target="_blank" rel="noopener">📷</a>` : ""}
+          ${e.paymentPhotoDriveUrl ? `<a href="${esc(e.paymentPhotoDriveUrl)}" target="_blank" rel="noopener">💳</a>` : ""}
+          ${e.deliveryPhotoDriveUrl ? `<a href="${esc(e.deliveryPhotoDriveUrl)}" target="_blank" rel="noopener">📦</a>` : ""}</td>
+    </tr>`).join("");
+}
+["fStatus", "fStaff", "fSearch"].forEach(id => $(id).addEventListener("input", renderBills));
+
+/* ── Pricebook ── */
+function renderPricebook() {
+  if (!PRICEBOOK.length) {
+    $("fItem").innerHTML = "<option>अभी कोई आइटम नहीं</option>";
+    return;
+  }
+  $("fItem").innerHTML = PRICEBOOK
+    .map((p, i) => `<option value="${i}">${esc(p.canonicalName)}</option>`).join("");
+  $("fItem").onchange = () => renderPriceItem(PRICEBOOK[+$("fItem").value]);
+  renderPriceItem(PRICEBOOK[0]);
+}
+
+function renderPriceItem(p) {
+  const hist = (p.history || []).filter(h => h.rate != null);
+  $("priceChartTitle").textContent = p.canonicalName + " — रेट history";
+  $("priceTiles").innerHTML = [
+    ["आख़िरी रेट", p.lastRate != null ? INR(p.lastRate) : "—", "#3987e5"],
+    ["पिछली 3 का औसत", p.avg3Rate != null ? INR(p.avg3Rate) : "—", "#199e70"],
+    ["कुल खरीदें", String((p.history || []).length), "#c98500"]
+  ].map(([k, v, c]) => `
+    <div class="card tile tilt"><div class="k">${k}</div><div class="v">${v}</div>
+    <div class="bar"><i style="width:60%;background:${c}"></i></div></div>`).join("");
+  attachTilt();
+
+  mkChart("chPrice", {
+    type: "line",
+    data: { labels: hist.map(h => h.date || ""),
+      datasets: [{ data: hist.map(h => h.rate), borderColor: SERIES[0], borderWidth: 2,
+        pointRadius: 4, pointHoverRadius: 7, pointBackgroundColor: SERIES[0],
+        pointBorderColor: "#1a1a19", pointBorderWidth: 2, tension: 0.25, fill: false }] },
+    options: { interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: {
+          label: c => INR(c.raw) + (hist[c.dataIndex].vendor ? " — " + hist[c.dataIndex].vendor : "") } } },
+      scales: { x: { ...gridOpts, ticks: { maxTicksLimit: 7 } },
+        y: { ...gridOpts, ticks: { callback: v => "₹" + v } } } }
+  });
+
+  $("priceRows").innerHTML = (p.history || []).slice(-30).reverse().map(h => `
+    <tr><td>${esc(h.date || "")}</td><td>${esc(h.vendor || "—")}</td>
+      <td class="num">${h.qty != null ? h.qty + " " + esc(h.unit || "") : "—"}</td>
+      <td class="num">${h.rate != null ? INR(h.rate) : "—"}</td>
+      <td class="num">${h.amount != null ? INR(h.amount) : "—"}</td>
+      <td>${esc(h.receiptId || "")}</td></tr>`).join("");
+}
+
+/* ── Flags ── */
+const FLAG_TEXT = {
+  amount_mismatch: "बिल-कुल और पेमेंट-रकम अलग",
+  double_payment: "invoice दुबारा दर्ज",
+  name_mismatch: "बिल का नाम ≠ paid-to नाम",
+  unknown_vendor: "नई दुकान",
+  over_threshold: "limit से ऊपर",
+  price_spike: "कीमत में उछाल"
+};
+function renderFlags() {
+  const rows = EXP.filter(e => (e.flags || []).length).slice(0, 100);
+  $("flagList").innerHTML = rows.length ? rows.map(e => `
+    <div class="flagRow">
+      <div class="fi">${(e.flags || []).map(f => FLAG_ICONS[f] || "⚠️").join("")}</div>
+      <div class="ft"><b>${esc(e.receiptId)}</b> — ${esc(e.vendor && e.vendor.name || "?")}
+        — ${e.billTotal != null ? INR(e.billTotal) : "—"} — ${esc(e.submittedBy && e.submittedBy.name)}
+        <div class="muted">${(e.flags || []).map(f => (FLAG_ICONS[f] || "⚠️") + " " + (FLAG_TEXT[f] || f)).join(" · ")}
+          ${(e.priceAlerts || []).map(a => "<br>" + esc(a)).join("")}</div>
+      </div>
+    </div>`).join("") : '<div class="empty">कोई flag नहीं 🎉</div>';
+}
+
+/* ── Missing bank debits ── */
+function renderMissing() {
+  $("missingList").innerHTML = MISSING.length ? MISSING.slice(0, 100).map(t => `
+    <div class="flagRow"><div class="fi">🏦</div>
+      <div class="ft"><b>${INR(t.amount)}</b> — ${esc(t.date)} —
+        ${esc((ACCOUNTS[t.accountId] || {}).label || t.accountId)} खाता
+        <div class="muted">${esc((t.narration || "").slice(0, 80))} · बिल अभी बाकी है</div>
+      </div>
+    </div>`).join("") : '<div class="empty">👍 सभी debits का मिलान हो चुका है</div>';
+}
+
+/* ══════════ नई एंट्री (manual entry, writes straight to Firestore) ══════════ */
+const UNITS_FALLBACK = ["177 Wet Canteen", "MES Canteen", "MH Vet Canteen"];
+
+function addItemRow(it) {
+  const d = document.createElement("div");
+  d.className = "irow";
+  d.innerHTML = `
+    <input placeholder="सामान" class="iName" value="${it ? esc(it.name) : ""}">
+    <input placeholder="मात्रा" class="iQty" type="number" inputmode="decimal" step="any">
+    <input placeholder="इकाई (kg)" class="iUnit">
+    <input placeholder="रेट ₹" class="iRate" type="number" inputmode="decimal" step="any">
+    <button type="button" title="हटाएँ">✕</button>`;
+  d.querySelector("button").onclick = () => { d.remove(); recalcTotal(); };
+  d.querySelectorAll("input").forEach(i => i.addEventListener("input", recalcTotal));
+  $("aItems").appendChild(d);
+}
+
+function itemRows() {
+  return [...document.querySelectorAll("#aItems .irow")].map(r => {
+    const val = (c) => r.querySelector(c).value.trim();
+    const num = (c) => (val(c) === "" ? null : Number(val(c)));
+    const name = val(".iName");
+    if (!name) return null;
+    const qty = num(".iQty"), rate = num(".iRate");
+    return { name, qty, unit: val(".iUnit") || null, rate,
+      amount: (qty != null && rate != null) ? Math.round(qty * rate * 100) / 100 : null };
+  }).filter(Boolean);
+}
+
+function recalcTotal() {
+  const sum = itemRows().reduce((a, i) => a + (i.amount || 0), 0);
+  if (sum > 0) $("aTotal").value = sum;
+}
+
+function initEntryForm() {
+  $("aDate").value = new Date().toISOString().slice(0, 10);
+  const units = [...new Set(EXP.map(e => e.unit).filter(Boolean))];
+  $("aUnit").innerHTML = '<option value="">— यूनिट चुनें —</option>' +
+    (units.length ? units : UNITS_FALLBACK).map(u => `<option>${esc(u)}</option>`).join("");
+  $("aAccount").innerHTML = '<option value="">— बाद में चुनूँगा —</option>' +
+    Object.keys(ACCOUNTS).map(id => `<option value="${esc(id)}">${esc(ACCOUNTS[id].label || id)}</option>`).join("");
+  if (!document.querySelectorAll("#aItems .irow").length) { addItemRow(); addItemRow(); }
+}
+
+function resetEntry() {
+  ["aVendor", "aTotal", "aInvoice", "aNote"].forEach(id => $(id).value = "");
+  $("aItems").innerHTML = "";
+  addItemRow(); addItemRow();
+  $("aMsg").textContent = "";
+}
+
+function fyLabel(d) {
+  const y = d.getFullYear() % 100;
+  return d.getMonth() >= 3 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+}
+
+async function saveEntry() {
+  const btn = $("aSave"), msg = $("aMsg");
+  const items = itemRows();
+  const total = $("aTotal").value === "" ? null : Number($("aTotal").value);
+  if (!items.length && total == null) {
+    msg.className = "bad"; msg.textContent = "कम से कम एक सामान या कुल रकम भरें";
+    return;
+  }
+  btn.disabled = true;
+  msg.className = "muted"; msg.textContent = "दर्ज हो रहा है…";
+  try {
+    const user = auth.currentUser;
+    const when = new Date($("aDate").value + "T12:00:00+05:30");
+    // Web receipts carry their own series so they can never collide with the
+    // bot's lock-protected EXP counter.
+    const seq = Date.now().toString().slice(-6);
+    const receiptId = `WEB/${fyLabel(when)}/${seq}`;
+    const docId = receiptId.replace(/\//g, "-");
+    const vendorName = $("aVendor").value.trim();
+    const vendorKey = vendorName ? vendorName.toLowerCase().replace(/[^a-z0-9ऀ-ॿ]/g, "") : null;
+
+    const rec = {
+      receiptId,
+      submittedBy: { telegramId: "dashboard", name: user.displayName || "Owner" },
+      submittedAt: firebase.firestore.Timestamp.fromDate(when),
+      source: "dashboard",
+      vendor: { name: vendorName || null, gstin: null, invoiceNo: $("aInvoice").value.trim() || null },
+      vendorKey,
+      items, billTotal: total,
+      billDate: $("aDate").value || null,
+      payment: null,
+      paidFromAccountId: $("aAccount").value || null,
+      unit: $("aUnit").value || null,
+      linkedChallanId: (($("aNote").value.match(/challan[\s:.\-]*([A-Za-z0-9\/\-]+)/i) || [])[1]) || null,
+      status: $("aAccount").value ? "reimbursed" : "pending",
+      flags: [], priceAlerts: [],
+      billPhotoDriveUrl: null, paymentPhotoDriveUrl: null,
+      extractedText: $("aNote").value.trim(),
+      reconciled: false, matchedBankTxnId: null,
+      statusHistory: [{ status: "pending", at: firebase.firestore.Timestamp.fromDate(when), by: "dashboard" }]
+    };
+
+    await db.collection("vbe_expenses").doc(docId).set(rec);
+    await db.collection("_audit_logs").add({
+      at: firebase.firestore.FieldValue.serverTimestamp(),
+      actorTelegramId: "dashboard-" + user.uid,
+      action: "submit", receiptId, before: null,
+      after: { status: rec.status, source: "dashboard" }
+    });
+
+    msg.className = "ok";
+    msg.textContent = `✅ दर्ज हो गया — ${receiptId}`;
+    resetEntry();
+    await loadData();
+    renderAll();
+  } catch (err) {
+    msg.className = "bad";
+    msg.textContent = "❌ नहीं हुआ: " + err.message +
+      (/permission/i.test(err.message) ? " (firestore.rules में UID डाली है?)" : "");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ══════════ 🏦 मिलान — statement पढ़ना और बिलों से जोड़ना ══════════
+   HARD RULE (VISION.md): बैंक का डेटा कभी AI को नहीं जाता। सब यहीं ब्राउज़र में। */
+
+function csvRows(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (c === '"') q = false;
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if (c !== "\r") cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ""));
+}
+
+const money = (s) => {
+  if (s == null) return null;
+  const n = parseFloat(String(s).replace(/[₹,\s]/g, ""));
+  return isNaN(n) ? null : n;
+};
+
+function parseDay(s) {
+  s = String(s || "").trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${m[1]}-${p2(m[2])}-${p2(m[3])}`;
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (m) return `${m[3].length === 2 ? "20" + m[3] : m[3]}-${p2(m[2])}-${p2(m[1])}`;
+  m = s.match(/(\d{1,2})[ \-]([A-Za-z]{3,})[ \-,]+(\d{2,4})/);
+  if (m) {
+    const mo = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 }[m[2].slice(0,3).toLowerCase()];
+    if (mo) return `${m[3].length === 2 ? "20" + m[3] : m[3]}-${p2(mo)}-${p2(m[1])}`;
+  }
+  return null;
+}
+const p2 = (n) => String(n).padStart(2, "0");
+
+/** UTR / UPI reference — the master key against double counting. */
+function utrOf(text) {
+  const s = String(text || "");
+  const m = s.match(/\b(?:UTR|RRN|REF|TXN)[:\s#-]*([A-Za-z0-9]{8,22})\b/i) || s.match(/\b(\d{12,22})\b/);
+  return m ? m[1].toUpperCase() : null;
+}
+
+/** Bank / PhonePe / GPay CSV → [{date, amount, type, narration, utr}] */
+function parseStatement(text) {
+  const rows = csvRows(text);
+  let head = -1, c = {};
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const low = rows[i].map(x => String(x).toLowerCase());
+    const f = { date: -1, narr: -1, debit: -1, credit: -1, amount: -1, type: -1 };
+    low.forEach((v, j) => {
+      if (f.date < 0 && /date|दिनांक|समय|time/.test(v)) f.date = j;
+      if (f.narr < 0 && /narration|description|particular|remark|detail|transaction|to |from /.test(v)) f.narr = j;
+      if (f.debit < 0 && /withdraw|debit|\bdr\b|paid|sent/.test(v)) f.debit = j;
+      if (f.credit < 0 && /deposit|credit|\bcr\b|received/.test(v)) f.credit = j;
+      if (f.amount < 0 && /amount|रकम/.test(v) && !/debit|credit/.test(v)) f.amount = j;
+      if (f.type < 0 && /^type$|dr\/cr|cr\/dr|direction/.test(v)) f.type = j;
+    });
+    if (f.date >= 0 && (f.debit >= 0 || f.amount >= 0)) { head = i; c = f; break; }
+  }
+  if (head < 0) return null;
+
+  const out = [];
+  for (let r = head + 1; r < rows.length; r++) {
+    const row = rows[r];
+    const date = parseDay(row[c.date]);
+    if (!date) continue;
+    const narration = c.narr >= 0 ? String(row[c.narr] || "").trim() : "";
+    let amount = null, type = null;
+    if (c.debit >= 0 || c.credit >= 0) {
+      const d = c.debit >= 0 ? money(row[c.debit]) : null;
+      const cr = c.credit >= 0 ? money(row[c.credit]) : null;
+      if (d) { amount = d; type = "debit"; } else if (cr) { amount = cr; type = "credit"; }
+    }
+    if (amount == null && c.amount >= 0) {
+      amount = money(row[c.amount]);
+      const tv = c.type >= 0 ? String(row[c.type] || "").toLowerCase() : "";
+      type = /cr|credit|received/.test(tv) ? "credit" : "debit";
+      if (amount != null && amount < 0) { amount = -amount; type = "debit"; }
+    }
+    if (!amount) continue;
+    out.push({ date, amount, type: type || "debit", narration, utr: utrOf(narration) });
+  }
+  return out;
+}
+
+/** Stable id from the row's own content, so re-uploading the same file is a no-op. */
+function txnId(accountId, t) {
+  const s = [accountId, t.date, t.amount, t.type, t.narration].join("|");
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
+  return accountId + "-" + (h >>> 0).toString(36) + "-" + Math.round(t.amount);
+}
+
+let RECON = { account: "", matched: [], maybe: [], noBill: [], skipped: 0 };
+
+function expenseDay(e) {
+  const d = e.billDate && /^\d{4}-\d{2}-\d{2}/.test(String(e.billDate))
+    ? String(e.billDate) : String(e.submittedAt || "");
+  return d.slice(0, 10);
+}
+function expenseAmount(e) {
+  return (e.payment && e.payment.amount != null) ? e.payment.amount : e.billTotal;
+}
+
+/** Match debits to bills: UTR first, then amount + date, then amount alone. */
+function matchStatement(txns, accountId) {
+  const open = EXP.filter(e => !e.reconciled && e.status !== "rejected" && expenseAmount(e) != null);
+  const used = new Set();
+  const matched = [], maybe = [], noBill = [];
+
+  txns.filter(t => t.type === "debit").forEach(t => {
+    let best = null, bestScore = -1, why = "";
+    open.forEach(e => {
+      if (used.has(e._id)) return;
+      const amt = expenseAmount(e);
+      const sameUtr = t.utr && e.payment && e.payment.upiRef &&
+        String(e.payment.upiRef).toUpperCase().includes(t.utr);
+      if (!sameUtr && Math.abs(amt - t.amount) > 0.01) return;
+      const days = Math.abs(new Date(t.date) - new Date(expenseDay(e))) / 86400000;
+      const score = (sameUtr ? 1000 : 0) + (days <= 2 ? 100 - days : 10) +
+        (e.paidFromAccountId === accountId ? 5 : 0);
+      if (score > bestScore) {
+        bestScore = score; best = e;
+        why = sameUtr ? "UTR मिला" : days <= 2 ? "रकम + तारीख़ मिली" : "सिर्फ़ रकम मिली";
+      }
+    });
+    if (best && bestScore >= 100) { used.add(best._id); matched.push({ t, e: best, why, sure: true }); }
+    else if (best) { used.add(best._id); maybe.push({ t, e: best, why, sure: false }); }
+    else noBill.push({ t });
+  });
+
+  return { matched, maybe, noBill };
+}
+
+async function handleStatementFile(file) {
+  const status = $("rStatus");
+  const accountId = $("rAccount").value;
+  if (!accountId) { status.className = "bad"; status.textContent = "पहले खाता चुनें"; return; }
+  status.className = "muted"; status.textContent = "पढ़ रहा हूँ…";
+  try {
+    const text = await file.text();
+    const txns = parseStatement(text);
+    if (!txns || !txns.length) {
+      status.className = "bad";
+      status.textContent = "यह file समझ नहीं आई — उसमें तारीख़ और रकम वाले column होने चाहिए।";
+      return;
+    }
+    const res = matchStatement(txns, accountId);
+    RECON = Object.assign({ account: accountId, txns }, res);
+    renderRecon(txns.length);
+    status.className = "ok";
+    status.textContent = `✅ ${txns.length} entries पढ़ीं — नीचे नतीजा देखें`;
+  } catch (err) {
+    status.className = "bad";
+    status.textContent = "नहीं पढ़ पाया: " + err.message;
+  }
+}
+
+function renderRecon(total) {
+  $("rResult").hidden = false;
+  const sum = (a) => a.reduce((x, m) => x + m.t.amount, 0);
+  $("rTiles").innerHTML = [
+    ["पढ़ी गईं", String(total), "बैंक entries", "#3987e5"],
+    ["✅ मिल गए", INR(sum(RECON.matched)), RECON.matched.length + " entries", "#0ca30c"],
+    ["🤔 शायद", INR(sum(RECON.maybe)), RECON.maybe.length + " देखने हैं", "#fab219"],
+    ["❓ बिना बिल", INR(sum(RECON.noBill)), RECON.noBill.length + " entries", "#d55181"]
+  ].map(([k, v, s, c]) => `
+    <div class="card tile tilt"><div class="k">${k}</div><div class="v">${v}</div>
+      <div class="s">${s}</div><div class="bar"><i style="width:70%;background:${c}"></i></div></div>`).join("");
+  attachTilt();
+
+  const line = (m, i, sure) => `
+    <div class="mrow">
+      <div class="amt">${INR(m.t.amount)}</div>
+      <div class="mx">
+        <b>${esc(m.t.date)}</b> ${esc((m.t.narration || "").slice(0, 60))}
+        ${m.t.utr ? `<br><span class="muted">UTR: ${esc(m.t.utr)}</span>` : ""}
+        <br><span class="badge ${sure ? "hi" : "lo"}">${esc(m.why)}</span>
+        <select data-i="${i}" data-sure="${sure ? 1 : 0}">
+          <option value="${esc(m.e._id)}">✓ ${esc(m.e.receiptId)} — ${esc(m.e.vendor && m.e.vendor.name || "?")} — ${INR(expenseAmount(m.e))}</option>
+          <option value="">✕ नहीं, यह नहीं है</option>
+        </select>
+      </div>
+    </div>`;
+
+  const rows = RECON.matched.map((m, i) => line(m, i, true))
+    .concat(RECON.maybe.map((m, i) => line(m, i + RECON.matched.length, false)));
+  $("rMaybe").innerHTML = rows.length ? rows.join("")
+    : '<div class="empty">कोई मिलान नहीं मिला</div>';
+
+  $("rNoBill").innerHTML = RECON.noBill.length ? RECON.noBill.map(m => `
+    <div class="mrow"><div class="amt">${INR(m.t.amount)}</div>
+      <div class="mx"><b>${esc(m.t.date)}</b> ${esc((m.t.narration || "").slice(0, 60))}
+      <br><span class="muted">इसका बिल अभी दर्ज नहीं है</span></div></div>`).join("")
+    : '<div class="empty">🎉 सबका बिल मिल गया</div>';
+}
+
+async function commitRecon() {
+  const btn = $("rSaveBtn"), status = $("rStatus");
+  btn.disabled = true;
+  status.className = "muted"; status.textContent = "सहेज रहा हूँ…";
+  try {
+    const all = RECON.matched.concat(RECON.maybe);
+    const picks = [...document.querySelectorAll("#rMaybe select")];
+    let saved = 0;
+    for (const sel of picks) {
+      const m = all[Number(sel.dataset.i)];
+      if (!m) continue;
+      const id = txnId(RECON.account, m.t);
+      const keep = sel.value;                        // "" = owner said no
+      await db.collection("vbe_bank_txns").doc(id).set({
+        accountId: RECON.account, date: m.t.date, amount: m.t.amount, type: m.t.type,
+        narration: m.t.narration, utr: m.t.utr || null,
+        matched: !!keep, matchedReceiptId: keep ? m.e.receiptId : null,
+        matchConfidence: keep ? (sel.dataset.sure === "1" ? "high" : "low") : null,
+        importedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      if (keep) {
+        await db.collection("vbe_expenses").doc(keep)
+          .update({ reconciled: true, matchedBankTxnId: id });
+        saved++;
+      }
+    }
+    // Debits with no bill still belong in the ledger — that IS the बकाया list.
+    for (const m of RECON.noBill) {
+      const id = txnId(RECON.account, m.t);
+      await db.collection("vbe_bank_txns").doc(id).set({
+        accountId: RECON.account, date: m.t.date, amount: m.t.amount, type: m.t.type,
+        narration: m.t.narration, utr: m.t.utr || null,
+        matched: false, matchedReceiptId: null, matchConfidence: null,
+        importedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+    await db.collection("_audit_logs").add({
+      at: firebase.firestore.FieldValue.serverTimestamp(),
+      actorTelegramId: "dashboard-" + auth.currentUser.uid,
+      action: "reconcile", receiptId: null, before: null,
+      after: { accountId: RECON.account, matched: saved, unmatched: RECON.noBill.length }
+    });
+    status.className = "ok";
+    status.textContent = `✅ ${saved} बिल मिला दिए · ${RECON.noBill.length} बिना-बिल दर्ज`;
+    await loadData(); renderAll();
+  } catch (err) {
+    status.className = "bad";
+    status.textContent = "नहीं सहेज पाया: " + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function initRecon() {
+  $("rAccount").innerHTML = '<option value="">— खाता चुनें —</option>' +
+    Object.keys(ACCOUNTS).map(id => `<option value="${esc(id)}">${esc(ACCOUNTS[id].label || id)}</option>`).join("");
+  const zone = $("dropZone").querySelector(".drop");
+  $("rFile").onchange = (e) => { if (e.target.files[0]) handleStatementFile(e.target.files[0]); };
+  ["dragenter", "dragover"].forEach(ev => zone.addEventListener(ev, (e) => {
+    e.preventDefault(); zone.classList.add("over");
+  }));
+  ["dragleave", "drop"].forEach(ev => zone.addEventListener(ev, (e) => {
+    e.preventDefault(); zone.classList.remove("over");
+  }));
+  zone.addEventListener("drop", (e) => {
+    const f = e.dataTransfer.files[0];
+    if (f) handleStatementFile(f);
+  });
+}
+
+/* ── Tabs + 3D tilt ── */
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x === b));
+  document.querySelectorAll(".view").forEach(v =>
+    v.classList.toggle("active", v.id === "v-" + b.dataset.v));
+});
+
+function attachTilt() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.querySelectorAll(".tilt").forEach(el => {
+    if (el._tilt) return;
+    el._tilt = true;
+    el.addEventListener("pointermove", ev => {
+      if (ev.pointerType === "touch") return;
+      const r = el.getBoundingClientRect();
+      const rx = ((ev.clientY - r.top) / r.height - 0.5) * -5;
+      const ry = ((ev.clientX - r.left) / r.width - 0.5) * 5;
+      el.style.transform = `perspective(700px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-2px)`;
+    });
+    el.addEventListener("pointerleave", () => { el.style.transform = ""; });
+  });
+}
+attachTilt();
+</script>
+</body>
+</html>
