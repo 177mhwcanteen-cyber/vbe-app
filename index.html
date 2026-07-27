@@ -154,9 +154,22 @@
   .itemsHead { display: flex; justify-content: space-between; align-items: center;
     margin: 16px 0 8px; font-size: 12px; color: var(--muted); }
   .itemsHead button { padding: 5px 12px; font-size: 12px; border-radius: 8px; }
-  .irow { display: grid; grid-template-columns: 2fr 0.8fr 0.9fr 0.9fr auto; gap: 8px; margin-bottom: 8px; }
-  @media (max-width: 560px) { .irow { grid-template-columns: 1fr 1fr; } }
-  .irow button { padding: 8px 10px; border-radius: 10px; color: var(--muted); }
+  /* One item = one card. Name on its own line so it is never clipped, then
+     मात्रा · इकाई · रेट in a row with the line total spelled out at the end —
+     the numbers must read like the bill they came off. */
+  .irow { background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+  .irow .iTop { display: flex; gap: 8px; align-items: center; }
+  .irow .iTop .iName { flex: 1; min-width: 0; font-weight: 600; }
+  .irow .iNums { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 6px; margin-top: 8px; }
+  .irow .fld { position: relative; }
+  .irow .fld span { position: absolute; top: 3px; left: 10px; font-size: 9.5px;
+    color: var(--muted); letter-spacing: .3px; pointer-events: none; }
+  .form .irow input { margin-top: 0; background: var(--surface); }
+  .form .irow .fld input { padding: 17px 10px 6px; }
+  .irow .del { padding: 8px 11px; border-radius: 10px; color: var(--muted); background: transparent; }
+  .irow .iAmt { margin-top: 7px; font-size: 12.5px; color: var(--ink-2); text-align: right; }
+  .irow .iAmt b { color: var(--ink); font-size: 14px; }
   .ok { color: var(--good); } .bad { color: var(--critical); }
 
   /* मिलान (reconciliation) */
@@ -338,7 +351,8 @@
         <div id="aItems"></div>
 
         <div class="frow">
-          <label>कुल ₹<input id="aTotal" type="number" inputmode="decimal" placeholder="अपने-आप जुड़ जाएगा"></label>
+          <label>कुल ₹<input id="aTotal" type="number" inputmode="decimal" placeholder="अपने-आप जुड़ जाएगा">
+            <small id="aExtra" class="hint same"></small></label>
           <label>बिल नं. (optional)<input id="aInvoice" placeholder="—"></label>
         </div>
         <div class="frow">
@@ -918,17 +932,39 @@ function renderMissing() {
 const UNITS_FALLBACK = ["177 Wet Canteen", "MES Canteen", "MH Vet Canteen"];
 
 function addItemRow(it) {
+  const v = (x) => (x == null || x === "" ? "" : x);
   const d = document.createElement("div");
   d.className = "irow";
   d.innerHTML = `
-    <input placeholder="सामान" class="iName" value="${it ? esc(it.name) : ""}">
-    <input placeholder="मात्रा" class="iQty" type="number" inputmode="decimal" step="any" value="${it && it.qty != null ? it.qty : ""}">
-    <input placeholder="इकाई" class="iUnit" value="${it && it.unit ? esc(it.unit) : ""}">
-    <input placeholder="रेट ₹" class="iRate" type="number" inputmode="decimal" step="any" value="${it && it.rate != null ? it.rate : ""}">
-    <button type="button" title="हटाएँ">✕</button>`;
-  d.querySelector("button").onclick = () => { d.remove(); recalcTotal(); };
-  d.querySelectorAll("input").forEach(i => i.addEventListener("input", () => { recalcTotal(); priceHints(); }));
+    <div class="iTop">
+      <input placeholder="सामान का नाम" class="iName" value="${it ? esc(it.name) : ""}">
+      <button type="button" class="del" title="हटाएँ">✕</button>
+    </div>
+    <div class="iNums">
+      <label class="fld"><span>मात्रा</span>
+        <input class="iQty" type="number" inputmode="decimal" step="any" value="${v(it && it.qty)}"></label>
+      <label class="fld"><span>इकाई</span>
+        <input class="iUnit" placeholder="किलो" value="${it && it.unit ? esc(it.unit) : ""}"></label>
+      <label class="fld"><span>रेट ₹</span>
+        <input class="iRate" type="number" inputmode="decimal" step="any" value="${v(it && it.rate)}"></label>
+    </div>
+    <div class="iAmt"></div>`;
+  d.querySelector(".del").onclick = () => { d.remove(); recalcTotal(); };
+  d.querySelectorAll("input").forEach(i => i.addEventListener("input", () => {
+    rowAmount(d); recalcTotal(); priceHints();
+  }));
   $("aItems").appendChild(d);
+  rowAmount(d);
+}
+
+/** मात्रा × रेट, spelled out on the row — so a wrong reading is obvious. */
+function rowAmount(row) {
+  const q = parseFloat(row.querySelector(".iQty").value);
+  const r = parseFloat(row.querySelector(".iRate").value);
+  const box = row.querySelector(".iAmt");
+  if (isNaN(q) || isNaN(r)) { box.textContent = ""; return; }
+  const u = row.querySelector(".iUnit").value.trim();
+  box.innerHTML = `${q}${u ? " " + esc(u) : ""} × ₹${r} = <b>${INR(q * r)}</b>`;
 }
 
 function itemRows() {
@@ -943,9 +979,19 @@ function itemRows() {
   }).filter(Boolean);
 }
 
+/**
+ * GST and round-off live on the bill but not on any item line, so a bill of
+ * ₹1,665 whose items add to ₹1,586 has ₹79 sitting outside the list. Keep that
+ * gap and add it back, or the first time the owner corrects one rate the total
+ * would silently drop by the tax.
+ */
+let PRINTED_EXTRA = 0;
+
 function recalcTotal() {
   const sum = itemRows().reduce((a, i) => a + (i.amount || 0), 0);
-  if (sum > 0) $("aTotal").value = sum;
+  if (sum > 0) $("aTotal").value = Math.round((sum + PRINTED_EXTRA) * 100) / 100;
+  $("aExtra").textContent = PRINTED_EXTRA
+    ? `सामान ${INR(sum)} + GST/अन्य ${INR(PRINTED_EXTRA)}` : "";
 }
 
 /** Units come from what has been used plus whatever the owner adds — the list
@@ -981,6 +1027,8 @@ function initEntryForm() {
 function resetEntry() {
   ["aVendor", "aTotal", "aInvoice", "aNote", "aUtr"].forEach(id => $(id).value = "");
   ENTRY_SHOTS = { bill: null, receipt: null };
+  PRINTED_EXTRA = 0;
+  $("aExtra").textContent = "";
   showShots();
   aiSay("");
   $("aItems").innerHTML = "";
@@ -1694,25 +1742,140 @@ function initRecon() {
 let ENTRY_SHOTS = { bill: null, receipt: null };   // data URLs, uploaded on save
 
 const RECEIPT_PROMPT =
-  'You read Indian UPI/bank payment receipts (PhonePe, GPay, Paytm, bank apps). ' +
-  'Return STRICT JSON only: {"paidTo":string|null,"amount":number|null,' +
-  '"utr":string|null,"paidAt":"YYYY-MM-DD"|null,"mode":string|null,"summary":string}. ' +
-  'utr is the UTR / UPI transaction / reference number exactly as printed. ' +
-  'summary is ONE short Hindi line. null for anything unreadable.';
+  'You read Indian UPI / bank payment receipts: GPay, PhonePe, Paytm, BHIM and ' +
+  'bank apps. The image is often a PHOTO OF A PHONE SCREEN — glare, tilt and ' +
+  'moiré are normal, read through them.\n' +
+  'Return STRICT JSON only:\n' +
+  '{"paidTo":string|null,"amount":number|null,"utr":string|null,' +
+  '"paidAt":"YYYY-MM-DD"|null,"time":"HH:MM"|null,"mode":string|null,' +
+  '"status":"success"|"pending"|"failed"|null,"summary":string}\n' +
+  'Rules:\n' +
+  '- paidTo = the merchant/person the money went TO ("Payment to X" → X).\n' +
+  '- amount = plain number, no ₹ or commas. "₹1,665" → 1665.\n' +
+  '- utr = the 12-digit UTR / UPI transaction ID / reference number, exactly as ' +
+  'printed. Many GPay chat bubbles do NOT show it — it only appears after ' +
+  'opening the payment. If it is not visible, return null. NEVER guess or ' +
+  'invent a UTR, and never use the amount, the phone number or the time as one.\n' +
+  '- paidAt: if the screen says only a time ("Paid · 10:08 pm") with no date, ' +
+  'the payment is from TODAY — use the today-date given below.\n' +
+  '- status: "success" for Paid/Completed/✓, else what it says.\n' +
+  '- summary = ONE short Hindi line, e.g. "J M Motel को ₹1665 दिए".\n' +
+  'null for anything you cannot actually read. Return only the JSON object.';
+
+const BILL_PROMPT =
+  'You read Indian purchase bills for a canteen supply business: thermal ' +
+  'printer slips, GST invoices, kacha parchi and handwritten bills, in Hindi or ' +
+  'English. The photo may be crumpled, tilted, dim or shot at an angle — read ' +
+  'through that.\n' +
+  'Return STRICT JSON only:\n' +
+  '{"vendor":string|null,"phone":string|null,"gstin":string|null,' +
+  '"invoiceNo":string|null,"billDate":"YYYY-MM-DD"|null,' +
+  '"items":[{"name":string,"qty":number|null,"unit":string|null,' +
+  '"rate":number|null,"amount":number|null}],' +
+  '"subTotal":number|null,"gst":number|null,"total":number|null,' +
+  '"paidVia":string|null,"summary":string}\n' +
+  'Rules:\n' +
+  '- vendor = the shop/firm name printed at the top, exactly as written.\n' +
+  '- IMPORTANT, thermal slips wrap: an item name often sits on one line while ' +
+  'its QTY / RATE / AMT sit on the NEXT line, so the columns look shifted. Pair ' +
+  'them by ORDER, not by which line they are on — the Nth item name takes the ' +
+  'Nth set of numbers. If the slip prints an item count ("NITEMS: 8"), return ' +
+  'exactly that many items.\n' +
+  '- For every item: amount must equal qty × rate. If a row does not add up, ' +
+  're-read that row before answering.\n' +
+  '- total = the final payable amount (the "TOTAL" line, after GST and round ' +
+  'off) — NOT the subtotal.\n' +
+  '- Amounts are plain numbers: no ₹, no commas. "1,665.0" → 1665.\n' +
+  '- Dates on Indian bills are DD-MM-YYYY. "27-07-2026" → "2026-07-27".\n' +
+  '- paidVia = CASH / UPI / CARD / CREDIT if the bill says so.\n' +
+  '- Keep item names as printed (Hindi is fine); do not translate or "correct" ' +
+  'spellings.\n' +
+  '- summary = ONE short Hindi line naming the shop and what was bought.\n' +
+  'Use null for anything genuinely unreadable — never guess a number. ' +
+  'Return only the JSON object.';
+
+/* ── Gemini: model discovery, because a hardcoded name goes 404 ───────────
+   Model IDs get retired, and which ones a key may call differs per project.
+   So ask the API what it has, keep the answer, and re-ask the moment a call
+   comes back 404/400 — the same self-healing the Telegram bot does. */
+let GEMINI_MODEL = null;
+try { GEMINI_MODEL = localStorage.getItem("vbeGeminiModel") || null; } catch (e) {}
+
+/** Local date, not toISOString() — after 5:30am IST those two disagree. */
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+}
+
+async function geminiDiscoverModel() {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${GEMINI_KEY}`);
+  if (!res.ok) throw new Error(geminiWhy(res.status, "मॉडल की सूची नहीं मिली"));
+  const models = ((await res.json()).models || [])
+    .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"));
+  // Newest plain "gemini-N-flash" wins: fast, free-tier friendly, sees images.
+  let best = null, bestV = -1;
+  models.forEach(m => {
+    const mm = m.name.match(/^models\/gemini-(\d+(?:\.\d+)?)-flash$/);
+    if (mm && Number(mm[1]) > bestV) { bestV = Number(mm[1]); best = m.name.slice(7); }
+  });
+  if (!best) {
+    const f = models.find(m => m.name.includes("flash")) || models[0];
+    if (f) best = f.name.slice(7);
+  }
+  if (!best) throw new Error("इस चाबी के लिए कोई AI मॉडल नहीं मिला");
+  GEMINI_MODEL = best;
+  try { localStorage.setItem("vbeGeminiModel", best); } catch (e) {}
+  return best;
+}
+
+/** HTTP status → something विक्रम जी can act on, not a bare number. */
+function geminiWhy(status, detail) {
+  if (status === 400) return "AI की चाबी ग़लत है — Firestore में geminiKey जाँचें";
+  if (status === 403) return "इस चाबी को इजाज़त नहीं है — नई Gemini key बनाकर लगाएँ";
+  if (status === 429) return "AI की आज की मुफ़्त सीमा पूरी — थोड़ी देर बाद फिर करें";
+  if (status >= 500) return "Google का AI अभी व्यस्त है — दोबारा कोशिश करें";
+  return (detail || "AI नहीं चला") + " (" + status + ")";
+}
+
+async function geminiPost(model, parts) {
+  return fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
+    { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0 }
+      }) });
+}
 
 async function askGemini(prompt, dataUrl) {
-  if (!GEMINI_KEY) throw new Error("AI की चाबी नहीं मिली (vbe_meta/app_config)");
-  const parts = [{ text: prompt }];
+  if (!GEMINI_KEY) throw new Error("AI की चाबी नहीं मिली — Firestore में vbe_meta › app_config › geminiKey डालें");
+  const parts = [{ text: prompt + "\n\nToday's date is " + todayISO() + "." }];
   if (dataUrl) parts.push({ inline_data: { mime_type: "image/jpeg", data: dataUrl.split(",")[1] } });
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-    { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0 } }) });
-  if (!res.ok) throw new Error("AI " + res.status);
+
+  let model = GEMINI_MODEL || await geminiDiscoverModel();
+  let res = await geminiPost(model, parts);
+  if (res.status === 404 || res.status === 400) {
+    // Either the cached name is gone or it never existed for this key: re-ask.
+    const fresh = await geminiDiscoverModel();
+    if (fresh !== model) res = await geminiPost(fresh, parts);
+  }
+  if (!res.ok) throw new Error(geminiWhy(res.status));
+
   const body = await res.json();
-  const text = (((body.candidates || [])[0] || {}).content || {}).parts.map(p => p.text || "").join("");
-  return JSON.parse(text.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, ""));
+  const cand = (body.candidates || [])[0];
+  if (!cand) {
+    const blocked = (body.promptFeedback || {}).blockReason;
+    throw new Error(blocked ? "AI ने फोटो पढ़ने से मना किया (" + blocked + ")"
+      : "AI ने कुछ नहीं लौटाया — फोटो साफ़ करके फिर लगाएँ");
+  }
+  const text = ((cand.content || {}).parts || []).map(p => p.text || "").join("");
+  if (!text.trim()) throw new Error("फोटो में कुछ पढ़ने लायक नहीं मिला");
+  try {
+    return JSON.parse(text.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, ""));
+  } catch (e) {
+    throw new Error("AI का जवाब समझ नहीं आया — दोबारा कोशिश करें");
+  }
 }
 
 function showShots() {
@@ -1736,31 +1899,69 @@ function pickPhoto(id, fromCamera) {
 
 function aiSay(html, cls) { $("aAiMsg").className = cls || "muted"; $("aAiMsg").innerHTML = html; }
 
+/** Only fill a box the owner has not already typed into. */
+function fillIfEmpty(id, val) {
+  if (val == null || val === "") return;
+  if (!$(id).value) $(id).value = val;
+}
+
 /** Bill photo → vendor, items, total. Every field stays editable afterwards. */
 $("aBillFile").addEventListener("change", async (e) => {
   const f = e.target.files[0];
   if (!f) return;
   aiSay('<span class="thinking"></span> बिल पढ़ रहा हूँ…');
   try {
-    ENTRY_SHOTS.bill = await shrinkImage(f);
+    ENTRY_SHOTS.bill = await shrinkImage(f, 1800, 0.85);   // small print needs pixels
     showShots();
     const r = await askGemini(BILL_PROMPT, ENTRY_SHOTS.bill);
+
     if (r.vendor) $("aVendor").value = r.vendor;
     if (r.billDate) $("aDate").value = r.billDate;
-    if (r.total != null) $("aTotal").value = r.total;
+    fillIfEmpty("aInvoice", r.invoiceNo);
+    PRINTED_EXTRA = 0;
     if (r.items && r.items.length) {
       $("aItems").innerHTML = "";
       r.items.forEach((it) => addItemRow(it));
-      recalcTotal();
-      if (r.total != null) $("aTotal").value = r.total;
+      // GST / round-off = whatever the printed total carries beyond the items.
+      const sum = itemRows().reduce((a, i) => a + (i.amount || 0), 0);
+      if (r.total != null && sum > 0 && r.total > sum) {
+        PRINTED_EXTRA = Math.round((r.total - sum) * 100) / 100;
+      }
     }
-    aiSay("✅ " + esc(r.summary || "बिल पढ़ लिया") +
-      " — <b>नीचे जाँचकर सुधार लें</b>, फिर दर्ज करें", "ok");
+    recalcTotal();
+    if (r.total != null) $("aTotal").value = r.total;    // printed total wins
+    if (r.paidVia) fillIfEmpty("aNote", r.paidVia.toUpperCase() + " से");
+
+    // The business card writes itself — GSTIN and phone are on most bills.
+    if (r.vendor && (r.gstin || r.phone)) {
+      vcardFromBill(r.vendor, r.gstin, r.phone).catch(() => {});
+    }
+
+    aiSay(billReadMsg(r), "ok");
     priceHints();
   } catch (err) {
-    aiSay("AI नहीं पढ़ पाया: " + esc(err.message) + " — हाथ से भर सकते हैं", "bad");
+    aiSay("बिल नहीं पढ़ पाया — " + esc(err.message) +
+      "<br><span class='muted'>नीचे हाथ से भर सकते हैं, फोटो फिर भी जुड़ जाएगी।</span>", "bad");
   }
 });
+
+/**
+ * What the AI read, said back in one glance — and the one number worth
+ * checking: the items add up to X but the slip says Y. Silent mismatch is
+ * how a wrong bill gets filed.
+ */
+function billReadMsg(r) {
+  const n = (r.items || []).length;
+  let msg = "✅ " + esc(r.summary || "बिल पढ़ लिया");
+  if (n) msg += ` · <b>${n}</b> चीज़ें`;
+  if (r.total != null) msg += ` · कुल <b>${INR(r.total)}</b>`;
+  const sum = (r.items || []).reduce((s, it) => s + (Number(it.amount) || 0), 0);
+  if (n && r.total != null && sum > 0 && Math.abs(sum - r.total) > Math.max(2, r.total * 0.02)) {
+    msg += `<br>⚠️ सामान का जोड़ ${INR(sum)} है पर बिल पर ${INR(r.total)} — ` +
+      `GST/राउंड-ऑफ़ हो सकता है, एक बार देख लें`;
+  }
+  return msg + "<br><span class='muted'>नीचे जाँचकर सुधार लें, फिर दर्ज करें।</span>";
+}
 
 /** Receipt photo → UTR, party, amount. This is what makes a bill permanent. */
 $("aRecvFile").addEventListener("change", async (e) => {
@@ -1768,17 +1969,31 @@ $("aRecvFile").addEventListener("change", async (e) => {
   if (!f) return;
   aiSay('<span class="thinking"></span> रसीद पढ़ रहा हूँ…');
   try {
-    ENTRY_SHOTS.receipt = await shrinkImage(f);
+    ENTRY_SHOTS.receipt = await shrinkImage(f, 1800, 0.85);
     showShots();
     const r = await askGemini(RECEIPT_PROMPT, ENTRY_SHOTS.receipt);
+
     if (r.utr) $("aUtr").value = r.utr;
-    if (r.paidTo && !$("aVendor").value) $("aVendor").value = r.paidTo;
-    if (r.amount != null && !$("aTotal").value) $("aTotal").value = r.amount;
-    if (r.paidAt) $("aDate").value = r.paidAt;
-    aiSay("✅ " + esc(r.summary || "रसीद पढ़ ली") +
-      (r.utr ? ` · UTR <b>${esc(r.utr)}</b>` : ""), "ok");
+    fillIfEmpty("aVendor", r.paidTo);
+    fillIfEmpty("aTotal", r.amount);
+    if (r.paidAt && !$("aBillFile").value) $("aDate").value = r.paidAt;
+
+    let msg = "✅ " + esc(r.summary || "रसीद पढ़ ली");
+    if (r.utr) msg += ` · UTR <b>${esc(r.utr)}</b>`;
+    else msg += `<br>⚠️ इस स्क्रीन पर UTR नहीं दिखा — रसीद खोलकर ` +
+      `(Payment details) दोबारा फोटो लें, या UTR हाथ से भर दें`;
+    if (r.status && r.status !== "success") msg += `<br>⚠️ पेमेंट की हालत: ${esc(r.status)}`;
+
+    // Bill और रसीद दोनों हैं तो रकम मिलनी चाहिए।
+    const billTotal = Number($("aTotal").value);
+    if (ENTRY_SHOTS.bill && r.amount != null && billTotal &&
+        Math.abs(billTotal - r.amount) > 1) {
+      msg += `<br>⚠️ बिल ${INR(billTotal)} का है पर दिए ${INR(r.amount)} — जाँच लें`;
+    }
+    aiSay(msg, "ok");
   } catch (err) {
-    aiSay("रसीद नहीं पढ़ पाया: " + esc(err.message), "bad");
+    aiSay("रसीद नहीं पढ़ पाया — " + esc(err.message) +
+      "<br><span class='muted'>UTR हाथ से भर सकते हैं।</span>", "bad");
   }
 });
 
@@ -1806,9 +2021,9 @@ function priceHints() {
     const prev = lastPriceOf(name);
     if (!prev) { if (el) el.remove(); return; }
     if (!el) {
-      el = document.createElement("span");
+      el = document.createElement("div");
       el.className = "hint";
-      row.querySelector(".iName").after(el);
+      row.querySelector(".iAmt").before(el);   // its own line, under the numbers
     }
     if (isNaN(rate)) {
       el.className = "hint same";
@@ -2096,6 +2311,28 @@ function editVcard() {
   saveVcard({ firm, person, phone, gstin, address });
 }
 
+/**
+ * A bill already carries the shop's GSTIN and phone, so the business card
+ * builds itself while the bill is being read — no second photo, no typing.
+ * Only fills blanks: a card the owner corrected by hand is never overwritten.
+ */
+async function vcardFromBill(vendor, gstin, phone) {
+  const key = pKey(vendor);
+  if (!key || (!gstin && !phone)) return;
+  const have = (VCARDS && VCARDS[key]) || {};
+  const add = {};
+  if (gstin && !have.gstin) add.gstin = String(gstin).toUpperCase().replace(/\s/g, "");
+  if (phone && !have.phone) add.phone = String(phone).replace(/[^\d+]/g, "").slice(-12);
+  if (!have.firm) add.firm = vendor;
+  if (!Object.keys(add).length) return;
+  add.partyKey = key;
+  add.name = vendor;
+  add.at = firebase.firestore.FieldValue.serverTimestamp();
+  add.source = "bill_photo";
+  await db.collection("vbe_parties").doc(key).set(add, { merge: true });
+  if (VCARDS) VCARDS[key] = Object.assign({}, have, add);
+}
+
 async function saveVcard(data) {
   const key = VCARD_PARTY.key;
   const doc = Object.assign({ partyKey: key, name: VCARD_PARTY.name,
@@ -2146,32 +2383,9 @@ function shrinkImage(file, maxSide = 1400, quality = 0.72) {
   });
 }
 
-const BILL_PROMPT =
-  'You read Indian purchase bills. Return STRICT JSON only: ' +
-  '{"vendor":string|null,"billDate":"YYYY-MM-DD"|null,"total":number|null,' +
-  '"items":[{"name":string,"qty":number|null,"rate":number|null,"amount":number|null}],' +
-  '"summary":string}. summary is ONE short Hindi line naming what was bought. ' +
-  'Use null when unreadable. Amounts are plain numbers.';
-
 async function readBillWithAI(dataUrl) {
   if (!GEMINI_KEY) return null;
-  const model = "gemini-2.5-flash";
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [
-          { text: BILL_PROMPT },
-          { inline_data: { mime_type: "image/jpeg", data: dataUrl.split(",")[1] } }
-        ] }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0 }
-      })
-    });
-  if (!res.ok) throw new Error("AI " + res.status);
-  const body = await res.json();
-  const text = (((body.candidates || [])[0] || {}).content || {}).parts
-    .map((p) => p.text || "").join("");
-  return JSON.parse(text.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, ""));
+  return askGemini(BILL_PROMPT, dataUrl);
 }
 
 function openBillFor(txnId) {
