@@ -161,7 +161,8 @@
     border-radius: 12px; padding: 10px; margin-bottom: 8px; }
   .irow .iTop { display: flex; gap: 8px; align-items: center; }
   .irow .iTop .iName { flex: 1; min-width: 0; font-weight: 600; }
-  .irow .iNums { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 6px; margin-top: 8px; }
+  .irow .iNums { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 5px; margin-top: 8px; }
+  @media (max-width: 420px) { .irow .iNums { grid-template-columns: 1fr 1fr; } }
   .irow .fld { position: relative; }
   .irow .fld span { position: absolute; top: 3px; left: 10px; font-size: 9.5px;
     color: var(--muted); letter-spacing: .3px; pointer-events: none; }
@@ -333,6 +334,55 @@
   .lightbox img { max-width: 100%; max-height: 86vh; border-radius: 14px; }
   .lightbox .x { position: absolute; top: 14px; right: 14px; }
 
+  /* ══ v6 ══ पेमेंट के कार्ड — ऊपर रकम, खोलने पर पूरा पता ══ */
+  .pay { border: 1px solid var(--border); border-radius: 13px; margin-bottom: 8px;
+    background: linear-gradient(150deg, rgba(25,158,112,.13), rgba(255,255,255,.02)); }
+  .pay.bad { background: linear-gradient(150deg, rgba(201,133,0,.15), rgba(255,255,255,.02));
+    border-color: rgba(201,133,0,.45); }
+  .payTop { display: flex; align-items: center; gap: 11px; padding: 11px 13px; cursor: pointer; }
+  .payAmt { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .payWho { flex: 1; min-width: 0; line-height: 1.35; }
+  .payWho b { font-size: 13.5px; display: block; }
+  .payWho small { color: var(--muted); font-size: 11.5px; }
+  .payChev { color: var(--muted); transition: transform .18s; }
+  .pay.open .payChev { transform: rotate(180deg); }
+  .payMore { display: none; padding: 0 13px 13px; }
+  .pay.open .payMore { display: block; }
+  .payRow { display: flex; align-items: center; gap: 8px; padding: 5px 0;
+    border-top: 1px solid var(--grid); font-size: 12.5px; }
+  .payRow span { color: var(--muted); min-width: 92px; }
+  .payRow code { flex: 1; min-width: 0; word-break: break-all; font-size: 12px; }
+
+  .paySum { display: grid; grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+    gap: 8px; padding: 11px 13px; border-radius: 13px; margin: 10px 0;
+    background: var(--surface-2); border: 1px solid var(--border); }
+  .paySum div { text-align: center; }
+  .paySum span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .paySum b { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .ok2t { color: #7de07d; } .duet { color: #ff9d9d; }
+
+  /* staff */
+  .stf { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--grid); }
+  .stf:last-child { border-bottom: 0; }
+  .stAv { width: 52px; height: 52px; flex: 0 0 auto; border-radius: 16px; font-size: 26px;
+    display: grid; place-items: center;
+    background: linear-gradient(150deg, rgba(213,81,129,.3), rgba(57,135,229,.16));
+    border: 1px solid var(--border); }
+  .stx { flex: 1; min-width: 0; }
+  #stAvatars { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 6px; }
+  .av { font-size: 20px; padding: 7px 10px; border-radius: 12px; }
+  .av.on { background: linear-gradient(160deg, rgba(57,135,229,.4), rgba(57,135,229,.15));
+    border-color: rgba(57,135,229,.6); }
+
+  /* आया/गया की पट्टी */
+  .io { display: flex; gap: 10px; margin-bottom: 10px; }
+  .io div { flex: 1; text-align: center; padding: 10px; border-radius: 13px;
+    border: 1px solid var(--border); }
+  .io span { display: block; font-size: 11px; color: var(--muted); }
+  .io b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .io .i { background: linear-gradient(150deg, rgba(12,163,12,.16), transparent); }
+  .io .o { background: linear-gradient(150deg, rgba(208,59,59,.16), transparent); }
+
   .ta { display: block; width: 100%; font: inherit; font-size: 12.5px; color: var(--ink);
     background: var(--surface-2); border: 1px solid var(--border);
     border-radius: 12px; padding: 11px; min-height: 130px; resize: vertical; }
@@ -400,6 +450,8 @@
       <button data-v="ledger">📜 हिसाब</button>
       <button data-v="party">🧑 पार्टी</button>
       <button data-v="recon">🏦 मिलान</button>
+      <button data-v="unit">🎯 यूनिट</button>
+      <button data-v="staff">🧑‍🤝‍🧑 Staff</button>
       <button data-v="missing">❓ बकाया</button>
     </nav>
 
@@ -558,12 +610,18 @@
       <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
       <div class="filters">
         <input id="pSearch" type="search" placeholder="नाम से खोजें — जैसे: राणा राम, chopra…">
+        <select id="pDir">
+          <option value="">🔴🟢 सब</option>
+          <option value="out">🔴 जिन्हें दिया</option>
+          <option value="in">🟢 जिनसे आया</option>
+        </select>
         <select id="pSort">
           <option value="total">सबसे ज़्यादा पैसा</option>
           <option value="count">सबसे ज़्यादा बार</option>
           <option value="last">सबसे हाल का</option>
         </select>
       </div>
+      <div id="pIO"></div>
       <div class="card" id="partyList"></div>
 
     </section>
@@ -589,6 +647,8 @@
                 placeholder="जैसे: जन्मतिथि DDMMYYYY, PAN, या मोबाइल के अंक"></label>
             <button class="primary" style="margin-top:8px;width:100%" onclick="retryWithPassword()">खोलें</button>
           </div>
+          <button type="button" style="width:100%;margin-top:10px" onclick="openBulk()">
+            📥 या एक साथ कई रसीदें डालें (statement से पहले)</button>
           <div id="rStatus" class="muted" style="margin-top:12px"></div>
           <div id="rCoverage" style="margin-top:14px"></div>
         </div>
@@ -619,6 +679,32 @@
           <div class="itemsHead" style="margin-top:0"><span>❓ इनका बिल नहीं मिला</span></div>
           <div id="rNoBill"></div>
         </div>
+      </div>
+    </section>
+
+    <!-- ── 🎯 यूनिट — कौन सा सामान किस यूनिट में गया ── -->
+    <section class="view" id="v-unit">
+      <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
+      <div id="unitWatch"></div>
+      <div class="filters">
+        <select id="uUnit" style="flex:1"></select>
+        <button type="button" onclick="addUnit()">➕ नई यूनिट</button>
+        <button type="button" class="primary" onclick="copyChallan()">📋 चालान कॉपी</button>
+      </div>
+      <div class="tiles" id="uTiles"></div>
+      <div class="card"><div id="uRows"></div></div>
+    </section>
+
+    <!-- ── 🧑‍🤝‍🧑 Staff ── -->
+    <section class="view" id="v-staff">
+      <div class="card">
+        <div class="itemsHead" style="margin-top:0">
+          <span>🧑‍🤝‍🧑 मेरा स्टाफ़</span>
+          <button type="button" class="primary mini" onclick="openStaff('')">➕ नया staff</button>
+        </div>
+        <p class="muted" style="margin-bottom:10px">कॉलिंग और WhatsApp नंबर अलग-अलग रखे जा
+          सकते हैं। ख़रीद दर्ज होते ही इन्हें WhatsApp भेजा जा सकेगा।</p>
+        <div id="staffList"></div>
       </div>
     </section>
 
@@ -739,6 +825,22 @@
             <label>कुल ₹<input id="bsTotal" type="number" inputmode="decimal" placeholder="अपने-आप"></label>
           </div>
           <div id="bsWarn" class="badge lo" hidden style="display:block;margin-top:8px;line-height:1.5"></div>
+
+          <!-- 💳 पेमेंट — एक बिल के कई पेमेंट, हर एक का पूरा पता -->
+          <div class="itemsHead" style="margin-top:16px"><span>💳 पेमेंट</span>
+            <span class="muted">कई हो सकते हैं</span></div>
+          <input type="file" id="bsPayShot" accept="image/*" hidden>
+          <div class="pick" style="margin-bottom:8px">
+            <button type="button" onclick="pickPhoto('bsPayShot', true)">📷 रसीद खींचें</button>
+            <button type="button" onclick="pickPhoto('bsPayShot', false)">🖼️ गैलरी</button>
+            <button type="button" onclick="addPayManual()">✍️ हाथ से</button>
+          </div>
+          <div id="bsPayMsg" class="muted" style="margin-bottom:8px"></div>
+          <div id="bsPays"></div>
+          <div id="bsPaySum"></div>
+          <div id="bsGapAsk" class="badge lo" hidden style="display:block;margin-top:8px;line-height:1.6"></div>
+          <label style="margin-top:10px">🎁 छूट ₹
+            <input id="bsDiscount" type="number" inputmode="decimal" placeholder="0"></label>
           <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
             <button class="primary" id="bsSave" onclick="saveBillSheet()">💾 सहेजें</button>
             <button type="button" onclick="closeSheet('billSheet')">रहने दें</button>
@@ -820,6 +922,54 @@
               <button type="button" onclick="closeSheet('paySheet')">बाद में</button>
               <span id="pyMsg" class="muted"></span>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📥 एक साथ कई रसीदें -->
+    <div id="bulkSheet" class="sheet" hidden>
+      <div class="sheetBox">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3>📥 एक साथ कई रसीदें</h3>
+          <button type="button" class="x" onclick="closeSheet('bulkSheet')">✕</button>
+        </div>
+        <p class="muted">GPay / PhonePe की जितनी रसीदें हैं, सब एक साथ चुन लें। हर एक से
+          UTR, रकम, खाता और समय निकालकर पक्की entry बन जाएगी — बैंक statement का
+          इंतज़ार किए बिना। वही UTR दुबारा आया तो नया नहीं बनेगा।</p>
+        <input type="file" id="bulkFiles" accept="image/*" multiple hidden>
+        <button type="button" class="primary" style="width:100%;margin:12px 0"
+          onclick="document.getElementById('bulkFiles').click()">🖼️ रसीदें चुनें (कई)</button>
+        <div id="bulkMsg" class="muted"></div>
+        <div id="bulkList" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- 🧑‍🤝‍🧑 staff जोड़ें / सुधारें -->
+    <div id="staffSheet" class="sheet" hidden>
+      <div class="sheetBox">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3 id="stTitle">🧑‍🤝‍🧑 Staff</h3>
+          <button type="button" class="x" onclick="closeSheet('staffSheet')">✕</button>
+        </div>
+        <div class="form">
+          <label>नाम<input id="stName" placeholder="जैसे: कैलाश भाई"></label>
+          <label style="margin-top:10px">अवतार</label>
+          <div id="stAvatars"></div>
+          <div class="frow" style="margin-top:10px">
+            <label>📞 कॉलिंग नंबर<input id="stPhone" inputmode="tel" placeholder="10 अंक"></label>
+            <label>💬 WhatsApp नंबर<input id="stWa" inputmode="tel" placeholder="अलग हो तो"></label>
+          </div>
+          <div class="frow">
+            <label>काम<input id="stRole" placeholder="जैसे: ख़रीदारी, डिलीवरी"></label>
+            <label>Telegram ID<input id="stTgId" inputmode="numeric" placeholder="bot को /myid भेजकर"></label>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
+            <button class="primary" onclick="saveStaff()">💾 सहेजें</button>
+            <button type="button" onclick="closeSheet('staffSheet')">रहने दें</button>
+            <span id="stMsg" class="muted"></span>
           </div>
         </div>
       </div>
@@ -936,6 +1086,11 @@ async function loadData() {
     VCARDS = {};
     vs.docs.forEach(d => { VCARDS[d.id] = d.data(); });
   } catch (e) { VCARDS = {}; }
+  try {
+    const st = await db.collection("vbe_staff").limit(100).get();
+    STAFF = {};
+    st.docs.forEach(d => { STAFF[d.id] = d.data(); });
+  } catch (e) { STAFF = {}; }
   MISSING = BANKTXNS.filter(t => t.type === "debit" && !t.matched)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
@@ -976,6 +1131,9 @@ function renderAll() {
   renderAccounts();
   renderMissing();
   refreshUnitList();
+  renderUnitTab();
+  renderUnitWatch();
+  renderStaff();
 }
 
 function monthKey(d) { return d ? d.toISOString().slice(0, 7) : ""; }
@@ -1268,6 +1426,8 @@ function addItemRow(it) {
         <input class="iUnit" list="unitList" value="${esc((it && it.unit) || "Nos")}"></label>
       <label class="fld"><span>रेट ₹</span>
         <input class="iRate" type="number" inputmode="decimal" step="any" value="${v(it && it.rate)}"></label>
+      <label class="fld"><span>बेचना ₹</span>
+        <input class="iSale" type="number" inputmode="decimal" step="any" value="${v(it && it.saleRate)}"></label>
     </div>
     <div class="iAmt"></div>`;
   d.querySelector(".del").onclick = () => { d.remove(); recalcTotal(); };
@@ -1285,7 +1445,17 @@ function rowAmount(row) {
   const box = row.querySelector(".iAmt");
   if (isNaN(q) || isNaN(r)) { box.textContent = ""; return; }
   const u = row.querySelector(".iUnit").value.trim();
-  box.innerHTML = `${q}${u ? " " + esc(u) : ""} × ₹${r} = <b>${INR(q * r)}</b>`;
+  const saleEl = row.querySelector(".iSale");
+  const sr = saleEl ? parseFloat(saleEl.value) : NaN;
+  let html = `${q}${u ? " " + esc(u) : ""} × ₹${r} = <b>${INR(q * r)}</b>`;
+  // ख़रीदा कितने में, बेचना कितने में — मुनाफ़ा वहीं दिख जाए जहाँ रेट भरा है।
+  if (!isNaN(sr) && sr > 0) {
+    const p = (sr - r) * q;
+    html += `<br><span class="${p >= 0 ? "hint down" : "hint up"}">` +
+      `बिक्री ${INR(sr * q)} · मुनाफ़ा <b>${INR(p)}</b>` +
+      (r ? ` (${Math.round(((sr - r) / r) * 100)}%)` : "") + `</span>`;
+  }
+  box.innerHTML = html;
 }
 
 function itemRows() {
@@ -1295,7 +1465,7 @@ function itemRows() {
     const name = val(".iName");
     if (!name) return null;
     const qty = num(".iQty"), rate = num(".iRate");
-    return { name, qty, unit: val(".iUnit") || null, rate,
+    return { name, qty, unit: val(".iUnit") || null, rate, saleRate: num(".iSale"),
       amount: (qty != null && rate != null) ? Math.round(qty * rate * 100) / 100 : null };
   }).filter(Boolean);
 }
@@ -1359,6 +1529,7 @@ function initEntryForm() {
 function resetEntry() {
   ["aVendor", "aTotal", "aInvoice", "aNote", "aUtr"].forEach(id => $(id).value = "");
   ENTRY_SHOTS = { bill: null, receipt: null };
+  ENTRY_PAY = null;
   PRINTED_EXTRA = 0;
   $("aExtra").textContent = "";
   showShots();
@@ -1428,8 +1599,21 @@ async function saveEntry() {
       }
     }
     const utr = $("aUtr").value.trim();
+    if (ENTRY_PAY) {
+      if (rec.paymentPhotoDriveUrl) ENTRY_PAY.photoUrl = rec.paymentPhotoDriveUrl;
+      if (utr && !ENTRY_PAY.utr) ENTRY_PAY.utr = utr.toUpperCase();
+      rec.payments = [ENTRY_PAY];
+      rec.paidFromAccountId = ENTRY_PAY.accountId || rec.paidFromAccountId;
+    }
     if (utr) rec.payment = { mode: "upi", paidToName: vendorName || null,
       amount: total, upiRef: utr, paidAt: $("aDate").value || null };
+
+    // Pricebook + Flags — bot की तरह app से बने बिलों पर भी
+    try {
+      const alerts = await pricebookAdd(rec);
+      rec.priceAlerts = alerts;
+      rec.flags = computeFlags(rec, alerts);
+    } catch (e) { rec.flags = computeFlags(rec, []); }
 
     await db.collection("vbe_expenses").doc(docId).set(rec);
     await db.collection("_audit_logs").add({
@@ -1951,18 +2135,61 @@ function renderRecon(total) {
 }
 
 /** One shape for every stored bank row, whatever source it came from. */
-function txnDoc(t, accountId, receiptId, confidence) {
-  return {
-    accountId, date: t.date, time: t.time || null,
+/**
+ * Statement की entry को Firestore के रूप में ढालो — और पुरानी जानकारी को
+ * कभी न मिटाओ।
+ *
+ * पहले यह हमेशा billPhotoId: null, aiSummary: null और matchedReceiptId: null
+ * लिखता था। merge:true के साथ null भी एक क़ीमत है, इसलिए वही statement दुबारा
+ * डालने पर पहले से लगी बिल-फोटो, AI की समझ और पक्का हो चुका मिलान — तीनों उड़
+ * जाते थे, और entry फिर से "बिल बाकी" हो जाती थी। जो पहले से भरा है वह जस का
+ * तस रहे; statement सिर्फ़ छूटी हुई जगहें भरे।
+ */
+function txnDoc(t, accountId, receiptId, confidence, existing) {
+  const doc = {
+    accountId, date: t.date,
     amount: t.amount, type: t.type,
-    narration: t.narration || "", utr: t.utr || null,
-    party: t.party || null, partyKey: pKey(t.party || t.narration || ""),
+    partyKey: pKey(t.party || t.narration || ""),
     source: t.source || "statement",
-    matched: !!receiptId, matchedReceiptId: receiptId || null,
-    matchConfidence: receiptId ? confidence : null,
-    billPhotoId: null, aiSummary: null,
     importedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
+  // ये सिर्फ़ तभी लिखो जब कुछ हो — खाली मान पुरानी क़ीमत न मिटाए।
+  if (t.time) doc.time = t.time;
+  if (t.narration) doc.narration = t.narration;
+  if (t.utr) doc.utr = String(t.utr).toUpperCase();
+  if (t.party) doc.party = t.party;
+  if (t.balance != null) doc.balance = t.balance;
+
+  // मिलान सिर्फ़ आगे बढ़े, पीछे कभी नहीं: पहले से जुड़ा बिल statement दुबारा
+  // डालने से नहीं टूटना चाहिए।
+  const had = existing && (existing.matchedReceiptId || existing.billPhotoId);
+  if (receiptId) {
+    doc.matched = true;
+    doc.matchedReceiptId = receiptId;
+    doc.matchConfidence = confidence || null;
+  } else if (!had && !existing) {
+    doc.matched = false;
+    doc.matchedReceiptId = null;
+  }
+  return doc;
+}
+
+/** इस entry के बारे में जो पहले से हमारे पास है। */
+function existingTxn(id) {
+  return BANKTXNS.filter((b) => b._id === id)[0] || null;
+}
+
+/** एक import का साफ़ हिसाब — कितनी नई, कितनी पहले से, कितनी जानकारी भरी। */
+function importReport(r) {
+  return gfx.insight({
+    icon: "📥", tone: r.added ? "down" : "ai",
+    title: `${r.total} entries पढ़ीं — ${r.added} नई जुड़ीं`,
+    body: `🔁 <b>${r.existed}</b> पहले से थीं (दुबारा नहीं जोड़ीं)` +
+      (r.enriched ? ` · ✍️ <b>${r.enriched}</b> में छूटी जानकारी भर दी` : "") +
+      (r.linked ? ` · 🔗 <b>${r.linked}</b> बिल से जुड़ीं` : "") +
+      `<br><span class="muted">पहले से भरी कोई चीज़ मिटाई नहीं गई — बिल, फोटो और
+       मिलान सब वैसे के वैसे हैं।</span>`
+  });
 }
 
 async function commitRecon() {
@@ -1972,15 +2199,17 @@ async function commitRecon() {
   try {
     const all = RECON.matched.concat(RECON.maybe);
     const picks = [...document.querySelectorAll("#rMaybe select")];
-    let saved = 0, linked = 0;
+    let saved = 0, linked = 0, added = 0, enriched = 0;
     for (const sel of picks) {
       const m = all[Number(sel.dataset.i)];
       if (!m) continue;
       const id = txnId(RECON.account, m.t);
       const keep = sel.value;                        // "" = owner said no
+      const had = existingTxn(id);
       await db.collection("vbe_bank_txns").doc(id).set(
         txnDoc(m.t, RECON.account, keep ? m.e.receiptId : null,
-               sel.dataset.sure === "1" ? "high" : "low"), { merge: true });
+               sel.dataset.sure === "1" ? "high" : "low", had), { merge: true });
+      if (had) enriched++; else added++;
       saved++;
       if (keep) {
         await db.collection("vbe_expenses").doc(keep)
@@ -1991,8 +2220,11 @@ async function commitRecon() {
     // Unmatched debits (the बकाया list) and every credit are stored too, so the
     // timeline and party views hold the whole picture, not just matched money.
     for (const m of RECON.noBill.concat((RECON.credits || []).map((t) => ({ t })))) {
-      await db.collection("vbe_bank_txns").doc(txnId(RECON.account, m.t))
-        .set(txnDoc(m.t, RECON.account, null, null), { merge: true });
+      const id2 = txnId(RECON.account, m.t);
+      const had2 = existingTxn(id2);
+      await db.collection("vbe_bank_txns").doc(id2)
+        .set(txnDoc(m.t, RECON.account, null, null, had2), { merge: true });
+      if (had2) enriched++; else added++;
       saved++;
     }
     await db.collection("_audit_logs").add({
@@ -2003,8 +2235,9 @@ async function commitRecon() {
                skipped: (RECON.dupes || []).length }
     });
     status.className = "ok";
-    status.textContent = `✅ ${saved} entries हमेशा के लिए सहेजीं · ${linked} बिल से जुड़ीं` +
-      ((RECON.dupes || []).length ? ` · 🔁 ${RECON.dupes.length} पहले से थीं (दुबारा नहीं जोड़ीं)` : "");
+    status.innerHTML = importReport({
+      total: saved + (RECON.dupes || []).length, added,
+      existed: enriched + (RECON.dupes || []).length, enriched, linked });
     await loadData(); renderAll();
   } catch (err) {
     status.className = "bad";
@@ -2072,6 +2305,7 @@ function initRecon() {
 /* ══════════ 🧠 AI से entry — बिल + रसीद पढ़कर, सब सुधारने लायक ══════════ */
 
 let ENTRY_SHOTS = { bill: null, receipt: null };   // data URLs, uploaded on save
+let ENTRY_PAY = null;                              // रसीद से निकला पूरा पेमेंट
 
 const RECEIPT_PROMPT =
   'You read Indian UPI / bank payment receipts: GPay, PhonePe, Paytm, BHIM and ' +
@@ -2336,15 +2570,25 @@ $("aRecvFile").addEventListener("change", async (e) => {
   try {
     ENTRY_SHOTS.receipt = await shrinkImage(f, 1800, 0.85);
     showShots();
-    const r = await askGemini(RECEIPT_PROMPT, ENTRY_SHOTS.receipt);
+    // वही पूरा रसीद-प्रॉम्प्ट जो बिल sheet इस्तेमाल करती है — नाम, खाता,
+    // समय, UTR सब निकालता है, सिर्फ़ UTR नहीं।
+    const r = await askGemini(PAY_PROMPT, ENTRY_SHOTS.receipt);
+    ENTRY_PAY = paymentFromReceipt(r, null);
 
     if (r.utr) $("aUtr").value = r.utr;
-    fillIfEmpty("aVendor", r.paidTo);
+    fillIfEmpty("aVendor", r.toName);
     fillIfEmpty("aTotal", r.amount);
     if (r.paidAt && !$("aBillFile").value) $("aDate").value = r.paidAt;
+    if (ENTRY_PAY.accountId && !$("aAccount").value) $("aAccount").value = ENTRY_PAY.accountId;
 
     let msg = "✅ " + esc(r.summary || "रसीद पढ़ ली");
-    if (r.utr) msg += ` · UTR <b>${esc(r.utr)}</b>`;
+    const bits = [];
+    if (ENTRY_PAY.accountId) bits.push("🏦 " + esc(accLabel(ENTRY_PAY.accountId)));
+    else if (r.fromBank) bits.push("🏦 " + esc(r.fromBank) + (r.fromLast4 ? " " + esc(r.fromLast4) : ""));
+    if (r.time) bits.push("🕘 " + esc(r.time));
+    if (r.app) bits.push("📱 " + esc(r.app));
+    if (bits.length) msg += "<br>" + bits.join(" · ");
+    if (r.utr) msg += `<br>🔗 UTR <b>${esc(r.utr)}</b>`;
     else msg += `<br>⚠️ इस स्क्रीन पर UTR नहीं दिखा — रसीद खोलकर ` +
       `(Payment details) दोबारा फोटो लें, या UTR हाथ से भर दें`;
     if (r.status && r.status !== "success") msg += `<br>⚠️ पेमेंट की हालत: ${esc(r.status)}`;
@@ -2504,7 +2748,7 @@ function buildParties() {
     const k = pKey(name);
     if (!k) return null;
     if (!map[k]) map[k] = { key: k, name: String(name).trim(), total: 0, count: 0,
-      accounts: {}, last: "", rows: [] };
+      inSum: 0, inCount: 0, accounts: {}, last: "", rows: [] };
     if (String(name).trim().length > map[k].name.length) map[k].name = String(name).trim();
     return map[k];
   };
@@ -2518,14 +2762,24 @@ function buildParties() {
     if (date > p.last) p.last = date;
     const acc = e.paidFromAccountId;
     if (acc) p.accounts[acc] = (p.accounts[acc] || 0) + amt;
-    p.rows.push({ kind: "bill", date, amount: amt, account: acc,
+    p.rows.push({ kind: "bill", dir: "out", date, amount: amt, account: acc,
       ref: e.receiptId, status: e.status, unit: e.unit, id: e._id });
   });
 
   BANKTXNS.forEach((t) => {
-    if (t.type !== "debit") return;
     const p = touch(t.party || t.narration);
     if (!p) return;
+    // आया हुआ पैसा भी उसी पार्टी के नीचे — वरना "सब सफ़ेद" दिखता है और
+    // यह पता ही नहीं चलता कि किससे लिया, किसे दिया।
+    if (t.type === "credit") {
+      p.inSum = (p.inSum || 0) + (t.amount || 0);
+      p.inCount = (p.inCount || 0) + 1;
+      if (String(t.date) > p.last) p.last = String(t.date);
+      p.rows.push({ kind: "bank", dir: "in", date: t.date, amount: t.amount,
+        account: t.accountId, time: t.time || null,
+        ref: t.utr ? "UTR " + t.utr : "", status: "आया", narration: t.narration });
+      return;
+    }
     // A matched debit is the same money as its bill — count it once.
     const dup = t.matchedReceiptId &&
       p.rows.some((r) => r.kind === "bill" && r.ref === t.matchedReceiptId);
@@ -2534,9 +2788,10 @@ function buildParties() {
       if (t.accountId) p.accounts[t.accountId] = (p.accounts[t.accountId] || 0) + (t.amount || 0);
     }
     if (String(t.date) > p.last) p.last = String(t.date);
-    p.rows.push({ kind: "bank", date: t.date, amount: t.amount, account: t.accountId,
-      ref: t.matchedReceiptId || (t.utr ? "UTR " + t.utr : ""), status: t.matched ? "मिला" : "बिल नहीं",
-      narration: t.narration });
+    p.rows.push({ kind: "bank", dir: "out", date: t.date, amount: t.amount,
+      account: t.accountId, time: t.time || null,
+      ref: t.matchedReceiptId || (t.utr ? "UTR " + t.utr : ""),
+      status: t.matched ? "मिला" : "बिल नहीं", narration: t.narration });
   });
 
   Object.values(map).forEach((p) => p.rows.sort((a, b) => String(b.date).localeCompare(String(a.date))));
@@ -2556,16 +2811,34 @@ function renderParties() {
     : sort === "last" ? String(b.last).localeCompare(String(a.last))
     : b.total - a.total);
 
+  const dir = $("pDir") ? $("pDir").value : "";
+  if (dir === "out") list = list.filter((p) => p.total > 0);
+  if (dir === "in") list = list.filter((p) => (p.inSum || 0) > 0);
+
+  // ऊपर कुल आया / कुल गया — बिलिंग app में यही पहली नज़र की चीज़ है।
+  const tOut = list.reduce((a, p) => a + p.total, 0);
+  const tIn = list.reduce((a, p) => a + (p.inSum || 0), 0);
+  $("pIO").innerHTML = `
+    <div class="io">
+      <div class="o"><span>🔴 गया</span><b>${INR(tOut)}</b></div>
+      <div class="i"><span>🟢 आया</span><b>${INR(tIn)}</b></div>
+      <div><span>बचा</span><b>${INR(tIn - tOut)}</b></div>
+    </div>`;
+
   $("partyList").innerHTML = list.length ? list.slice(0, 100).map((p) => {
     const accs = Object.keys(p.accounts);
+    const net = (p.inSum || 0) - p.total;
     return `
-    <div class="mrow" style="cursor:pointer" onclick="showParty('${esc(p.key)}')">
-      <div class="amt">${INR(p.total)}</div>
+    <div class="mrow txn ${p.total >= (p.inSum || 0) ? "out" : "in"}"
+         style="cursor:pointer" onclick="showParty('${esc(p.key)}')">
+      <div class="amt ${p.total ? "out" : "in"}">${p.total ? "−" + INR(p.total) : "+" + INR(p.inSum || 0)}</div>
       <div class="mx">
-        <b>${esc(p.name)}</b>
-        <br><span class="muted">${p.count} बार · आख़िरी ${esc(p.last || "—")}</span>
-        ${accs.length ? "<br>" + accs.map(a =>
-          `<span class="badge">${esc(accLabel(a))} · ${INR(p.accounts[a])}</span>`).join(" ") : ""}
+        <div class="pname">${esc(p.name)}</div>
+        <span class="muted">${p.count} बार · आख़िरी ${esc(dayLabel(p.last) || "—")}</span>
+        <br>
+        ${p.total ? `<span class="badge lo">🔴 गया ${INR(p.total)}</span> ` : ""}
+        ${p.inSum ? `<span class="badge hi">🟢 आया ${INR(p.inSum)}</span> ` : ""}
+        ${p.total && p.inSum ? `<span class="badge">बचा ${INR(net)}</span>` : ""}
         ${accs.length > 1 ? '<br><span class="badge lo">⚠️ ' + accs.length + ' अलग खातों से</span>' : ""}
       </div>
     </div>`;
@@ -2585,7 +2858,10 @@ function showParty(key) {
   if (!p) { toast("इस नाम का कोई हिसाब नहीं मिला"); return; }
   const accs = Object.keys(p.accounts);
   const rows = p.rows.filter((r) => inRange(r.date));
-  const inSum = rows.reduce((a, r) => a + (r.amount || 0), 0);
+  const outR = rows.filter((r) => r.dir !== "in");
+  const inR = rows.filter((r) => r.dir === "in");
+  const outSum = outR.reduce((a, r) => a + (r.amount || 0), 0);
+  const inSum = inR.reduce((a, r) => a + (r.amount || 0), 0);
   const noBill = p.rows.filter((r) => r.kind === "bank" && r.status === "बिल नहीं").length;
 
   openSheet("partySheet");
@@ -2594,12 +2870,17 @@ function showParty(key) {
       <h3>${esc(p.name)}</h3>
       <button type="button" class="x" onclick="closeParty()">✕</button>
     </div>
-    <div class="tiles" style="margin:10px 0">
-      <div class="card tile"><div class="k">कुल दिया</div><div class="v">${INR(p.total)}</div>
-        <div class="s">${p.count} बार · आख़िरी ${esc(p.last || "—")}</div></div>
-      <div class="card tile"><div class="k">चुनी अवधि में</div><div class="v">${INR(inSum)}</div>
-        <div class="s">${rows.length} बार</div></div>
+    <div class="io" style="margin:10px 0">
+      <div class="o"><span>🔴 कुल दिया</span><b>${INR(p.total)}</b>
+        <span style="margin-top:3px">${p.count} बार</span></div>
+      <div class="i"><span>🟢 कुल आया</span><b>${INR(p.inSum || 0)}</b>
+        <span style="margin-top:3px">${p.inCount || 0} बार</span></div>
+      <div><span>बचा</span><b>${INR((p.inSum || 0) - p.total)}</b>
+        <span style="margin-top:3px">आख़िरी ${esc(dayLabel(p.last) || "—")}</span></div>
     </div>
+    <div class="muted" style="margin-bottom:10px">📅 चुनी अवधि में —
+      <b style="color:#ff9d9d">${INR(outSum)}</b> गया ·
+      <b style="color:#7de07d">${INR(inSum)}</b> आया · ${rows.length} बार</div>
     ${noBill ? `<div class="badge lo" style="margin-bottom:10px">⚠️ ${noBill} पेमेंट का बिल अभी बाकी है</div>` : ""}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
       <button type="button" class="primary mini" onclick="openPay('${esc(p.name)}')">💸 पेमेंट करें</button>
@@ -2609,10 +2890,11 @@ function showParty(key) {
     <div class="itemsHead"><span>📜 पुराने लेन-देन</span>
       <span class="muted">${rows.length || p.rows.length}</span></div>
     ${(rows.length ? rows : p.rows).slice(0, 200).map((r) => `
-      <div class="mrow txn out">
-        <div class="amt">${INR(r.amount)}</div>
+      <div class="mrow txn ${r.dir === "in" ? "in" : "out"}">
+        <div class="amt ${r.dir === "in" ? "in" : "out"}">${r.dir === "in" ? "+" : "−"}${INR(r.amount)}</div>
         <div class="mx">
-          <b>${esc(r.date || "—")}</b> · ${r.kind === "bill" ? "🧾 बिल" : "🏦 बैंक"}
+          <b>${esc(dayLabel(String(r.date || "").slice(0, 10)) || "—")}</b>${r.time ? " · " + esc(r.time) : ""}
+          · ${r.kind === "bill" ? "🧾 बिल" : r.dir === "in" ? "🟢 आया" : "🏦 बैंक"}
           ${r.ref ? " · " + esc(r.ref) : ""}
           <br><span class="muted">${esc(accLabel(r.account))}${r.unit ? " · " + esc(r.unit) : ""}
             ${r.status ? " · " + esc(r.status) : ""}</span>
@@ -2754,7 +3036,7 @@ function initParties() {
   PARTIES = buildParties();
   renderParties();
 }
-["pSearch", "pSort"].forEach(id => $(id).addEventListener("input", renderParties));
+["pSearch", "pSort", "pDir"].forEach(id => $(id).addEventListener("input", renderParties));
 
 /* ══════════ 📎 बिल जोड़ना + 🧠 Gemini ══════════
    चाबी कभी code में नहीं — Firestore के owner-only doc से आती है, इसलिए
@@ -2969,6 +3251,7 @@ function refreshAll() {
   try { PARTIES = buildParties(); renderParties(); } catch (e) {}
   try { renderMissing(); } catch (e) {}
   try { renderAccounts(); renderCoverage(); } catch (e) {}
+  try { renderUnitTab(); renderUnitWatch(); renderStaff(); } catch (e) {}
 }
 
 /* ── 🏦 खाते — जोड़ना, सुधारना, और एक टैप में भेजना ─────────────────
@@ -3154,6 +3437,8 @@ function addBsItem(it) {
         <input class="iUnit" list="unitList" value="${esc((it && it.unit) || "Nos")}"></label>
       <label class="fld"><span>रेट ₹</span>
         <input class="iRate" type="number" inputmode="decimal" step="any" value="${v(it && it.rate)}"></label>
+      <label class="fld"><span>बेचना ₹</span>
+        <input class="iSale" type="number" inputmode="decimal" step="any" value="${v(it && it.saleRate)}"></label>
     </div>
     <div class="iAmt"></div>`;
   d.querySelector(".del").onclick = () => { d.remove(); bsRecalc(); };
@@ -3172,7 +3457,7 @@ function bsItems() {
     const name = val(".iName");
     if (!name) return null;
     const qty = num(".iQty"), rate = num(".iRate");
-    return { name, qty, unit: val(".iUnit") || "Nos", rate,
+    return { name, qty, unit: val(".iUnit") || "Nos", rate, saleRate: num(".iSale"),
       amount: (qty != null && rate != null) ? Math.round(qty * rate * 100) / 100 : null };
   }).filter(Boolean);
 }
@@ -3202,7 +3487,8 @@ function bsCheckAmount() {
     `बाक़ी नकद/किसी और खाते से गया हो तो ठीक है, वरना जाँच लें।`;
 }
 ["bsGst"].forEach((id) => $(id).addEventListener("input", bsRecalc));
-$("bsTotal").addEventListener("input", bsCheckAmount);
+$("bsTotal").addEventListener("input", () => { bsCheckAmount(); renderPays(); });
+$("bsDiscount").addEventListener("input", renderPays);
 
 function bsShowShots() {
   const all = (BILL_SHOTS.bill ? [{ u: BILL_SHOTS.bill, t: "बिल" }] : [])
@@ -3215,6 +3501,8 @@ function openBillSheet(opts) {
   BILL_TXN = opts.txn || null;
   BILL_EXP = opts.exp || null;
   BILL_SHOTS = { bill: null, extra: [] };
+  BILL_PAYS = [];
+  $("bsDiscount").value = "";
   billMode(BILL_TXN || BILL_EXP ? "photo" : "hand");
   $("bsTitle").textContent = BILL_EXP ? "✏️ बिल सुधारें" : "📎 बिल जोड़ें";
   $("bsJson").value = "";
@@ -3235,6 +3523,13 @@ function openBillSheet(opts) {
     $("bsDate").value = String(BILL_TXN.date || todayISO()).slice(0, 10);
     $("bsTotal").value = BILL_TXN.amount || "";
     $("bsUtr").value = BILL_TXN.utr || "";
+    // बैंक की entry ख़ुद एक पेमेंट है — उसे पेमेंट की सूची में दिखाओ,
+    // ताकि "बिल कितना, दिया कितना" का हिसाब पहले ही सही बैठे।
+    BILL_PAYS = [BILL_TXN.paymentDetail || {
+      id: "bank", amount: BILL_TXN.amount, paidAt: String(BILL_TXN.date).slice(0, 10),
+      time: BILL_TXN.time || null, app: "बैंक statement", status: "success",
+      utr: BILL_TXN.utr || null, accountId: BILL_TXN.accountId || "", at: new Date().toISOString()
+    }];
   } else if (BILL_EXP) {
     $("bsTxn").innerHTML = `<span class="muted">${esc(BILL_EXP.receiptId || "")}</span>`;
     $("bsVendor").value = (BILL_EXP.vendor && BILL_EXP.vendor.name) || "";
@@ -3245,11 +3540,21 @@ function openBillSheet(opts) {
     $("bsUtr").value = (BILL_EXP.payment && BILL_EXP.payment.upiRef) || "";
     $("bsUnit").value = BILL_EXP.unit || "";
     $("bsNote").value = BILL_EXP.note || "";
+    $("bsDiscount").value = BILL_EXP.discount || "";
+    BILL_PAYS = (BILL_EXP.payments || []).slice();
+    // पुराना एक-UTR वाला रूप भी सँभालो, वरना पुराने बिलों का पेमेंट ग़ायब लगेगा
+    if (!BILL_PAYS.length && BILL_EXP.payment && BILL_EXP.payment.upiRef) {
+      BILL_PAYS = [{ id: "old", amount: BILL_EXP.payment.amount, utr: BILL_EXP.payment.upiRef,
+        paidAt: BILL_EXP.payment.paidAt || BILL_EXP.billDate, status: "success",
+        accountId: BILL_EXP.paidFromAccountId || "", at: new Date().toISOString() }];
+    }
     (BILL_EXP.items || []).forEach(addBsItem);
   } else {
     $("bsTxn").textContent = "";
   }
   if (!document.querySelectorAll("#bsItems .irow").length) addBsItem();
+  $("bsPayMsg").textContent = "";
+  renderPays();
   openSheet("billSheet");
 }
 
@@ -3289,6 +3594,18 @@ $("bmFile").addEventListener("change", async (e) => {
     ai.className = "bad";
     ai.textContent = "AI नहीं पढ़ पाया (बिल फिर भी जुड़ जाएगा): " + err.message;
   }
+});
+
+$("bsPayShot").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const shot = await shrinkImage(f, 1800, 0.85);
+  await addPayFromShot(shot, $("bsPayMsg"));
+});
+
+$("bulkFiles").addEventListener("change", async (e) => {
+  const files = [...e.target.files];
+  if (files.length) await bulkReceipts(files);
 });
 
 $("bsMore").addEventListener("change", async (e) => {
@@ -3418,7 +3735,11 @@ async function saveBillSheet() {
       note: $("bsNote").value.trim() || null,
       billDate: $("bsDate").value || todayISO(),
       gstAmount: Number($("bsGst").value) || 0,
-      payment: { upiRef: $("bsUtr").value.trim() || null, amount: total }
+      discount: Number($("bsDiscount").value) || 0,
+      payments: BILL_PAYS,
+      paidFromAccountId: (BILL_PAYS[0] && BILL_PAYS[0].accountId) || null,
+      payment: { upiRef: (BILL_PAYS[0] && BILL_PAYS[0].utr) || $("bsUtr").value.trim() || null,
+                 amount: BILL_PAYS.reduce((a, p) => a + (Number(p.amount) || 0), 0) || total }
     };
 
     if (BILL_EXP) {
@@ -3426,9 +3747,15 @@ async function saveBillSheet() {
         vendor: BILL_EXP.vendor, items: BILL_EXP.items, billTotal: BILL_EXP.billTotal }));
       const patch = Object.assign({}, payload);
       if (urls.length) patch.photos = (BILL_EXP.photos || []).concat(urls);
+      // Pricebook और Flags अब तक सिर्फ़ Telegram bot भरता था, इसलिए app से बने
+      // बिल कहीं गिने ही नहीं जाते थे और दोनों tab ख़ाली दिखते थे।
+      const alerts = await pricebookAdd(Object.assign({}, BILL_EXP, patch)).catch(() => []);
+      patch.priceAlerts = alerts;
+      patch.flags = computeFlags(Object.assign({}, BILL_EXP, patch), alerts);
       await db.collection("vbe_expenses").doc(BILL_EXP._id).update(patch);
       await auditLog("edit_bill", before, Object.assign({ id: BILL_EXP._id }, payload));
       Object.assign(BILL_EXP, patch);
+      if (alerts.length) toast("📈 " + alerts[0]);
       toast("✏️ बिल सुधर गया");
     } else if (BILL_TXN) {
       const patch = {
@@ -3709,10 +4036,23 @@ const gfx = {
     });
   },
 
+  /**
+   * Drive का share-link (…/file/d/ID/view) एक HTML पन्ना है, तस्वीर नहीं —
+   * <img> में डालने पर टूटा हुआ icon आता है, जो बिल tab में दिख रहा था।
+   * उसी ID से thumbnail वाला पता बनाओ, जो सचमुच एक JPEG लौटाता है।
+   */
+  imgUrl(url, big) {
+    const s = String(url || "");
+    const m = s.match(/\/d\/([A-Za-z0-9_-]{20,})/) || s.match(/[?&]id=([A-Za-z0-9_-]{20,})/);
+    if (!m) return s;
+    return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w" + (big ? 1600 : 200);
+  },
+
   /** फोटो का thumbnail — टैप पर पूरी खुले। */
   photo(url, alt) {
     if (!url) return `<div class="thx" title="फोटो नहीं">🧾</div>`;
-    return `<img class="th" src="${esc(url)}" alt="${esc(alt || "")}" loading="lazy"
+    return `<img class="th" src="${esc(this.imgUrl(url))}" alt="${esc(alt || "")}" loading="lazy"
+      onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'thx',textContent:'🧾'}))"
       onclick="event.stopPropagation();lightbox('${esc(url)}')">`;
   }
 };
@@ -3725,7 +4065,10 @@ function lightbox(url) {
     el.onclick = () => { el.hidden = true; };
     document.body.appendChild(el);
   }
-  el.innerHTML = `<button type="button" class="x">✕</button><img src="${esc(url)}">`;
+  el.innerHTML = `<button type="button" class="x">✕</button>` +
+    `<img src="${esc(gfx.imgUrl(url, true))}">` +
+    `<a class="badge" style="position:absolute;bottom:16px;padding:9px 16px"
+        href="${esc(url)}" target="_blank" rel="noopener">↗️ Drive में खोलें</a>`;
   el.hidden = false;
 }
 
@@ -3932,6 +4275,626 @@ function billCards(rows) {
       </div>
     </div>`;
   }).join("");
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v6 — बिलिंग + बैंकिंग
+   ─────────────────────────────────────────────────────────────────────
+   अब तक हर बिल पर सिर्फ़ एक UTR टिकता था। असल में एक बिल के पीछे कई
+   पेमेंट हो सकते हैं, अलग-अलग खातों से, अलग-अलग समय पर — और हर पेमेंट का
+   अपना पूरा पता होता है। यही v6 का ढाँचा है।
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 💳 पेमेंट का पूरा रिकॉर्ड ─────────────────────────────────────── */
+
+const PAY_PROMPT =
+  'You read Indian UPI payment receipts: Google Pay, PhonePe, Paytm, BHIM, ' +
+  'and bank apps. The image is usually a photo or screenshot of a phone ' +
+  'screen — glare, tilt and moiré are normal, read through them.\n' +
+  'Return STRICT JSON only:\n' +
+  '{"amount":number|null,"paidAt":"YYYY-MM-DD"|null,"time":"HH:MM"|null,' +
+  '"app":string|null,"status":"success"|"pending"|"failed"|null,' +
+  '"utr":string|null,"appTxnId":string|null,' +
+  '"fromName":string|null,"fromBank":string|null,"fromLast4":string|null,' +
+  '"fromVpa":string|null,"toName":string|null,"toVpa":string|null,' +
+  '"summary":string}\n' +
+  'Rules:\n' +
+  '- amount: plain number, no ₹ or commas. "₹3,250" → 3250.\n' +
+  '- time: 24-hour. "4:42 pm" → "16:42".\n' +
+  '- app: "Google Pay", "PhonePe", "Paytm", or the bank app name.\n' +
+  '- utr: the "UPI transaction ID" / UTR / RRN — usually 12 digits. This is ' +
+  'the one number the bank statement will also carry, so never guess it. If ' +
+  'it is not printed, return null.\n' +
+  '- appTxnId: the app\'s own reference ("Google transaction ID"), which is ' +
+  'NOT the UTR. Keep them apart.\n' +
+  '- fromBank / fromLast4: the sender\'s bank and the last digits shown next ' +
+  'to it. "AU Small Finance Bank 0628" → fromBank "AU Small Finance Bank", ' +
+  'fromLast4 "0628".\n' +
+  '- fromName: who paid ("From: UJJWAL BHARAT INFRATECH" → that).\n' +
+  '- toName / toVpa: who was paid, and their UPI id.\n' +
+  '- status: "success" for Completed / Paid / ✓.\n' +
+  '- summary: ONE short Hindi line, e.g. "Manak Provision Store को ₹3250".\n' +
+  'null for anything you cannot actually read. Return only the JSON object.';
+
+/** रसीद पर लिखा बैंक हमारे किस खाते का है — आख़िरी 4 अंक से पहचानो। */
+function matchAccount(bank, last4) {
+  const l4 = String(last4 || "").replace(/\D/g, "").slice(-4);
+  const ids = Object.keys(ACCOUNTS);
+  if (l4) {
+    const byNum = ids.filter((id) => {
+      const a = ACCOUNTS[id] || {};
+      const n = String(a.accountNumber || "").replace(/\D/g, "");
+      return (n && n.slice(-4) === l4) || new RegExp(l4 + "\\b").test(String(a.label || ""));
+    })[0];
+    if (byNum) return byNum;
+  }
+  const b = pKey(bank);
+  if (!b) return "";
+  return ids.filter((id) => {
+    const a = ACCOUNTS[id] || {};
+    return pKey(a.bank).includes(b.slice(0, 6)) || pKey(a.label).includes(b.slice(0, 6));
+  })[0] || "";
+}
+
+/** रसीद से पढ़ी हुई चीज़ों को पेमेंट के ढाँचे में ढालो। */
+function paymentFromReceipt(r, photoUrl) {
+  const accountId = matchAccount(r.fromBank, r.fromLast4);
+  return {
+    id: "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    amount: r.amount != null ? Number(r.amount) : null,
+    paidAt: r.paidAt || todayISO(),
+    time: r.time || null,
+    app: r.app || null,
+    status: r.status || "success",
+    utr: r.utr ? String(r.utr).toUpperCase() : null,
+    appTxnId: r.appTxnId || null,
+    fromName: r.fromName || null,
+    fromBank: r.fromBank || null,
+    fromLast4: r.fromLast4 || null,
+    fromVpa: r.fromVpa || null,
+    toName: r.toName || null,
+    toVpa: r.toVpa || null,
+    accountId,
+    photoUrl: photoUrl || null,
+    at: new Date().toISOString()
+  };
+}
+
+/** बिल का पैसा-हिसाब: कितना बना, कितना दिया, कितना बाकी/छूट। */
+function paySummary(rec) {
+  const pays = (rec && rec.payments) || [];
+  const paid = pays.filter((p) => p.status !== "failed")
+    .reduce((a, p) => a + (Number(p.amount) || 0), 0);
+  const total = Number(rec && rec.billTotal) || 0;
+  const gap = Math.round((total - paid) * 100) / 100;
+  return {
+    pays, paid, total, gap,
+    discount: Number(rec && rec.discount) || 0,
+    due: total ? Math.max(0, gap - (Number(rec && rec.discount) || 0)) : 0
+  };
+}
+
+/** एक पेमेंट का कार्ड — ऊपर रकम, खोलने पर पूरा पता। */
+function payCard(p, idx, editable) {
+  const acc = p.accountId ? accLabel(p.accountId) : (p.fromBank || "खाता नहीं पता");
+  const when = dayLabel(String(p.paidAt || "").slice(0, 10)) + (p.time ? " · " + p.time : "");
+  const bad = p.status && p.status !== "success";
+  return `
+  <div class="pay ${bad ? "bad" : ""}">
+    <div class="payTop" onclick="this.parentNode.classList.toggle('open')">
+      <span class="payAmt">${INR(p.amount)}</span>
+      <div class="payWho">
+        <b>${esc(acc)}</b>
+        <small>${esc(when)}${p.app ? " · " + esc(p.app) : ""}${bad ? " · ⚠️ " + esc(p.status) : ""}</small>
+      </div>
+      <span class="payChev">▾</span>
+    </div>
+    <div class="payMore">
+      ${p.utr ? `<div class="payRow"><span>UTR</span><code>${esc(p.utr)}</code>
+        <button type="button" class="mini" onclick="copyText('${esc(p.utr)}');toast('📋 UTR कॉपी')">📋</button></div>` : ""}
+      ${p.fromName ? `<div class="payRow"><span>भेजा</span><b>${esc(p.fromName)}</b></div>` : ""}
+      ${p.fromVpa ? `<div class="payRow"><span>भेजने की UPI</span><code>${esc(p.fromVpa)}</code></div>` : ""}
+      ${p.toName ? `<div class="payRow"><span>मिला</span><b>${esc(p.toName)}</b></div>` : ""}
+      ${p.toVpa ? `<div class="payRow"><span>पाने की UPI</span><code>${esc(p.toVpa)}</code></div>` : ""}
+      ${p.appTxnId ? `<div class="payRow"><span>${esc(p.app || "App")} ID</span><code>${esc(p.appTxnId)}</code></div>` : ""}
+      ${p.photoUrl ? `<div style="margin-top:8px">${gfx.photo(p.photoUrl, "रसीद")}</div>` : ""}
+      ${editable ? `<div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="mini" onclick="editPayment(${idx})">✏️ सुधारें</button>
+        <button type="button" class="mini" onclick="dropPayment(${idx})">🗑️ हटाएँ</button>
+      </div>` : ""}
+    </div>
+  </div>`;
+}
+
+/* ── बिल sheet में पेमेंट का हिस्सा ─────────────────────────────────── */
+
+let BILL_PAYS = [];
+
+function renderPays() {
+  const total = Number($("bsTotal").value) || 0;
+  const paid = BILL_PAYS.filter((p) => p.status !== "failed")
+    .reduce((a, p) => a + (Number(p.amount) || 0), 0);
+  const gap = Math.round((total - paid) * 100) / 100;
+  const disc = Number($("bsDiscount").value) || 0;
+  const due = Math.max(0, gap - disc);
+
+  $("bsPays").innerHTML = BILL_PAYS.length
+    ? BILL_PAYS.map((p, i) => payCard(p, i, true)).join("")
+    : '<div class="muted" style="padding:6px 0">अभी कोई पेमेंट दर्ज नहीं</div>';
+
+  // बिल कितना बना, कितना गया — यही असली हिसाब है, इसलिए हमेशा सामने रहे।
+  $("bsPaySum").innerHTML = !total ? "" : `
+    <div class="paySum">
+      <div><span>बिल</span><b>${INR(total)}</b></div>
+      <div><span>दिया</span><b class="ok2t">${INR(paid)}</b></div>
+      ${disc ? `<div><span>छूट</span><b class="ok2t">${INR(disc)}</b></div>` : ""}
+      <div><span>${due > 0 ? "बाकी" : "हालत"}</span>
+        <b class="${due > 0 ? "duet" : "ok2t"}">${due > 0 ? INR(due) : "✅ पूरा"}</b></div>
+    </div>`;
+
+  // कम पैसा गया है तो चुपचाप मत छोड़ो — छूट थी या उधार, यह दर्ज होना चाहिए।
+  const ask = $("bsGapAsk");
+  if (gap > 1 && paid > 0 && !disc) {
+    ask.hidden = false;
+    ask.innerHTML = `⚖️ बिल ${INR(total)} का है और दिया ${INR(paid)} — ` +
+      `<b>${INR(gap)}</b> का फ़र्क़ है।
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button type="button" class="mini primary" onclick="markDiscount(${gap})">🎁 ${INR(gap)} की छूट मिली</button>
+        <button type="button" class="mini" onclick="$('bsGapAsk').hidden=true">📌 अभी बाकी है</button>
+      </div>`;
+  } else ask.hidden = true;
+}
+
+function markDiscount(amt) {
+  $("bsDiscount").value = amt;
+  renderPays();
+  toast("🎁 छूट दर्ज — कुल में गिनी जाएगी");
+}
+
+function dropPayment(i) {
+  askPin("पेमेंट हटाने", () => {
+    BILL_PAYS.splice(i, 1);
+    renderPays();
+  });
+}
+
+function editPayment(i) {
+  const p = BILL_PAYS[i];
+  const ask = (label, was) => {
+    const v = prompt(label, was == null ? "" : was);
+    return v === null ? null : v.trim();
+  };
+  const amt = ask("रकम ₹", p.amount);
+  if (amt === null) return;
+  p.amount = amt === "" ? null : Number(amt);
+  const utr = ask("UTR", p.utr); if (utr !== null) p.utr = utr.toUpperCase() || null;
+  const t = ask("समय (HH:MM)", p.time); if (t !== null) p.time = t || null;
+  const d = ask("तारीख़ (YYYY-MM-DD)", p.paidAt); if (d !== null) p.paidAt = d || todayISO();
+  renderPays();
+}
+
+/** हाथ से पेमेंट जोड़ना — रसीद न हो तब भी हिसाब पूरा रहे। */
+function addPayManual() {
+  const remaining = Math.max(0,
+    (Number($("bsTotal").value) || 0) -
+    BILL_PAYS.reduce((a, p) => a + (Number(p.amount) || 0), 0));
+  BILL_PAYS.push({
+    id: "p" + Date.now().toString(36),
+    amount: remaining || null, paidAt: $("bsDate").value || todayISO(),
+    time: null, app: null, status: "success", utr: null,
+    accountId: $("bsPayAcc") ? $("bsPayAcc").value : "", at: new Date().toISOString()
+  });
+  renderPays();
+  editPayment(BILL_PAYS.length - 1);
+}
+
+/** रसीद की फोटो से पेमेंट — पूरा पता AI निकालता है। */
+async function addPayFromShot(dataUrl, msgEl) {
+  const say = (t, c) => { if (msgEl) { msgEl.className = c || "muted"; msgEl.innerHTML = t; } };
+  say('<span class="thinking"></span> रसीद पढ़ रहा हूँ…');
+  let parsed = null;
+  try { parsed = await askGemini(PAY_PROMPT, dataUrl); }
+  catch (err) { say("रसीद नहीं पढ़ पाई: " + esc(err.message), "bad"); }
+
+  const up = await driveUpload(dataUrl, "receipt_" + Date.now());
+  const p = paymentFromReceipt(parsed || {}, up && up.ok ? up.url : null);
+  if (!p.amount) p.amount = Number($("bsTotal").value) || null;
+  if (!p.photoUrl) p.rawShot = dataUrl;      // Drive न चले तो फोटो फिर भी बची रहे
+  BILL_PAYS.push(p);
+  renderPays();
+
+  if (parsed) {
+    const missing = [!p.utr && "UTR", !p.accountId && "खाता", !p.time && "समय"].filter(Boolean);
+    say("✅ " + esc(parsed.summary || "रसीद पढ़ ली") +
+      (p.accountId ? ` · <b>${esc(accLabel(p.accountId))}</b>` : "") +
+      (p.utr ? ` · UTR <b>${esc(p.utr)}</b>` : "") +
+      (missing.length ? `<br>⚠️ ${missing.join(", ")} नहीं मिला — ✏️ से भर दें` : ""), "ok");
+  }
+  return p;
+}
+
+/* ── 📥 एक साथ कई रसीदें ───────────────────────────────────────────── */
+
+/**
+ * बैंक statement आने में दिन लग जाते हैं। तब तक रसीदें ही सच हैं — इसलिए
+ * 20 screenshot एक साथ डालो, हर एक से एक पक्की entry बने, और UTR को ही
+ * पहचान मानो ताकि statement आने पर वही entry दुबारा न बने।
+ */
+async function bulkReceipts(files) {
+  const box = $("bulkMsg"), list = $("bulkList");
+  const out = { added: 0, dupe: 0, failed: 0, rows: [] };
+  list.innerHTML = "";
+  for (let i = 0; i < files.length; i++) {
+    box.className = "muted";
+    box.innerHTML = `<span class="thinking"></span> ${i + 1} / ${files.length} पढ़ रहा हूँ…` +
+      gfx.meter(((i) / files.length) * 100, gfx.C.bill);
+    let r = null, shot = null;
+    try {
+      shot = await shrinkImage(files[i], 1800, 0.85);
+      r = await askGemini(PAY_PROMPT, shot);
+    } catch (e) {
+      out.failed++;
+      out.rows.push({ ok: false, why: e.message, name: files[i].name });
+      continue;
+    }
+    if (!r.utr || !r.amount) {
+      out.failed++;
+      out.rows.push({ ok: false, why: r.utr ? "रकम नहीं पढ़ी" : "UTR नहीं दिखा", r });
+      continue;
+    }
+    const id = "utr-" + String(r.utr).toUpperCase();
+    if (BANKTXNS.some((t) => t._id === id)) { out.dupe++; out.rows.push({ ok: true, dupe: true, r }); continue; }
+
+    const up = await driveUpload(shot, "receipt_" + r.utr);
+    const pay = paymentFromReceipt(r, up && up.ok ? up.url : null);
+    const doc = {
+      date: pay.paidAt, time: pay.time || null, amount: pay.amount, type: "debit",
+      party: pay.toName || null, utr: pay.utr, matched: false,
+      accountId: pay.accountId || "", narration: "UPI/" + (pay.app || "APP") + "/" +
+        pay.utr + "/" + (pay.toName || ""),
+      source: "receipt_bulk", paymentDetail: pay,
+      importedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    await db.collection("vbe_bank_txns").doc(id).set(doc, { merge: true });
+    BANKTXNS.push(Object.assign({ _id: id }, doc));
+    out.added++;
+    out.rows.push({ ok: true, r, pay });
+    list.innerHTML = out.rows.map((x) => x.ok
+      ? `<div class="mrow txn out"><div class="amt out">−${INR((x.pay || x.r).amount)}</div>
+           <div class="mx"><b>${esc((x.pay || x.r).toName || "—")}</b>
+             <br><span class="muted">${esc(x.r.utr)}${x.dupe ? " · 🔁 पहले से थी" : " · ✅ जुड़ी"}</span></div></div>`
+      : `<div class="mrow"><div class="amt">—</div><div class="mx">
+           <b class="badge lo">❌ ${esc(x.why)}</b></div></div>`).join("");
+  }
+  box.className = out.added ? "ok" : "bad";
+  box.innerHTML = `✅ <b>${out.added}</b> नई जुड़ीं · 🔁 <b>${out.dupe}</b> पहले से थीं` +
+    (out.failed ? ` · ❌ <b>${out.failed}</b> नहीं पढ़ी गईं` : "");
+  await auditLog("bulk_receipts", null, { added: out.added, dupe: out.dupe, failed: out.failed });
+  refreshAll();
+  return out;
+}
+
+function openBulk() {
+  $("bulkMsg").innerHTML = "";
+  $("bulkList").innerHTML = "";
+  openSheet("bulkSheet");
+}
+
+/* ── 🎯 किसके लिए? — बिना यूनिट कोई बिल पूरा नहीं ─────────────────── */
+
+function billsWithoutUnit() {
+  return EXP.filter((e) => !e.unit && inRange(e.billDate || e.submittedAt));
+}
+
+/**
+ * "सामान खरीदा गया पर किसके लिए, यह लिखा ही नहीं" — यही सबसे बड़ी लीक है,
+ * इसलिए इसे गिनकर सामने रखा जाता है, चुपचाप नहीं छोड़ा जाता।
+ */
+function renderUnitWatch() {
+  const box = $("unitWatch");
+  if (!box) return;
+  const miss = billsWithoutUnit();
+  const total = miss.reduce((a, e) => a + (e.billTotal || 0), 0);
+  if (!miss.length) {
+    box.innerHTML = gfx.insight({ icon: "🎯", tone: "down",
+      title: "हर बिल की यूनिट लिखी है",
+      body: "एक भी पैसा बिना पते के नहीं गया — यही चाहिए था ✅" });
+    return;
+  }
+  box.innerHTML = gfx.insight({ icon: "🚨", tone: "up",
+    title: `${miss.length} बिल की यूनिट नहीं लिखी — ${INR(total)}`,
+    body: `पता ही नहीं चलेगा यह सामान कहाँ गया। नीचे एक-एक पर टैप करके भर दें।` +
+      `<div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap">` +
+      miss.slice(0, 8).map((e) =>
+        `<button type="button" class="mini" onclick="editExpense('${esc(e._id)}')">` +
+        `${esc((e.vendor && e.vendor.name) || e.receiptId)} ${INR(e.billTotal)}</button>`).join("") +
+      `</div>` });
+}
+
+/** यूनिट-वार लेखा — किस यूनिट में क्या, कब, कितने का गया। */
+function unitLedger(unit) {
+  const rows = [];
+  EXP.forEach((e) => {
+    if (e.unit !== unit || !inRange(e.billDate || e.submittedAt)) return;
+    (e.items || []).forEach((it) => rows.push({
+      date: String(e.billDate || "").slice(0, 10),
+      name: it.name, qty: it.qty, unitName: it.unit, rate: it.rate,
+      amount: it.amount, party: (e.vendor && e.vendor.name) || "", receiptId: e.receiptId
+    }));
+    if (!(e.items || []).length) rows.push({
+      date: String(e.billDate || "").slice(0, 10), name: "(सामान की list नहीं)",
+      amount: e.billTotal, party: (e.vendor && e.vendor.name) || "", receiptId: e.receiptId
+    });
+  });
+  return rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+
+/** चालान — यूनिट को भेजने लायक पर्ची, एक टैप में कॉपी। */
+function challanText(unit) {
+  const rows = unitLedger(unit);
+  const total = rows.reduce((a, r) => a + (r.amount || 0), 0);
+  const L = ["चालान — " + unit, "Vande Bharat Enterprises, Barmer",
+    "अवधि: " + (DR.from ? dayLabel(DR.from) + " से " + dayLabel(DR.to || todayISO()) : "पूरा"),
+    "─".repeat(34)];
+  rows.forEach((r, i) => L.push(
+    `${i + 1}. ${r.name}` +
+    (r.qty != null ? ` — ${r.qty} ${r.unitName || "Nos"}` : "") +
+    (r.rate != null ? ` × ₹${r.rate}` : "") +
+    (r.amount != null ? ` = ₹${r.amount}` : "") +
+    (r.date ? `  (${r.date})` : "")));
+  L.push("─".repeat(34), "कुल: ₹" + Math.round(total));
+  return L.join("\n");
+}
+
+function renderUnitTab() {
+  const sel = $("uUnit");
+  if (!sel) return;
+  const keep = sel.value;
+  const units = allUnits();
+  sel.innerHTML = units.map((u) => `<option>${esc(u)}</option>`).join("");
+  if (keep && units.indexOf(keep) !== -1) sel.value = keep;
+  const unit = sel.value;
+  const rows = unitLedger(unit);
+  const total = rows.reduce((a, r) => a + (r.amount || 0), 0);
+
+  $("uTiles").innerHTML = [
+    gfx.tile({ k: "इस यूनिट में गया", v: INR(total), n: total, s: rows.length + " चीज़ें",
+      color: gfx.C.out, pct: 70 }),
+    gfx.tile({ k: "बिल", v: String(new Set(rows.map((r) => r.receiptId)).size),
+      s: rangeWords(), color: gfx.C.bill, pct: 70 })
+  ].join("");
+  gfx.countUp($("uTiles"));
+
+  $("uRows").innerHTML = rows.length ? rows.map((r) => `
+    <div class="mrow txn out">
+      <div class="amt out">${r.amount != null ? INR(r.amount) : "—"}</div>
+      <div class="mx">
+        <div class="pname">${esc(r.name)}</div>
+        <span class="muted">${esc(dayLabel(r.date))}${r.qty != null
+          ? " · " + r.qty + " " + esc(r.unitName || "Nos") : ""}${r.rate != null ? " × ₹" + r.rate : ""}
+          ${r.party ? " · " + esc(r.party) : ""}</span>
+      </div>
+    </div>`).join("") : '<div class="empty">इस अवधि में इस यूनिट के लिए कुछ नहीं गया</div>';
+}
+
+async function copyChallan() {
+  await copyText(challanText($("uUnit").value));
+  toast("📋 चालान कॉपी — WhatsApp में चिपका दें");
+}
+
+/* ── 💰 मुनाफ़ा ─────────────────────────────────────────────────────── */
+
+/** एक बिल पर लागत, बिक्री और मुनाफ़ा। */
+function profitOf(e) {
+  let cost = 0, sale = 0, known = 0;
+  (e.items || []).forEach((it) => {
+    const q = Number(it.qty) || 0;
+    const c = Number(it.rate) || 0;
+    cost += it.amount != null ? Number(it.amount) : q * c;
+    if (it.saleRate != null) { sale += q * Number(it.saleRate); known++; }
+  });
+  if (!known) return null;
+  return { cost, sale, profit: Math.round((sale - cost) * 100) / 100,
+    pct: cost ? Math.round(((sale - cost) / cost) * 100) : 0, known };
+}
+
+function rangeProfit() {
+  let cost = 0, sale = 0, n = 0;
+  EXP.forEach((e) => {
+    if (!inRange(e.billDate || e.submittedAt)) return;
+    const p = profitOf(e);
+    if (!p) return;
+    cost += p.cost; sale += p.sale; n++;
+  });
+  return n ? { cost, sale, profit: sale - cost,
+    pct: cost ? Math.round(((sale - cost) / cost) * 100) : 0, n } : null;
+}
+
+/* ── 🧑‍🤝‍🧑 Staff ──────────────────────────────────────────────────── */
+
+let STAFF = {};
+
+const AVATARS = ["🧑‍🌾", "👨‍🔧", "🧑‍🍳", "👨‍💼", "🧔", "👳", "🧑‍🏭", "👨‍🚀", "🤵", "🧑‍💻"];
+
+function renderStaff() {
+  const box = $("staffList");
+  if (!box) return;
+  const ids = Object.keys(STAFF);
+  box.innerHTML = ids.length ? ids.map((id) => {
+    const s = STAFF[id] || {};
+    const call = String(s.phone || "").replace(/\D/g, "").slice(-10);
+    const wa = String(s.whatsapp || s.phone || "").replace(/\D/g, "").slice(-10);
+    const bills = EXP.filter((e) => e.submittedBy &&
+      (String(e.submittedBy.telegramId) === id || e.submittedBy.name === s.name));
+    const spend = bills.reduce((a, e) => a + (e.billTotal || 0), 0);
+    return `
+    <div class="stf">
+      <div class="stAv">${s.avatar || "🧑"}</div>
+      <div class="stx">
+        <div class="pname">${esc(s.name || id)}</div>
+        <span class="muted">${bills.length} बिल · ${INR(spend)}${s.role ? " · " + esc(s.role) : ""}</span>
+        ${call || wa ? `<br><span class="muted">${call ? "📞 " + esc(call) : ""}${
+          wa && wa !== call ? " · 💬 " + esc(wa) : ""}</span>` : ""}
+        <div class="arow">
+          ${call ? `<a class="badge hi" style="padding:8px 13px" href="tel:+91${call}">📞 कॉल</a>` : ""}
+          ${wa ? `<a class="badge hi" style="padding:8px 13px" target="_blank"
+             href="https://wa.me/91${wa}">💬 WhatsApp</a>` : ""}
+          <button type="button" class="mini" onclick="openStaff('${esc(id)}')">✏️ सुधारें</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("") : '<div class="empty">अभी कोई staff नहीं — ऊपर ➕ से जोड़ें</div>';
+}
+
+let STAFF_EDIT = "";
+
+function openStaff(id) {
+  askPin(id ? "staff सुधारने" : "नया staff जोड़ने", () => {
+    STAFF_EDIT = id || "";
+    const s = (id && STAFF[id]) || {};
+    $("stTitle").textContent = id ? "✏️ " + (s.name || id) : "➕ नया staff";
+    [["stName", s.name], ["stTgId", s.telegramId || id], ["stPhone", s.phone],
+     ["stWa", s.whatsapp], ["stRole", s.role]].forEach(([f, v]) => { $(f).value = v || ""; });
+    $("stAvatars").innerHTML = AVATARS.map((a) =>
+      `<button type="button" class="av ${(s.avatar || "🧑‍🌾") === a ? "on" : ""}"
+        onclick="pickAvatar(this,'${a}')">${a}</button>`).join("");
+    $("stMsg").textContent = "";
+    openSheet("staffSheet");
+  });
+}
+
+function pickAvatar(btn, a) {
+  document.querySelectorAll("#stAvatars .av").forEach((b) => b.classList.remove("on"));
+  btn.classList.add("on");
+  btn.dataset.picked = a;
+  $("stAvatars").dataset.value = a;
+}
+
+async function saveStaff() {
+  const msg = $("stMsg");
+  const name = $("stName").value.trim();
+  if (!name) { msg.className = "bad"; msg.textContent = "नाम तो भरें"; return; }
+  const tg = $("stTgId").value.replace(/\D/g, "");
+  const id = STAFF_EDIT || tg || "s_" + pKey(name).slice(0, 14).toLowerCase();
+  const doc = {
+    name, telegramId: tg || null,
+    phone: $("stPhone").value.replace(/\D/g, "").slice(-10) || null,
+    whatsapp: $("stWa").value.replace(/\D/g, "").slice(-10) || null,
+    role: $("stRole").value.trim() || "staff",
+    avatar: $("stAvatars").dataset.value || (STAFF[id] && STAFF[id].avatar) || "🧑‍🌾",
+    active: true,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  msg.className = "muted"; msg.textContent = "सहेज रहा हूँ…";
+  try {
+    await db.collection("vbe_staff").doc(id).set(doc, { merge: true });
+    await auditLog(STAFF_EDIT ? "edit_staff" : "add_staff", STAFF[id] || null, doc);
+    STAFF[id] = Object.assign({}, STAFF[id], doc);
+    closeSheet("staffSheet");
+    renderStaff();
+    toast("✅ " + name + " सहेजा");
+  } catch (err) {
+    msg.className = "bad"; msg.textContent = "नहीं सहेजा: " + err.message;
+  }
+}
+
+/**
+ * जिसने सामान ख़रीदा उसे भी पता चले कि उसका हिसाब दर्ज हो गया। WhatsApp का
+ * link ही खोलते हैं — browser अपने-आप message नहीं भेज सकता, और भेजने से
+ * पहले विक्रम जी एक नज़र देख भी लेते हैं।
+ */
+function tellStaff(staffName, rec) {
+  const id = Object.keys(STAFF).filter((k) =>
+    STAFF[k].name === staffName || String(STAFF[k].telegramId) === String(staffName))[0];
+  const s = id ? STAFF[id] : null;
+  const wa = s && String(s.whatsapp || s.phone || "").replace(/\D/g, "").slice(-10);
+  if (!wa) return null;
+  const text = `नमस्ते ${s.name} जी 🙏\n` +
+    `आपकी ख़रीद दर्ज हो गई है ✅\n` +
+    `🏪 ${(rec.vendor && rec.vendor.name) || "—"}\n` +
+    `💰 ${INR(rec.billTotal)}\n` +
+    (rec.unit ? `🏷️ ${rec.unit}\n` : "") +
+    `🧾 ${rec.receiptId}\n— विक्रम चरण, VBE बाड़मेर`;
+  return `https://wa.me/91${wa}?text=${encodeURIComponent(text)}`;
+}
+
+/* ── 💹 Pricebook + 🚩 Flags — app वाले बिलों से भी ─────────────────
+   अब तक ये सिर्फ़ Telegram bot भरता था, इसलिए app से बने बिल कहीं गिने
+   ही नहीं जाते थे और दोनों tab ख़ाली दिखते थे। */
+
+async function pricebookAdd(rec) {
+  const items = (rec.items || []).filter((it) => it && it.name && it.rate != null);
+  if (!items.length) return [];
+  const alerts = [];
+  // alias-index: वही चीज़ दो नामों से आए तो एक ही जगह जुड़े (bot भी यही रखता है)
+  let idx = { aliases: {}, names: {} };
+  try {
+    const d = await db.collection("vbe_meta").doc("pricebook_index").get();
+    if (d.exists) idx = Object.assign(idx, d.data());
+  } catch (e) {}
+
+  for (const it of items) {
+    const nameKey = pKey(it.name);
+    const ck = idx.aliases[nameKey] || nameKey;
+    const ref = db.collection("vbe_pricebook").doc(ck);
+    let doc = { canonicalName: it.name, aliases: [], history: [], lastRate: null, avg3Rate: null };
+    try {
+      const snap = await ref.get();
+      if (snap.exists) doc = Object.assign(doc, snap.data());
+    } catch (e) {}
+    doc.history = doc.history || [];
+    doc.aliases = doc.aliases || [];
+    if (doc.aliases.indexOf(it.name) === -1) doc.aliases.push(it.name);
+
+    const prev3 = doc.history.filter((h) => h.rate != null).slice(-3).map((h) => h.rate);
+    if (prev3.length === 3) {
+      const avg = (prev3[0] + prev3[1] + prev3[2]) / 3;
+      if (avg > 0 && it.rate > avg * 1.2) {
+        alerts.push(`⚠️ ${doc.canonicalName} ₹${it.rate} — पिछली 3 बार ₹${prev3.join("/₹")}, ` +
+          `~${Math.round((it.rate / avg - 1) * 100)}% ज़्यादा`);
+      }
+    }
+    doc.history.push({
+      date: String(rec.billDate || todayISO()).slice(0, 10),
+      vendor: (rec.vendor && rec.vendor.name) || null,
+      qty: it.qty != null ? it.qty : null, unit: it.unit || null,
+      rate: it.rate, saleRate: it.saleRate != null ? it.saleRate : null,
+      amount: it.amount != null ? it.amount : null,
+      receiptId: rec.receiptId, by: (rec.submittedBy && rec.submittedBy.name) || "app"
+    });
+    if (doc.history.length > 100) doc.history = doc.history.slice(-100);
+    doc.lastRate = it.rate;
+    const last3 = doc.history.filter((h) => h.rate != null).slice(-3).map((h) => h.rate);
+    doc.avg3Rate = Math.round((last3.reduce((a, b) => a + b, 0) / last3.length) * 100) / 100;
+
+    await ref.set(doc, { merge: true });
+    idx.aliases[nameKey] = ck;
+    idx.names[ck] = doc.canonicalName;
+  }
+  try { await db.collection("vbe_meta").doc("pricebook_index").set(idx, { merge: true }); }
+  catch (e) {}
+  return alerts;
+}
+
+/** वही जाँचें जो bot करता है — ताकि Flags दोनों तरफ़ से भरे। */
+function computeFlags(rec, priceAlerts) {
+  const f = [];
+  const s = paySummary(rec);
+  if (rec.billTotal != null && s.paid > 0 && Math.abs(rec.billTotal - s.paid) > 1 && !rec.discount) {
+    f.push("amount_mismatch");
+  }
+  if (rec.billTotal != null && rec.billTotal > 5000) f.push("over_threshold");
+  const vk = pKey(rec.vendor && rec.vendor.name);
+  if (vk && !EXP.some((e) => e._id !== rec._id && pKey(e.vendor && e.vendor.name) === vk)) {
+    f.push("unknown_vendor");
+  }
+  const inv = rec.vendor && rec.vendor.invoiceNo;
+  if (inv && EXP.some((e) => e._id !== rec._id && e.vendor && e.vendor.invoiceNo === inv)) {
+    f.push("double_payment");
+  }
+  if (!rec.unit) f.push("no_unit");
+  if ((priceAlerts || []).length) f.push("price_spike");
+  return f;
 }
 
 /* ── Tabs + 3D tilt ── */
