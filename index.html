@@ -285,6 +285,54 @@
   .upiApps button { padding: 13px 8px; border-radius: 14px; font-size: 12.5px; line-height: 1.35; }
   .upiApps button b { display: block; font-size: 20px; margin-bottom: 4px; }
 
+  /* ══ v5 ══ Graphics engine — एक ही जगह के टुकड़े, पूरे app में ══ */
+  .ins { display: flex; gap: 12px; align-items: flex-start; padding: 13px 14px;
+    border-radius: 14px; border: 1px solid var(--border); margin-bottom: 10px;
+    background: linear-gradient(150deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); }
+  .ins .ii { font-size: 20px; line-height: 1.2; flex: 0 0 auto; }
+  .ins .it { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+  .ins .it b { color: var(--ink); }
+  .ins .ih { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+  .ins.up   { background: linear-gradient(150deg, rgba(208,59,59,.16), rgba(208,59,59,.03)); border-color: rgba(208,59,59,.4); }
+  .ins.down { background: linear-gradient(150deg, rgba(12,163,12,.16), rgba(12,163,12,.03)); border-color: rgba(12,163,12,.4); }
+  .ins.warn { background: linear-gradient(150deg, rgba(201,133,0,.16), rgba(201,133,0,.03)); border-color: rgba(201,133,0,.45); }
+  .ins.ai   { background: linear-gradient(150deg, rgba(213,81,129,.15), rgba(57,135,229,.06)); border-color: rgba(213,81,129,.38); }
+
+  /* लंबा अंक (₹-5,46,251) tile से बाहर निकल जाता था — अंकों की गिनती के
+     हिसाब से आकार घटा दो, ताकि कार्ड कभी न टूटे। */
+  .tile .v { font-variant-numeric: tabular-nums; }
+  .tile .v.md { font-size: 22px; }
+  .tile .v.sm { font-size: 19px; letter-spacing: -.2px; }
+  .tile .sp { margin-top: 8px; height: 26px; display: block; width: 100%; }
+  .tile .d { font-size: 11.5px; font-weight: 700; margin-top: 3px; }
+  .tile .d.up { color: #ff9d9d; } .tile .d.down { color: #7de07d; } .tile .d.flat { color: var(--muted); }
+
+  .skel { border-radius: 10px; height: 13px; margin: 7px 0;
+    background: linear-gradient(90deg, var(--surface-2) 25%, #2e2e2c 37%, var(--surface-2) 63%);
+    background-size: 400% 100%; animation: shimmer 1.3s ease infinite; }
+  @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+  /* बिल के कार्ड — फोटो सामने, ताकि "कौन सा बिल है" पढ़ना न पड़े */
+  .bcard { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--grid);
+    cursor: pointer; align-items: flex-start; }
+  .bcard:last-child { border-bottom: 0; }
+  .bcard .th { width: 62px; height: 62px; flex: 0 0 auto; border-radius: 12px;
+    border: 1px solid var(--border); object-fit: cover; background: var(--surface-2); }
+  .bcard .thx { width: 62px; height: 62px; flex: 0 0 auto; border-radius: 12px;
+    border: 1px dashed var(--border); display: grid; place-items: center;
+    font-size: 21px; color: var(--muted); background: var(--surface-2); }
+  .bcard .bx { flex: 1; min-width: 0; }
+  .bcard .bt { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .bcard .bt b { font-size: 15px; }
+  .bcard .bamt { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bcard .bi { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  /* पूरी फोटो देखने का पर्दा */
+  .lightbox { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.92);
+    display: grid; place-items: center; padding: 12px; }
+  .lightbox img { max-width: 100%; max-height: 86vh; border-radius: 14px; }
+  .lightbox .x { position: absolute; top: 14px; right: 14px; }
+
   .ta { display: block; width: 100%; font: inherit; font-size: 12.5px; color: var(--ink);
     background: var(--surface-2); border: 1px solid var(--border);
     border-radius: 12px; padding: 11px; min-height: 130px; resize: vertical; }
@@ -359,6 +407,7 @@
     <section class="view active" id="v-overview">
       <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
       <div class="tiles" id="tiles"></div>
+      <div id="ovBrain"></div>
       <div class="card chartCard tilt">
         <h3>🟢 आया · 🔴 गया — दिन-दर-दिन</h3>
         <div class="chartBox"><canvas id="chDaily"></canvas></div>
@@ -455,21 +504,16 @@
         <select id="fStaff"><option value="">सब staff</option></select>
         <input id="fSearch" type="search" placeholder="खोजें: दुकान, आइटम, receipt…">
       </div>
-      <div class="card tableWrap">
-        <table>
-          <thead><tr>
-            <th>Receipt</th><th>तारीख</th><th>Staff</th><th>दुकान</th>
-            <th class="num">₹</th><th>यूनिट</th><th>Status</th><th>Flags</th><th>फोटो</th>
-          </tr></thead>
-          <tbody id="billRows"></tbody>
-        </table>
-        <div id="billEmpty" class="empty" hidden>कुछ नहीं मिला</div>
+      <div class="card">
+        <div id="billRows"></div>
+        <div id="billEmpty" class="empty" hidden>इस अवधि में कोई बिल नहीं</div>
       </div>
     </section>
 
     <!-- ── Pricebook ── -->
     <section class="view" id="v-price">
       <div class="filters"><select id="fItem" style="flex:1"></select></div>
+      <div id="priceAdvice"></div>
       <div class="tiles" id="priceTiles"></div>
       <div class="card chartCard tilt">
         <h3 id="priceChartTitle">रेट history</h3>
@@ -581,7 +625,7 @@
     <!-- ── ❓ बकाया — जिन पैसों का बिल नहीं मिला, और उन्हें यहीं से निपटाना ── -->
     <section class="view" id="v-missing">
       <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
-      <div class="card tilt" id="mBrain" style="margin-bottom:12px"></div>
+      <div id="mBrain"></div>
       <div class="filters">
         <select id="mAccount"><option value="">सारे खाते</option></select>
         <select id="mSort">
@@ -678,6 +722,15 @@
             <label>GSTIN<input id="bsGstin" placeholder="—"></label>
             <label>UTR / Ref<input id="bsUtr" placeholder="—"></label>
           </div>
+          <div class="frow">
+            <label>किसके लिए?
+              <div style="display:flex;gap:8px">
+                <select id="bsUnit" style="flex:1"></select>
+                <button type="button" onclick="addUnit(true)" title="नई यूनिट जोड़ें"
+                  style="margin-top:5px;padding:10px 14px">＋</button>
+              </div></label>
+            <label>टिप्पणी<input id="bsNote" placeholder="जैसे: challan 42"></label>
+          </div>
           <div class="itemsHead"><span>सामान</span>
             <button type="button" onclick="addBsItem()">+ और जोड़ें</button></div>
           <div id="bsItems"></div>
@@ -755,6 +808,8 @@
             <button type="button" onclick="upiPay('paytm')"><b>🔵</b>Paytm</button>
             <button type="button" onclick="upiPay('')"><b>📲</b>कोई भी</button>
           </div>
+          <button type="button" style="width:100%;margin-top:10px" onclick="payAlreadyDone()">
+            ✍️ पैसा पहले भेज चुका हूँ — बस दर्ज कर दो</button>
           <div id="pyAfter" hidden style="margin-top:16px;border-top:1px solid var(--grid);padding-top:14px">
             <b>पैसा चला गया?</b>
             <p class="muted" style="margin:4px 0 10px">UTR डाल दें और बिल की फोटो लगा दें —
@@ -943,21 +998,30 @@ function renderTiles() {
   const bills = EXP.filter(e => inRange(e.billDate || e.submittedAt));
   const pend = bills.filter(e => e.status === "pending" || e.status === "approved");
 
+  // sparkline पिछले 14 दिन की चाल दिखाती है — अंक बताता है "कितना",
+  // लकीर बताती है "किस तरफ़ जा रहा है"। दोनों साथ चाहिए।
+  const inSpark = dailySeries(14, "credit"), outSpark = dailySeries(14, "debit");
+  const billPct = outAll.length ? 100 - (noBill.length / outAll.length) * 100 : 100;
+
   $("tiles").innerHTML = [
-    ["🟢 आया", INR(inSum), inAll.length + " entries", "#0ca30c"],
-    ["🔴 गया", INR(outSum), outAll.length + " entries", "#d03b3b"],
-    ["बचा", INR(inSum - outSum), rangeWords(), "#3987e5"],
-    ["📎 बिल बाकी", INR(sum(noBill)), noBill.length + " भुगतान", "#fab219"],
-    ["🧾 बिल दर्ज", String(bills.length), pend.length + " approve बाकी", "#199e70"],
-    ["🧑 पार्टियाँ", String(partySet.size), "जिनसे लेन-देन हुआ", "#d55181"]
-  ].map(([k, v, s2, c]) => `
-    <div class="card tile tilt">
-      <div class="k">${k}</div>
-      <div class="v">${v}</div>
-      <div class="s">${s2 || "&nbsp;"}</div>
-      <div class="bar"><i style="width:70%;background:${c}"></i></div>
-    </div>`).join("");
+    gfx.tile({ k: "🟢 आया", v: INR(inSum), n: inSum, s: inAll.length + " entries",
+      color: gfx.C.in, spark: inSpark }),
+    gfx.tile({ k: "🔴 गया", v: INR(outSum), n: outSum, s: outAll.length + " entries",
+      color: gfx.C.out, spark: outSpark }),
+    gfx.tile({ k: "बचा", v: INR(inSum - outSum), s: rangeWords(), color: gfx.C.bill,
+      pct: inSum ? Math.min(100, Math.max(0, ((inSum - outSum) / inSum) * 100)) : 0 }),
+    gfx.tile({ k: "📎 बिल बाकी", v: INR(sum(noBill)), n: sum(noBill),
+      s: noBill.length + " भुगतान · " + Math.round(billPct) + "% पूरा",
+      color: gfx.C.warn, pct: billPct }),
+    gfx.tile({ k: "🧾 बिल दर्ज", v: String(bills.length),
+      s: pend.length + " approve बाकी", color: "#199e70",
+      pct: bills.length ? 100 - (pend.length / bills.length) * 100 : 0 }),
+    gfx.tile({ k: "🧑 पार्टियाँ", v: String(partySet.size), s: "जिनसे लेन-देन हुआ",
+      color: gfx.C.ai, pct: 70 })
+  ].join("");
   attachTilt();
+  gfx.countUp($("tiles"));
+  renderBrain();
 }
 
 function sumBy(rows, keyFn, valFn) {
@@ -1098,20 +1162,7 @@ function renderBills() {
   }).slice(0, 200);
 
   $("billEmpty").hidden = rows.length > 0;
-  $("billRows").innerHTML = rows.map(e => `
-    <tr onclick="editExpense('${esc(e._id)}')" style="cursor:pointer" title="सुधारने के लिए दबाएँ">
-      <td><b>${esc(e.receiptId)}</b></td>
-      <td>${e._date ? e._date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : ""}</td>
-      <td>${esc(e.submittedBy && e.submittedBy.name)}</td>
-      <td><span class="plink" onclick="event.stopPropagation();showParty('${esc(pKey(e.vendor && e.vendor.name))}')">${esc(e.vendor && e.vendor.name || "—")}</span></td>
-      <td class="num">${e.billTotal != null ? INR(e.billTotal) : "—"}</td>
-      <td>${esc(e.unit || "—")}</td>
-      <td><span class="chip ${esc(e.status)}"><i></i>${esc(e.status)}</span></td>
-      <td>${(e.flags || []).map(f => `<span title="${esc(f)}">${FLAG_ICONS[f] || "⚠️"}</span>`).join(" ")}</td>
-      <td>${e.billPhotoDriveUrl ? `<a href="${esc(e.billPhotoDriveUrl)}" target="_blank" rel="noopener">📷</a>` : ""}
-          ${e.paymentPhotoDriveUrl ? `<a href="${esc(e.paymentPhotoDriveUrl)}" target="_blank" rel="noopener">💳</a>` : ""}
-          ${e.deliveryPhotoDriveUrl ? `<a href="${esc(e.deliveryPhotoDriveUrl)}" target="_blank" rel="noopener">📦</a>` : ""}</td>
-    </tr>`).join("");
+  $("billRows").innerHTML = billCards(rows);
 }
 ["fStatus", "fStaff", "fSearch"].forEach(id => $(id).addEventListener("input", renderBills));
 
@@ -1129,15 +1180,28 @@ function renderPricebook() {
 
 function renderPriceItem(p) {
   const hist = (p.history || []).filter(h => h.rate != null);
+  const rates = hist.map(h => h.rate);
+  const lo = rates.length ? Math.min(...rates) : null;
+  const hi = rates.length ? Math.max(...rates) : null;
   $("priceChartTitle").textContent = p.canonicalName + " — रेट history";
+
+  // सलाह पहले, आँकड़े बाद में — दुकान पर काम की बात यही है।
+  $("priceAdvice").innerHTML = priceAdvice(p);
+
+  const prev = hist.length > 1 ? hist[hist.length - 2].rate : null;
   $("priceTiles").innerHTML = [
-    ["आख़िरी रेट", p.lastRate != null ? INR(p.lastRate) : "—", "#3987e5"],
-    ["पिछली 3 का औसत", p.avg3Rate != null ? INR(p.avg3Rate) : "—", "#199e70"],
-    ["कुल खरीदें", String((p.history || []).length), "#c98500"]
-  ].map(([k, v, c]) => `
-    <div class="card tile tilt"><div class="k">${k}</div><div class="v">${v}</div>
-    <div class="bar"><i style="width:60%;background:${c}"></i></div></div>`).join("");
+    gfx.tile({ k: "आख़िरी रेट", v: p.lastRate != null ? INR(p.lastRate) : "—",
+      delta: p.lastRate != null && prev ? pctChange(p.lastRate, prev) : null,
+      deltaWhat: "पिछली बार से", color: gfx.C.bill, spark: rates.slice(-14) }),
+    gfx.tile({ k: "पिछली 3 का औसत", v: p.avg3Rate != null ? INR(p.avg3Rate) : "—",
+      s: lo != null ? `सबसे सस्ता ₹${lo} · सबसे महँगा ₹${hi}` : "", color: "#199e70",
+      pct: p.lastRate != null && hi > lo ? 100 - ((p.lastRate - lo) / (hi - lo)) * 100 : 60 }),
+    gfx.tile({ k: "कुल खरीदें", v: String((p.history || []).length),
+      s: hist.length ? "आख़िरी " + esc(dayLabel(hist[hist.length - 1].date || "")) : "",
+      color: gfx.C.warn, pct: 70 })
+  ].join("");
   attachTilt();
+  gfx.countUp($("priceTiles"));
 
   mkChart("chPrice", {
     type: "line",
@@ -1259,14 +1323,25 @@ function allUnits() {
   return [...new Set([...UNITS_FALLBACK, ...saved, ...used])];
 }
 
-function addUnit() {
+/** यूनिट की सूची कभी बंद न हो — जहाँ भी वह पूछी जाए, वहीं से जुड़ भी सके। */
+function addUnit(forSheet) {
   const name = (prompt("नई यूनिट / जगह का नाम लिखें\n(जैसे: मारवाड़ रसोई, MH कैंटीन, 414 Engineer)") || "").trim();
   if (!name) return;
   const saved = JSON.parse(localStorage.getItem("vbeUnits") || "[]");
   if (!saved.includes(name)) saved.push(name);
   localStorage.setItem("vbeUnits", JSON.stringify(saved));
   initEntryForm();
-  $("aUnit").value = name;
+  fillUnitSelect("bsUnit");
+  $(forSheet ? "bsUnit" : "aUnit").value = name;
+}
+
+function fillUnitSelect(id) {
+  const el = $(id);
+  if (!el) return;
+  const keep = el.value;
+  el.innerHTML = '<option value="">— किसके लिए? —</option>' +
+    allUnits().map((u) => `<option>${esc(u)}</option>`).join("");
+  if (keep) el.value = keep;
 }
 
 function initEntryForm() {
@@ -3147,8 +3222,10 @@ function openBillSheet(opts) {
   $("bmAI").textContent = GEMINI_KEY ? "" : "(AI बंद है — बिल फिर भी जुड़ जाएगा)";
   $("bsMsg").textContent = "";
   $("bsItems").innerHTML = "";
-  ["bsVendor", "bsInvoice", "bsPhone", "bsGstin", "bsUtr", "bsGst", "bsTotal"]
+  ["bsVendor", "bsInvoice", "bsPhone", "bsGstin", "bsUtr", "bsGst", "bsTotal", "bsNote"]
     .forEach((id) => { $(id).value = ""; });
+  fillUnitSelect("bsUnit");
+  $("bsUnit").value = "";
   $("bsDate").value = todayISO();
 
   if (BILL_TXN) {
@@ -3166,6 +3243,8 @@ function openBillSheet(opts) {
     $("bsDate").value = String(BILL_EXP.billDate || todayISO()).slice(0, 10);
     $("bsTotal").value = BILL_EXP.billTotal != null ? BILL_EXP.billTotal : "";
     $("bsUtr").value = (BILL_EXP.payment && BILL_EXP.payment.upiRef) || "";
+    $("bsUnit").value = BILL_EXP.unit || "";
+    $("bsNote").value = BILL_EXP.note || "";
     (BILL_EXP.items || []).forEach(addBsItem);
   } else {
     $("bsTxn").textContent = "";
@@ -3335,6 +3414,8 @@ async function saveBillSheet() {
       vendor: { name: vendor || null, gstin: $("bsGstin").value.trim() || null,
                 invoiceNo: $("bsInvoice").value.trim() || null },
       items, billTotal: total,
+      unit: $("bsUnit").value || null,
+      note: $("bsNote").value.trim() || null,
       billDate: $("bsDate").value || todayISO(),
       gstAmount: Number($("bsGst").value) || 0,
       payment: { upiRef: $("bsUtr").value.trim() || null, amount: total }
@@ -3354,6 +3435,7 @@ async function saveBillSheet() {
         billPhotoId: BILL_TXN._id,
         aiSummary: vendor ? vendor + " · " + items.length + " चीज़ें" : null,
         billVendor: vendor || null, billTotal: total, billItems: items,
+        billUnit: $("bsUnit").value || null, billNote: $("bsNote").value.trim() || null,
         billPhotos: urls
       };
       if (BILL_SHOTS.bill && !(urls[0] && urls[0].url)) {
@@ -3426,6 +3508,14 @@ function upiLink(app) {
   return host + q;
 }
 
+/** GPay से पैसा पहले ही जा चुका है — तो सिर्फ़ UTR और बिल माँगो। */
+function payAlreadyDone() {
+  $("pyAfter").hidden = false;
+  $("pyMsg").className = "muted";
+  $("pyMsg").textContent = "UTR डालकर दर्ज कर दें — बिल भी उसी के साथ लग जाएगा।";
+  $("pyUtr").focus();
+}
+
 function upiPay(app) {
   const link = upiLink(app);
   if (!link) { $("pyMsg").className = "bad"; $("pyMsg").textContent = "UPI ID या नंबर भरें"; return; }
@@ -3495,16 +3585,15 @@ function renderMissing() {
     byParty[k].n++; byParty[k].sum += t.amount || 0;
   });
   const top = Object.values(byParty).sort((a, b) => b.sum - a.sum).slice(0, 3);
-  $("mBrain").innerHTML = rows.length ? `
-    <div class="k muted">🧠 इस अवधि की समझ</div>
-    <div style="font-size:19px;font-weight:700;margin:6px 0">
-      ${rows.length} पेमेंट बिना बिल के — <span style="color:#d03b3b">${INR(total)}</span></div>
-    <div class="muted">सबसे ज़्यादा: ${top.map((p) =>
-      `<b>${esc(p.name)}</b> ${INR(p.sum)} (${p.n})`).join(" · ") || "—"}</div>
-    <div class="muted" style="margin-top:6px">नीचे किसी भी पंक्ति पर 📎 दबाकर बिल लगाएँ,
-      या नाम पर टैप करके पूरा हिसाब देखें।</div>`
-    : `<div style="font-size:19px;font-weight:700">शाबाश — इस अवधि में हर पैसे का बिल लगा है ✅</div>
-       <div class="muted" style="margin-top:6px">ऊपर से दूसरी अवधि चुनकर देख सकते हैं।</div>`;
+  $("mBrain").innerHTML = rows.length
+    ? gfx.insight({ icon: "📎", tone: "warn",
+        title: `${rows.length} पेमेंट बिना बिल के — ${INR(total)}`,
+        body: `सबसे ज़्यादा: ${top.map((p) =>
+            `<b>${esc(p.name)}</b> ${INR(p.sum)} (${p.n})`).join(" · ") || "—"}` +
+          `<br>नीचे किसी भी पंक्ति पर 📎 दबाकर बिल लगाएँ, या नाम पर टैप करके पूरा हिसाब देखें।` })
+    : gfx.insight({ icon: "✅", tone: "down",
+        title: "शाबाश — इस अवधि में हर पैसे का बिल लगा है",
+        body: "ऊपर से दूसरी अवधि चुनकर देख सकते हैं।" });
 
   $("missingList").innerHTML = rows.length ? rows.slice(0, 300).map((t) => `
     <div class="mrow txn out">
@@ -3526,13 +3615,329 @@ function renderMissing() {
   if (el) el.addEventListener("input", renderMissing);
 });
 
+/* ═══════════════════════════════════════════════════════════════════════
+   v5 — 🎨 Graphics engine + 🧠 समझ
+   ─────────────────────────────────────────────────────────────────────
+   एक ही जगह के टुकड़े, जिन्हें पूरा app जोड़कर पन्ने बनाता है। इसलिए एक
+   सुधार हर पन्ने पर पहुँचता है, और कोई पन्ना अपनी अलग शक्ल नहीं बनाता।
+   ═══════════════════════════════════════════════════════════════════ */
+
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const gfx = {
+  /** पाँच रंग, पाँच मतलब — इसके बाहर कोई रंग नहीं। */
+  C: { in: "#0ca30c", out: "#d03b3b", bill: "#3987e5", warn: "#c98500", ai: "#d55181" },
+
+  /**
+   * छोटा ग्राफ़, बिना किसी library के — tile के अंदर बैठ जाता है।
+   * Chart.js एक tile के लिए भारी है और यहाँ अक्ष की ज़रूरत भी नहीं:
+   * बस चाल दिखनी है, अंक ऊपर लिखा ही है।
+   */
+  spark(values, color, h) {
+    const v = (values || []).filter((x) => typeof x === "number");
+    if (v.length < 2) return "";
+    const H = h || 26, W = 100;
+    const lo = Math.min(...v), hi = Math.max(...v), span = hi - lo || 1;
+    const pt = (x, i) => [(i / (v.length - 1)) * W, H - 2 - ((x - lo) / span) * (H - 5)];
+    const line = v.map((x, i) => pt(x, i).join(",")).join(" ");
+    const area = `0,${H} ` + line + ` ${W},${H}`;
+    const id = "sg" + Math.random().toString(36).slice(2, 8);
+    return `<svg class="sp" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${color}" stop-opacity=".38"/>
+        <stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="${area}" fill="url(#${id})"/>
+      <polyline points="${line}" fill="none" stroke="${color}" stroke-width="1.6"
+        stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    </svg>`;
+  },
+
+  /** एक tile — बड़ा अंक, नीचे बात, बदलाव, और चाहें तो चाल का ग्राफ़। */
+  tile(o) {
+    const d = o.delta;
+    const arrow = d == null ? "" :
+      `<div class="d ${d > 0 ? "up" : d < 0 ? "down" : "flat"}">${
+        d > 0 ? "▲" : d < 0 ? "▼" : "•"} ${Math.abs(Math.round(d))}% ${o.deltaWhat || ""}</div>`;
+    return `<div class="card tile tilt">
+      <div class="k">${o.k}</div>
+      <div class="v${String(o.v).length > 11 ? " sm" : String(o.v).length > 8 ? " md" : ""}"${
+        o.n != null ? ` data-count="${o.n}"` : ""}>${o.v}</div>
+      ${arrow}
+      ${o.s ? `<div class="s">${o.s}</div>` : ""}
+      ${o.spark ? this.spark(o.spark, o.color || this.C.bill) :
+        `<div class="bar"><i style="width:${o.pct == null ? 70 : o.pct}%;background:${o.color || this.C.bill}"></i></div>`}
+    </div>`;
+  },
+
+  /** 🧠 समझ का कार्ड — यही app की "बात करने" वाली जगह है। */
+  insight(o) {
+    return `<div class="ins ${o.tone || "ai"}">
+      <div class="ii">${o.icon || "🧠"}</div>
+      <div class="it">${o.title ? `<div class="ih">${o.title}</div>` : ""}${o.body}</div>
+    </div>`;
+  },
+
+  meter(pct, color) {
+    const w = Math.max(0, Math.min(100, pct || 0));
+    return `<div class="bar"><i style="width:${w}%;background:${color || this.C.bill}"></i></div>`;
+  },
+
+  skeleton(n) {
+    return Array.from({ length: n || 3 }, (_, i) =>
+      `<div class="skel" style="width:${[92, 74, 60][i % 3]}%"></div>`).join("");
+  },
+
+  /**
+   * अंक 0 से बढ़ते हुए आएँ। सजावट नहीं — बदला हुआ आँकड़ा आँख पकड़ लेती है,
+   * जो इस app में सबसे ज़रूरी बात है। धीमे फ़ोन पर अपने-आप बंद।
+   */
+  countUp(root) {
+    if (REDUCED) return;
+    (root || document).querySelectorAll("[data-count]").forEach((el) => {
+      const to = Number(el.dataset.count);
+      if (!isFinite(to) || Math.abs(to) < 1) return;
+      const text = el.textContent, t0 = performance.now(), dur = 620;
+      const step = (t) => {
+        const k = Math.min(1, (t - t0) / dur);
+        const e = 1 - Math.pow(1 - k, 3);
+        el.textContent = text.replace(/[\d,]+/, () =>
+          Math.round(to * e).toLocaleString("en-IN"));
+        if (k < 1) requestAnimationFrame(step);
+        else el.textContent = text;
+      };
+      requestAnimationFrame(step);
+    });
+  },
+
+  /** फोटो का thumbnail — टैप पर पूरी खुले। */
+  photo(url, alt) {
+    if (!url) return `<div class="thx" title="फोटो नहीं">🧾</div>`;
+    return `<img class="th" src="${esc(url)}" alt="${esc(alt || "")}" loading="lazy"
+      onclick="event.stopPropagation();lightbox('${esc(url)}')">`;
+  }
+};
+
+function lightbox(url) {
+  let el = $("lightbox");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "lightbox"; el.className = "lightbox";
+    el.onclick = () => { el.hidden = true; };
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<button type="button" class="x">✕</button><img src="${esc(url)}">`;
+  el.hidden = false;
+}
+
+/* ── 🧠 समझ — कोड से बनती है, model से नहीं ───────────────────────────
+   इसलिए तुरंत आती है, मुफ़्त है, और बैंक का डेटा कहीं नहीं जाता। */
+
+/** दो अवधियों की तुलना: कितने प्रतिशत ऊपर-नीचे। */
+function pctChange(now, before) {
+  if (!before) return null;
+  return Math.round(((now - before) / before) * 100);
+}
+
+/** पिछले N दिन का दिन-वार जोड़ — sparkline के लिए। */
+function dailySeries(days, type) {
+  const out = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = shiftDays(-i);
+    out.push(BANKTXNS.filter((t) => String(t.date).slice(0, 10) === d && t.type === type)
+      .reduce((a, t) => a + (t.amount || 0), 0));
+  }
+  return out;
+}
+
+/** Pricebook से: कौन सी चीज़ महँगी हुई, कौन सी सस्ती। */
+function priceMoves(limit) {
+  const moves = [];
+  PRICEBOOK.forEach((p) => {
+    const h = (p.history || []).filter((x) => x.rate != null);
+    if (h.length < 2) return;
+    const last = h[h.length - 1], prev = h[h.length - 2];
+    const pc = pctChange(last.rate, prev.rate);
+    if (pc == null || Math.abs(pc) < 8) return;
+    moves.push({ name: p.canonicalName, now: last.rate, was: prev.rate,
+      pc, vendor: prev.vendor || "", date: last.date || "" });
+  });
+  moves.sort((a, b) => Math.abs(b.pc) - Math.abs(a.pc));
+  return moves.slice(0, limit || 3);
+}
+
+/**
+ * Overview की समझ। हर बात एक वाक्य में और अंक के साथ — "18% ज़्यादा" बिना
+ * "किससे" के अधूरी बात है, इसलिए हर तुलना का दूसरा सिरा भी लिखा जाता है।
+ */
+function renderBrain() {
+  const box = $("ovBrain");
+  if (!box) return;
+  const out = [];
+
+  // 1) इस महीने बनाम पिछला महीना
+  const mNow = BANKTXNS.filter((t) => t.type === "debit" &&
+    String(t.date) >= monthStart(0) && String(t.date) <= todayISO());
+  const mPrev = BANKTXNS.filter((t) => t.type === "debit" &&
+    String(t.date) >= monthStart(1) && String(t.date) <= monthEnd(1));
+  const sNow = mNow.reduce((a, t) => a + (t.amount || 0), 0);
+  const sPrev = mPrev.reduce((a, t) => a + (t.amount || 0), 0);
+  const pc = pctChange(sNow, sPrev);
+  if (sNow > 0) {
+    out.push(gfx.insight({
+      icon: pc == null ? "📊" : pc > 0 ? "📈" : "📉",
+      tone: pc == null ? "ai" : pc > 8 ? "up" : pc < -8 ? "down" : "ai",
+      title: `इस महीने ${INR(sNow)} गए`,
+      body: pc == null ? `${mNow.length} पेमेंट · पिछले महीने का हिसाब नहीं है`
+        : `${mNow.length} पेमेंट · पिछले महीने ${INR(sPrev)} गए थे — ` +
+          `<b>${Math.abs(pc)}% ${pc > 0 ? "ज़्यादा" : pc < 0 ? "कम" : "बराबर"}</b>`
+    }));
+  }
+
+  // 2) सबसे ज़्यादा पैसा किसे
+  const by = {};
+  mNow.forEach((t) => {
+    const k = pKey(t.party || t.narration) || "?";
+    by[k] = by[k] || { name: t.party || "—", sum: 0, n: 0 };
+    by[k].sum += t.amount || 0; by[k].n++;
+  });
+  const top = Object.values(by).sort((a, b) => b.sum - a.sum)[0];
+  if (top && top.sum > 0) {
+    const share = sNow ? Math.round((top.sum / sNow) * 100) : 0;
+    out.push(gfx.insight({
+      icon: "🧑", tone: "ai", title: `सबसे ज़्यादा ${esc(top.name)} को`,
+      body: `<b>${INR(top.sum)}</b> · ${top.n} बार · इस महीने के खर्चे का <b>${share}%</b>` +
+        `<br><button type="button" class="mini" style="margin-top:8px"
+           onclick="showParty('${esc(pKey(top.name))}')">पूरा हिसाब देखें</button>`
+    }));
+  }
+
+  // 3) बिल बाकी
+  const nb = BANKTXNS.filter((t) => t.type === "debit" && !t.matched &&
+    !t.matchedReceiptId && !t.billPhotoId);
+  const nbSum = nb.reduce((a, t) => a + (t.amount || 0), 0);
+  const paid = BANKTXNS.filter((t) => t.type === "debit").length;
+  if (nb.length) {
+    out.push(gfx.insight({
+      icon: "📎", tone: "warn", title: `${nb.length} पेमेंट का बिल बाकी`,
+      body: `<b>${INR(nbSum)}</b> के भुगतान बिना बिल के हैं ` +
+        `(कुल ${paid} में से)${gfx.meter(100 - (nb.length / (paid || 1)) * 100, gfx.C.warn)}` +
+        `<button type="button" class="mini" style="margin-top:8px"
+           onclick="goTab('missing')">बकाया खोलें</button>`
+    }));
+  } else if (paid) {
+    out.push(gfx.insight({ icon: "✅", tone: "down",
+      title: "हर पैसे का बिल लगा है", body: "शाबाश — कुछ बाकी नहीं।" }));
+  }
+
+  // 4) रेट की चाल
+  priceMoves(2).forEach((m) => {
+    out.push(gfx.insight({
+      icon: m.pc > 0 ? "⚠️" : "🎉", tone: m.pc > 0 ? "up" : "down",
+      title: `${esc(m.name)} ${m.pc > 0 ? "महँगी" : "सस्ती"} हुई`,
+      body: `पिछली बार <b>₹${m.was}</b>${m.vendor ? " — " + esc(m.vendor) : ""}, ` +
+        `अब <b>₹${m.now}</b> — <b>${Math.abs(m.pc)}% ${m.pc > 0 ? "ज़्यादा" : "कम"}</b>`
+    }));
+  });
+
+  box.innerHTML = out.length ? out.join("")
+    : gfx.insight({ icon: "📥", tone: "ai", title: "अभी कुछ कहने लायक नहीं",
+        body: "statement डालिए या एक बिल जोड़िए — फिर यहीं पूरी समझ दिखने लगेगी।" });
+}
+
+/** tab बदलना — बटन भी सही जगह चमके। */
+function goTab(v) {
+  document.querySelectorAll("#tabs button").forEach((b) =>
+    b.classList.toggle("active", b.dataset.v === v));
+  document.querySelectorAll(".view").forEach((s) =>
+    s.classList.toggle("active", s.id === "v-" + v));
+  window.scrollTo({ top: 0, behavior: REDUCED ? "auto" : "smooth" });
+}
+
+/* ── 💹 Pricebook — विक्रम जी वाली सलाह ─────────────────────────────── */
+
+/**
+ * हर चीज़ के लिए एक वाक्य, वैसा ही जैसा दुकान पर सोचा जाता है:
+ * "पिछली बार किससे, कितने में — और आज क्या फ़र्क़ है"।
+ */
+function priceAdvice(p) {
+  const h = (p.history || []).filter((x) => x.rate != null);
+  if (!h.length) return "";
+  const last = h[h.length - 1];
+  const prev = h.length > 1 ? h[h.length - 2] : null;
+  const cheapest = h.reduce((a, b) => (b.rate < a.rate ? b : a), h[0]);
+
+  if (!prev) {
+    return gfx.insight({ icon: "🆕", tone: "ai",
+      title: `${esc(p.canonicalName)} — पहली बार`,
+      body: `<b>₹${last.rate}</b>${last.vendor ? " — " + esc(last.vendor) : ""}` +
+        `${last.date ? " · " + esc(dayLabel(last.date)) : ""}<br>` +
+        `अगली बार यही रेट मिलाकर बताऊँगा।` });
+  }
+  const pc = pctChange(last.rate, prev.rate);
+  const up = pc > 0;
+  const body =
+    `विक्रम जी, <b>${esc(p.canonicalName)}</b> पिछली बार ` +
+    `${prev.vendor ? "<b>" + esc(prev.vendor) + "</b> से " : ""}` +
+    `<b>₹${prev.rate}</b> में ली थी, आज <b>₹${last.rate}</b>` +
+    (pc ? ` — <b>${Math.abs(pc)}% ${up ? "ज़्यादा" : "कम"}</b>` : " — वही रेट") +
+    (cheapest.rate < last.rate
+      ? `<br>सबसे सस्ती <b>₹${cheapest.rate}</b> में मिली थी` +
+        `${cheapest.vendor ? " — " + esc(cheapest.vendor) : ""}` +
+        `${cheapest.date ? " (" + esc(dayLabel(cheapest.date)) + ")" : ""}`
+      : "<br>यही अब तक का सबसे सस्ता रेट है ✅");
+
+  return gfx.insight({
+    icon: pc > 8 ? "⚠️" : pc < -8 ? "🎉" : "📊",
+    tone: pc > 8 ? "up" : pc < -8 ? "down" : "ai",
+    title: pc > 8 ? "महँगी मिली — देख लीजिए"
+      : pc < -8 ? "सस्ती मिली — शाबाश" : "रेट लगभग वही",
+    body
+  });
+}
+
+/* ── 🧾 बिल tab — table नहीं, फोटो वाले कार्ड ──────────────────────── */
+
+/** बिल की जो भी फोटो मिले, पहली वाली thumbnail बने। */
+function billPhotoUrl(e) {
+  if (e.billPhotoDriveUrl) return e.billPhotoDriveUrl;
+  const ph = (e.photos || []).filter((p) => p && p.url)[0];
+  return ph ? ph.url : null;
+}
+
+function billCards(rows) {
+  return rows.map((e) => {
+    const url = billPhotoUrl(e);
+    const items = (e.items || []).slice(0, 3)
+      .map((i) => esc(i.name) + (i.qty != null ? ` ${i.qty}${i.unit ? " " + esc(i.unit) : ""}` : ""));
+    const more = (e.items || []).length - items.length;
+    const extra = (e.photos || []).length + (e.deliveryPhotoDriveUrl ? 1 : 0);
+    return `
+    <div class="bcard" onclick="editExpense('${esc(e._id)}')">
+      ${gfx.photo(url, e.receiptId)}
+      <div class="bx">
+        <div class="bt">
+          <b><span class="plink" onclick="event.stopPropagation();showParty('${esc(pKey(e.vendor && e.vendor.name))}')">${esc((e.vendor && e.vendor.name) || "—")}</span></b>
+          <span class="bamt">${e.billTotal != null ? INR(e.billTotal) : "—"}</span>
+        </div>
+        <div class="bi">${esc(e.receiptId || "")} · ${esc(dayLabel(String(e.billDate || "").slice(0, 10))
+          || (e._date ? e._date.toLocaleDateString("en-IN") : ""))}
+          ${e.unit ? " · 🏷️ " + esc(e.unit) : ""}</div>
+        ${items.length ? `<div class="bi">${items.join(" · ")}${more > 0 ? ` +${more} और` : ""}</div>` : ""}
+        <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span class="chip ${esc(e.status)}"><i></i>${esc(e.status)}</span>
+          ${(e.flags || []).map((f) => `<span class="badge lo" title="${esc(FLAG_TEXT[f] || f)}">${FLAG_ICONS[f] || "⚠️"}</span>`).join("")}
+          ${extra ? `<span class="badge">📷 ${extra + (url ? 0 : 0)}</span>` : ""}
+          <button type="button" class="mini" onclick="event.stopPropagation();editExpense('${esc(e._id)}')">✏️ सुधारें</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
 /* ── Tabs + 3D tilt ── */
 $("tabs").addEventListener("click", e => {
   const b = e.target.closest("button");
-  if (!b) return;
-  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x === b));
-  document.querySelectorAll(".view").forEach(v =>
-    v.classList.toggle("active", v.id === "v-" + b.dataset.v));
+  if (b) goTab(b.dataset.v);
 });
 
 function attachTilt() {
