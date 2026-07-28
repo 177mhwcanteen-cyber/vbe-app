@@ -299,11 +299,19 @@
   .ins.warn { background: linear-gradient(150deg, rgba(201,133,0,.16), rgba(201,133,0,.03)); border-color: rgba(201,133,0,.45); }
   .ins.ai   { background: linear-gradient(150deg, rgba(213,81,129,.15), rgba(57,135,229,.06)); border-color: rgba(213,81,129,.38); }
 
-  /* लंबा अंक (₹-5,46,251) tile से बाहर निकल जाता था — अंकों की गिनती के
-     हिसाब से आकार घटा दो, ताकि कार्ड कभी न टूटे। */
-  .tile .v { font-variant-numeric: tabular-nums; }
+  /* ₹48,79,153.56 जैसे अंक tile से बाहर निकल जाते थे। लंबाई के हिसाब से
+     आकार घटता है, और आख़िरी सुरक्षा के तौर पर कार्ड कभी बहता नहीं। */
+  .tile { overflow: hidden; }
+  .tile .v { font-variant-numeric: tabular-nums; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .tile .v.md { font-size: 22px; }
-  .tile .v.sm { font-size: 19px; letter-spacing: -.2px; }
+  .tile .v.sm { font-size: 19px; letter-spacing: -.3px; }
+  .tile .v.xs { font-size: 16px; letter-spacing: -.4px; }
+  .tile .k, .tile .s { overflow-wrap: anywhere; }
+  .tile .s.full { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 11.5px; }
+  .mrow .amt { max-width: 46%; overflow: hidden; text-overflow: ellipsis; }
+  .paySum b, .io b { display: block; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; font-size: clamp(12px, 3.6vw, 16px); }
   .tile .sp { margin-top: 8px; height: 26px; display: block; width: 100%; }
   .tile .d { font-size: 11.5px; font-weight: 700; margin-top: 3px; }
   .tile .d.up { color: #ff9d9d; } .tile .d.down { color: #7de07d; } .tile .d.flat { color: var(--muted); }
@@ -333,6 +341,92 @@
     display: grid; place-items: center; padding: 12px; }
   .lightbox img { max-width: 100%; max-height: 86vh; border-radius: 14px; }
   .lightbox .x { position: absolute; top: 14px; right: 14px; }
+
+  /* ══ v7 ══ ग्राफ़िक्स इंजन — काँच, रोशनी, और धीमी चाल ══
+     कार्ड असली frosted glass की तरह: पीछे का धुँधलापन, ऊपरी किनारे पर
+     रोशनी की एक पतली धार, और नीचे गहराई। पृष्ठभूमि धीरे-धीरे बदलती है
+     ताकि पन्ना ज़िंदा लगे — पर इतनी धीमे कि ध्यान न भटके।              */
+  .aurora { position: fixed; inset: -20%; z-index: -1; pointer-events: none;
+    filter: blur(70px); opacity: .5; transition: opacity .8s; }
+  .aurora i { position: absolute; display: block; border-radius: 50%;
+    animation: drift 26s ease-in-out infinite; }
+  .aurora i:nth-child(1) { width: 46vw; height: 46vw; left: -8%; top: 2%;
+    background: radial-gradient(circle, #3987e5 0%, transparent 70%); }
+  .aurora i:nth-child(2) { width: 40vw; height: 40vw; right: -6%; top: 22%;
+    background: radial-gradient(circle, #d55181 0%, transparent 70%);
+    animation-delay: -9s; }
+  .aurora i:nth-child(3) { width: 38vw; height: 38vw; left: 18%; bottom: 4%;
+    background: radial-gradient(circle, #199e70 0%, transparent 70%);
+    animation-delay: -17s; }
+  @keyframes drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    33% { transform: translate3d(6vw, -5vh, 0) scale(1.14); }
+    66% { transform: translate3d(-5vw, 6vh, 0) scale(.9); }
+  }
+  /* हर tab का अपना रंग-मिज़ाज */
+  body[data-tab="overview"] .aurora { filter: blur(70px) hue-rotate(0deg); }
+  body[data-tab="ledger"]   .aurora { filter: blur(70px) hue-rotate(35deg); }
+  body[data-tab="party"]    .aurora { filter: blur(70px) hue-rotate(-40deg); }
+  body[data-tab="unit"]     .aurora { filter: blur(70px) hue-rotate(90deg); }
+  body[data-tab="udhaar"]   .aurora { filter: blur(70px) hue-rotate(150deg); }
+  body[data-tab="staff"]    .aurora { filter: blur(70px) hue-rotate(-80deg); }
+
+  .card, .sheetBox {
+    backdrop-filter: blur(14px) saturate(1.25);
+    -webkit-backdrop-filter: blur(14px) saturate(1.25);
+    position: relative;
+  }
+  /* ऊपरी किनारे पर रोशनी की धार — यही काँच का एहसास देती है */
+  .card::before, .sheetBox::before {
+    content: ""; position: absolute; inset: 0 0 auto; height: 1px; border-radius: inherit;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.32), transparent);
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .aurora i { animation: none; }
+    .view, .sheetBox { animation: none !important; }
+  }
+
+  /* पहले से लगी हुई फोटो */
+  .haveRow { display: flex; gap: 9px; overflow-x: auto; padding: 2px 0 6px; }
+  .haveRow figure { flex: 0 0 auto; width: 78px; text-align: center; cursor: pointer; }
+  .haveRow img, .haveRow .thx { width: 78px; height: 78px; object-fit: cover;
+    border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); }
+  .haveRow figcaption { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+
+  /* 🏪 उधार के कार्ड */
+  .ud { border: 1px solid rgba(201,133,0,.4); border-radius: 14px; margin-bottom: 9px;
+    background: linear-gradient(150deg, rgba(201,133,0,.14), rgba(255,255,255,.02)); }
+  .udTop { display: flex; align-items: center; gap: 11px; padding: 12px 13px; cursor: pointer; }
+  .udAmt { font-size: 16px; font-weight: 700; color: #f0c064;
+    font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .udWho { flex: 1; min-width: 0; line-height: 1.35; }
+  .udWho b { font-size: 14px; display: block; }
+  .udWho small { color: var(--muted); font-size: 11.5px; }
+  .udMore { display: none; padding: 0 13px 13px; }
+  .ud.open .udMore { display: block; }
+  .udRow { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px;
+    padding: 9px 0; border-top: 1px solid var(--grid); cursor: pointer; font-size: 12.5px; }
+  .udRow b { text-align: right; color: #f0c064; }
+  .udRow small { grid-column: 1 / -1; color: var(--muted); }
+
+  /* 🩷 चालान बाकी — गुलाबी, जब तक नंबर न आए */
+  .pinkish { border-left: 3px solid #ff6fae !important;
+    background: linear-gradient(90deg, rgba(255,111,174,.12), transparent 45%) !important; }
+  .badge.pink { background: rgba(255,111,174,.18); border-color: rgba(255,111,174,.5); color: #ffb3d4; }
+
+  /* 💬 WhatsApp चुनने वाले बटन */
+  .waBtn { display: flex; align-items: center; gap: 11px; padding: 12px 14px;
+    border-radius: 14px; border: 1px solid rgba(37,211,102,.45); margin-bottom: 8px;
+    background: linear-gradient(150deg, rgba(37,211,102,.18), rgba(255,255,255,.02));
+    color: var(--ink); text-decoration: none; }
+  .waBtn b { font-size: 24px; }
+  .waBtn span { display: flex; flex-direction: column; font-weight: 600; }
+  .waBtn small { color: var(--muted); font-weight: 400; font-size: 11.5px; }
+  .waPrev { white-space: pre-wrap; font-size: 11.5px; line-height: 1.5;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 11px; max-height: 40vh; overflow: auto;
+    color: var(--ink-2); }
 
   /* ══ v6 ══ पेमेंट के कार्ड — ऊपर रकम, खोलने पर पूरा पता ══ */
   .pay { border: 1px solid var(--border); border-radius: 13px; margin-bottom: 8px;
@@ -407,6 +501,7 @@
 </style>
 </head>
 <body>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <div class="wrap">
   <header class="top">
@@ -452,6 +547,7 @@
       <button data-v="recon">🏦 मिलान</button>
       <button data-v="unit">🎯 यूनिट</button>
       <button data-v="staff">🧑‍🤝‍🧑 Staff</button>
+      <button data-v="udhaar">🏪 उधार</button>
       <button data-v="missing">❓ बकाया</button>
     </nav>
 
@@ -482,19 +578,13 @@
           <div class="aiBtn bill">
             <span class="ico">🧾</span>
             <div class="aiTxt">बिल की फोटो<small>AI पढ़कर दुकान, सामान, रेट भर देगा</small>
-              <div class="pick">
-                <button type="button" onclick="pickPhoto('aBillFile', true)">📷 कैमरा</button>
-                <button type="button" onclick="pickPhoto('aBillFile', false)">🖼️ गैलरी</button>
-              </div>
+              <button type="button" style="width:100%" onclick="pickPhoto('aBillFile')">🖼️ गैलरी से चुनें</button>
             </div>
           </div>
           <div class="aiBtn recv">
             <span class="ico">💳</span>
             <div class="aiTxt">पेमेंट रसीद<small>UTR अपने-आप निकल जाएगा</small>
-              <div class="pick">
-                <button type="button" onclick="pickPhoto('aRecvFile', true)">📷 कैमरा</button>
-                <button type="button" onclick="pickPhoto('aRecvFile', false)">🖼️ गैलरी</button>
-              </div>
+              <button type="button" style="width:100%" onclick="pickPhoto('aRecvFile')">🖼️ गैलरी से चुनें</button>
             </div>
           </div>
         </div>
@@ -554,6 +644,12 @@
           <option value="rejected">Rejected</option>
         </select>
         <select id="fStaff"><option value="">सब staff</option></select>
+        <select id="fChallan">
+          <option value="">🧾 चालान: सब</option>
+          <option value="no">🩷 चालान नहीं बना</option>
+          <option value="yes">✅ चालान बन गया</option>
+          <option value="due">⚖️ पैसा बाकी</option>
+        </select>
         <input id="fSearch" type="search" placeholder="खोजें: दुकान, आइटम, receipt…">
       </div>
       <div class="card">
@@ -688,6 +784,7 @@
     <section class="view" id="v-unit">
       <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
       <div id="unitWatch"></div>
+      <div id="chWatch"></div>
       <div class="filters">
         <select id="uUnit" style="flex:1"></select>
         <button type="button" onclick="addUnit()">➕ नई यूनिट</button>
@@ -695,6 +792,21 @@
       </div>
       <div class="tiles" id="uTiles"></div>
       <div class="card"><div id="uRows"></div></div>
+    </section>
+
+    <!-- ── 🏪 उधार — मंडी/मार्केट का बकाया ── -->
+    <section class="view" id="v-udhaar">
+      <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
+      <div id="udBrain"></div>
+      <div class="card">
+        <div class="itemsHead" style="margin-top:0">
+          <span>🏪 किस-किस पर उधारी है</span>
+          <button type="button" class="primary mini" onclick="openBillSheet({})">➕ उधार का बिल</button>
+        </div>
+        <p class="muted" style="margin-bottom:10px">जिस बिल का पूरा पैसा नहीं गया वह यहीं
+          दिखेगा। पेमेंट की रसीद लगाते ही अपने-आप कट जाएगा।</p>
+        <div id="udList"></div>
+      </div>
     </section>
 
     <!-- ── 🧑‍🤝‍🧑 Staff ── -->
@@ -771,10 +883,8 @@
         <!-- फोटो से -->
         <div id="bsPhoto" class="form">
           <input type="file" id="bmFile" accept="image/*" hidden>
-          <div class="pick">
-            <button type="button" onclick="pickPhoto('bmFile', true)">📷 कैमरा से खींचें</button>
-            <button type="button" onclick="pickPhoto('bmFile', false)">🖼️ गैलरी से चुनें</button>
-          </div>
+          <button type="button" style="width:100%" onclick="pickPhoto('bmFile')">
+            🖼️ गैलरी से बिल की फोटो चुनें</button>
           <div id="bmAI" class="muted" style="margin-top:10px"></div>
         </div>
 
@@ -792,12 +902,11 @@
 
         <!-- सबके नीचे: वही खाने, हमेशा सुधारे जा सकते हैं -->
         <div class="form" id="bsForm">
+          <div id="bsHave"></div>
           <div id="bsShots" class="shots" style="margin-top:10px"></div>
-          <div class="pick" style="margin-bottom:10px">
-            <input type="file" id="bsMore" accept="image/*" hidden>
-            <button type="button" onclick="pickPhoto('bsMore', true)">🚚 डिलीवरी/माल की फोटो</button>
-            <button type="button" onclick="pickPhoto('bsMore', false)">🖼️ गैलरी से</button>
-          </div>
+          <input type="file" id="bsMore" accept="image/*" multiple hidden>
+          <button type="button" style="width:100%;margin-bottom:10px" onclick="pickPhoto('bsMore')">
+            🚚 डिलीवरी / 📦 माल की फोटो जोड़ें</button>
           <div class="frow">
             <label>दुकान / पार्टी<input id="bsVendor" placeholder="जैसे: राम सब्ज़ी भंडार"></label>
             <label>तारीख<input id="bsDate" type="date"></label>
@@ -827,15 +936,18 @@
             <label>कुल ₹<input id="bsTotal" type="number" inputmode="decimal" placeholder="अपने-आप"></label>
           </div>
           <div id="bsWarn" class="badge lo" hidden style="display:block;margin-top:8px;line-height:1.5"></div>
+          <div class="frow" style="margin-top:10px">
+            <label>🧾 चालान नंबर<input id="bsChallan" placeholder="व्यापारी से आने पर भरें"></label>
+            <label>बिक्री कुल ₹<input id="bsSaleTotal" readonly placeholder="—"></label>
+          </div>
 
           <!-- 💳 पेमेंट — एक बिल के कई पेमेंट, हर एक का पूरा पता -->
           <div class="itemsHead" style="margin-top:16px"><span>💳 पेमेंट</span>
             <span class="muted">कई हो सकते हैं</span></div>
           <input type="file" id="bsPayShot" accept="image/*" hidden>
           <div class="pick" style="margin-bottom:8px">
-            <button type="button" onclick="pickPhoto('bsPayShot', true)">📷 रसीद खींचें</button>
-            <button type="button" onclick="pickPhoto('bsPayShot', false)">🖼️ गैलरी</button>
-            <button type="button" onclick="addPayManual()">✍️ हाथ से</button>
+            <button type="button" onclick="pickPhoto('bsPayShot')">🖼️ रसीद की फोटो</button>
+            <button type="button" onclick="addPayManual()">✍️ हाथ से जोड़ें</button>
           </div>
           <div id="bsPayMsg" class="muted" style="margin-bottom:8px"></div>
           <div id="bsPays"></div>
@@ -977,6 +1089,21 @@
       </div>
     </div>
 
+    <!-- 💬 चालान WhatsApp पर भेजें -->
+    <div id="waSheet" class="sheet" hidden>
+      <div class="sheetBox">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3>💬 चालान भेजें</h3>
+          <button type="button" class="x" onclick="closeSheet('waSheet')">✕</button>
+        </div>
+        <p class="muted">किसे भेजना है? नाम दबाते ही WhatsApp में पूरा संदेश तैयार खुलेगा।</p>
+        <div id="waPick" style="margin:12px 0"></div>
+        <div class="itemsHead"><span>📄 जो भेजा जाएगा</span></div>
+        <div id="waPreview" class="waPrev"></div>
+      </div>
+    </div>
+
     <!-- 🔒 PIN -->
     <div id="pinSheet" class="sheet" hidden>
       <div class="sheetBox" style="max-width:360px">
@@ -1023,7 +1150,24 @@ const ALLOWED_UIDS = ["OSEMzBorjgVnWM04yFATVGmc79S2", "LoDJzLE8Qce1Wao5VDHYOLELC
 /* ════════════════════════════════════════════════ */
 
 const SERIES = ["#3987e5", "#008300", "#d55181", "#c98500", "#199e70"]; // validated dark palette
-const INR = n => "₹" + Number(n || 0).toLocaleString("en-IN");
+// पैसे गिनते वक़्त दशमलव सिर्फ़ जगह खाता है और अंक कार्ड से बाहर धकेलता है।
+const INR = n => "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
+
+/**
+ * बड़ी रकम को छोटा करके लिखो — ₹52,40,405 की जगह ₹52.4 लाख।
+ *
+ * tile में पूरा अंक काटकर "₹52,40,…" दिखाना सबसे बुरा है: न पढ़ा जाता है, न
+ * अंदाज़ा लगता है। लाख/करोड़ में वही बात एक नज़र में समझ आती है और डिब्बे में
+ * आराम से बैठ जाती है। पूरा अंक नीचे की पंक्ति में रहता ही है।
+ */
+function INRshort(n) {
+  const v = Math.round(Number(n) || 0);
+  const a = Math.abs(v), sign = v < 0 ? "-" : "";
+  const trim = (x) => String(x).replace(/\.0$/, "");
+  if (a >= 1e7) return "₹" + sign + trim((a / 1e7).toFixed(a >= 1e8 ? 0 : 2)) + " करोड़";
+  if (a >= 1e5) return "₹" + sign + trim((a / 1e5).toFixed(a >= 1e6 ? 1 : 2)) + " लाख";
+  return "₹" + sign + a.toLocaleString("en-IN");
+}
 const $ = id => document.getElementById(id);
 
 firebase.initializeApp(FIREBASE_CONFIG);
@@ -1135,6 +1279,8 @@ function renderAll() {
   refreshUnitList();
   renderUnitTab();
   renderUnitWatch();
+  renderChallanWatch();
+  renderUdhaar();
   renderStaff();
 }
 
@@ -1168,7 +1314,7 @@ function renderTiles() {
       color: gfx.C.in, spark: inSpark }),
     gfx.tile({ k: "🔴 गया", v: INR(outSum), n: outSum, s: outAll.length + " entries",
       color: gfx.C.out, spark: outSpark }),
-    gfx.tile({ k: "बचा", v: INR(inSum - outSum), s: rangeWords(), color: gfx.C.bill,
+    gfx.tile({ k: "बचा", v: INR(inSum - outSum), n: inSum - outSum, s: rangeWords(), color: gfx.C.bill,
       pct: inSum ? Math.min(100, Math.max(0, ((inSum - outSum) / inSum) * 100)) : 0 }),
     gfx.tile({ k: "📎 बिल बाकी", v: INR(sum(noBill)), n: sum(noBill),
       s: noBill.length + " भुगतान · " + Math.round(billPct) + "% पूरा",
@@ -1180,6 +1326,7 @@ function renderTiles() {
       color: gfx.C.ai, pct: 70 })
   ].join("");
   attachTilt();
+  gfx.fit($("tiles"));
   gfx.countUp($("tiles"));
   renderBrain();
 }
@@ -1313,6 +1460,10 @@ function renderBills() {
     if (!inRange(e.billDate || e.submittedAt)) return false;
     if (st && e.status !== st) return false;
     if (sf && !(e.submittedBy && e.submittedBy.name === sf)) return false;
+    const ch = $("fChallan") ? $("fChallan").value : "";
+    if (ch === "no" && !needsChallan(e)) return false;
+    if (ch === "yes" && !e.challanNo) return false;
+    if (ch === "due" && paySummary(e).due <= 0.5) return false;
     if (q) {
       const hay = [e.receiptId, e.vendor && e.vendor.name, e.extractedText, e.unit,
         (e.items || []).map(i => i.name).join(" ")].join(" ").toLowerCase();
@@ -1324,7 +1475,7 @@ function renderBills() {
   $("billEmpty").hidden = rows.length > 0;
   $("billRows").innerHTML = billCards(rows);
 }
-["fStatus", "fStaff", "fSearch"].forEach(id => $(id).addEventListener("input", renderBills));
+["fStatus", "fStaff", "fSearch", "fChallan"].forEach(id => $(id).addEventListener("input", renderBills));
 
 /* ── Pricebook ── */
 function renderPricebook() {
@@ -1361,6 +1512,7 @@ function renderPriceItem(p) {
       color: gfx.C.warn, pct: 70 })
   ].join("");
   attachTilt();
+  gfx.fit($("priceTiles"));
   gfx.countUp($("priceTiles"));
 
   mkChart("chPrice", {
@@ -2587,9 +2739,10 @@ async function geminiPost(model, parts) {
       }) });
 }
 
-async function askGemini(prompt, dataUrl) {
+async function askGemini(prompt, dataUrl, extraText) {
   if (!GEMINI_KEY) throw new Error("AI की चाबी नहीं मिली — Firestore में vbe_meta › app_config › geminiKey डालें");
-  const parts = [{ text: prompt + "\n\nToday's date is " + todayISO() + "." }];
+  const parts = [{ text: prompt + "\n\nToday's date is " + todayISO() + "." +
+    (extraText ? "\n\n" + extraText : "") }];
   if (dataUrl) parts.push({ inline_data: { mime_type: "image/jpeg", data: dataUrl.split(",")[1] } });
 
   let model = GEMINI_MODEL || await geminiDiscoverModel();
@@ -2622,16 +2775,15 @@ function showShots() {
     .map(k => `<img src="${ENTRY_SHOTS[k]}" title="${k === "bill" ? "बिल" : "रसीद"}">`).join("");
 }
 /**
- * Open a file input as either the camera or the gallery. `capture` is what
- * forces the camera, so it is added or removed per tap instead of being baked
- * into the markup — one input, two doors. Clearing `.value` first means picking
- * the same photo twice still fires `change` (a retry after a failed read).
+ * गैलरी खोलो। `.value` पहले ख़ाली करने से वही फोटो दुबारा चुनने पर भी
+ * `change` चलता है — पहली बार AI न पढ़ पाए तो दोबारा कोशिश हो सके।
  */
-function pickPhoto(id, fromCamera) {
+function pickPhoto(id) {
   const el = $(id);
   if (!el) return;
-  if (fromCamera) el.setAttribute("capture", "environment");
-  else el.removeAttribute("capture");
+  // कैमरा हर जगह से हटा दिया — विक्रम जी हमेशा गैलरी से ही चुनते हैं, और
+  // capture लगा होने पर Android सीधे कैमरा खोल देता था।
+  el.removeAttribute("capture");
   el.value = "";
   el.click();
 }
@@ -2867,14 +3019,18 @@ function renderLedger() {
   const noBill = rows.filter((t) => t.type === "debit" && !t.matchedReceiptId && !t.billPhotoId).length;
 
   $("lTiles").innerHTML = [
-    ["🟢 आया", INR(inSum), rows.filter(t => t.type === "credit").length + " entries", "#0ca30c"],
-    ["🔴 गया", INR(outSum), rows.filter(t => t.type === "debit").length + " entries", "#d03b3b"],
-    ["बचा", INR(inSum - outSum), "इस अवधि में", "#3987e5"],
-    ["📎 बिल बाकी", String(noBill), "इन पर बिल लगाना है", "#fab219"]
-  ].map(([k, v, s2, c]) => `
-    <div class="card tile tilt"><div class="k">${k}</div><div class="v">${v}</div>
-      <div class="s">${s2}</div><div class="bar"><i style="width:70%;background:${c}"></i></div></div>`).join("");
+    gfx.tile({ k: "🟢 आया", v: INR(inSum), n: inSum,
+      s: rows.filter(t => t.type === "credit").length + " entries", color: gfx.C.in, pct: 70 }),
+    gfx.tile({ k: "🔴 गया", v: INR(outSum), n: outSum,
+      s: rows.filter(t => t.type === "debit").length + " entries", color: gfx.C.out, pct: 70 }),
+    gfx.tile({ k: "बचा", v: INR(inSum - outSum), n: inSum - outSum,
+      s: "इस अवधि में", color: gfx.C.bill, pct: 70 }),
+    gfx.tile({ k: "📎 बिल बाकी", v: String(noBill), s: "इन पर बिल लगाना है",
+      color: gfx.C.warn, pct: 70 })
+  ].join("");
   attachTilt();
+  gfx.fit($("lTiles"));
+  gfx.countUp($("lTiles"));
 
   $("ledgerRows").innerHTML = rows.length ? rows.slice(0, 300).map((t) => {
     const paid = t.type === "debit";
@@ -3121,8 +3277,7 @@ function renderVcard(p) {
                 <a class="badge hi" style="padding:9px 14px" target="_blank"
                    href="https://wa.me/91${wa}?text=${encodeURIComponent("नमस्ते " + (c.firm || p.name) + " जी, विक्रम चरण — VBE बाड़मेर")}">💬 WhatsApp</a>` : ""}
         <button type="button" class="mini" onclick="editVcard()">✍️ ${has ? "सुधारें" : "हाथ से भरें"}</button>
-        <button type="button" class="mini" onclick="pickPhoto('vcFile', true)">📷 कार्ड खींचें</button>
-        <button type="button" class="mini" onclick="pickPhoto('vcFile', false)">🖼️ गैलरी</button>
+        <button type="button" class="mini" onclick="pickPhoto('vcFile')">🖼️ कार्ड की फोटो</button>
         ${has ? `<button type="button" class="mini" onclick="copyVcard()">📋 कॉपी</button>` : ""}
       </div>
       <div id="vcMsg" class="muted" style="margin-top:8px"></div>
@@ -3424,7 +3579,8 @@ function refreshAll() {
   try { PARTIES = buildParties(); renderParties(); } catch (e) {}
   try { renderMissing(); } catch (e) {}
   try { renderAccounts(); renderCoverage(); } catch (e) {}
-  try { renderUnitTab(); renderUnitWatch(); renderStaff(); } catch (e) {}
+  try { renderUnitTab(); renderUnitWatch(); renderChallanWatch(); } catch (e) {}
+  try { renderUdhaar(); renderStaff(); } catch (e) {}
 }
 
 /* ── 🏦 खाते — जोड़ना, सुधारना, और एक टैप में भेजना ─────────────────
@@ -3636,10 +3792,17 @@ function bsItems() {
 }
 
 function bsRecalc() {
-  const sum = bsItems().reduce((a, i) => a + (i.amount || 0), 0);
+  const items = bsItems();
+  const sum = items.reduce((a, i) => a + (i.amount || 0), 0);
   const gst = Number($("bsGst").value) || 0;
   if (sum > 0) $("bsTotal").value = Math.round((sum + gst) * 100) / 100;
+  // चालान किस रकम का बनेगा — यही स्टाफ़ को भेजना है, इसलिए हमेशा सामने रहे।
+  const sale = items.reduce((a, i) =>
+    a + (i.saleRate != null ? (Number(i.qty) || 0) * i.saleRate : 0), 0);
+  const box = $("bsSaleTotal");
+  if (box) box.value = sale ? Math.round(sale) : "";
   bsCheckAmount();
+  renderPays();
 }
 
 /**
@@ -3661,12 +3824,42 @@ function bsCheckAmount() {
 }
 ["bsGst"].forEach((id) => $(id).addEventListener("input", bsRecalc));
 $("bsTotal").addEventListener("input", () => { bsCheckAmount(); renderPays(); });
+$("bsChallan").addEventListener("input", () => { renderPays(); });
 $("bsDiscount").addEventListener("input", renderPays);
 
 function bsShowShots() {
   const all = (BILL_SHOTS.bill ? [{ u: BILL_SHOTS.bill, t: "बिल" }] : [])
     .concat(BILL_SHOTS.extra.map((u, i) => ({ u, t: "फोटो " + (i + 1) })));
   $("bsShots").innerHTML = all.map((s) => `<img src="${s.u}" title="${s.t}">`).join("");
+}
+
+/**
+ * जो फोटो पहले लगाई थीं वे खोलते ही सामने हों। «मैंने यह लगाया था» — यह
+ * याद आना ज़रूरी है, तभी ग़लती पकड़ में आती है और सुधार हो पाता है।
+ */
+function showHavePhotos(rec) {
+  const box = $("bsHave");
+  if (!box) return;
+  const shots = [];
+  const add = (url, label, icon) => { if (url) shots.push({ url, label, icon }); };
+  add(rec.billPhotoDriveUrl, "बिल", "🧾");
+  add(rec.paymentPhotoDriveUrl, "रसीद", "💳");
+  add(rec.deliveryPhotoDriveUrl, "डिलीवरी", "🚚");
+  (rec.photos || rec.billPhotos || []).forEach((ph) => {
+    if (ph && ph.url) add(ph.url, ph.kind === "bill" ? "बिल" : "माल",
+      ph.kind === "bill" ? "🧾" : "📦");
+  });
+  ((rec.payments || []).forEach((pp) => add(pp.photoUrl, "रसीद", "💳")));
+
+  box.innerHTML = shots.length ? `
+    <div class="itemsHead" style="margin-top:4px"><span>📎 पहले से लगी हुई</span>
+      <span class="muted">${shots.length}</span></div>
+    <div class="haveRow">${shots.map((sh) => `
+      <figure onclick="lightbox('${esc(sh.url)}')">
+        <img src="${esc(gfx.imgUrl(sh.url))}" loading="lazy"
+          onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'thx',textContent:'🧾'}))">
+        <figcaption>${sh.icon} ${esc(sh.label)}</figcaption>
+      </figure>`).join("")}</div>` : "";
 }
 
 /** एक ही जगह से खुले — बैंक की entry हो, पुराना बिल हो, या कोरा नया। */
@@ -3683,8 +3876,9 @@ function openBillSheet(opts) {
   $("bmAI").textContent = GEMINI_KEY ? "" : "(AI बंद है — बिल फिर भी जुड़ जाएगा)";
   $("bsMsg").textContent = "";
   $("bsItems").innerHTML = "";
-  ["bsVendor", "bsInvoice", "bsPhone", "bsGstin", "bsUtr", "bsGst", "bsTotal", "bsNote"]
-    .forEach((id) => { $(id).value = ""; });
+  ["bsVendor", "bsInvoice", "bsPhone", "bsGstin", "bsUtr", "bsGst", "bsTotal",
+   "bsNote", "bsChallan", "bsSaleTotal"].forEach((id) => { $(id).value = ""; });
+  $("bsHave").innerHTML = "";
   fillUnitSelect("bsUnit");
   $("bsUnit").value = "";
   $("bsDate").value = todayISO();
@@ -3693,6 +3887,7 @@ function openBillSheet(opts) {
     $("bsTxn").innerHTML = `<span class="pname">${esc(BILL_TXN.party || "—")}</span> ·
       ${INR(BILL_TXN.amount)} · ${esc(BILL_TXN.date)} · ${esc(accLabel(BILL_TXN.accountId))}`;
     $("bsVendor").value = BILL_TXN.party || "";
+    showHavePhotos(BILL_TXN);
     $("bsDate").value = String(BILL_TXN.date || todayISO()).slice(0, 10);
     $("bsTotal").value = BILL_TXN.amount || "";
     $("bsUtr").value = BILL_TXN.utr || "";
@@ -3713,6 +3908,8 @@ function openBillSheet(opts) {
     $("bsUtr").value = (BILL_EXP.payment && BILL_EXP.payment.upiRef) || "";
     $("bsUnit").value = BILL_EXP.unit || "";
     $("bsNote").value = BILL_EXP.note || "";
+    $("bsChallan").value = BILL_EXP.challanNo || "";
+    showHavePhotos(BILL_EXP);
     $("bsDiscount").value = BILL_EXP.discount || "";
     BILL_PAYS = (BILL_EXP.payments || []).slice();
     // पुराना एक-UTR वाला रूप भी सँभालो, वरना पुराने बिलों का पेमेंट ग़ायब लगेगा
@@ -3906,6 +4103,7 @@ async function saveBillSheet() {
       items, billTotal: total,
       unit: $("bsUnit").value || null,
       note: $("bsNote").value.trim() || null,
+      challanNo: $("bsChallan").value.trim() || null,
       billDate: $("bsDate").value || todayISO(),
       gstAmount: Number($("bsGst").value) || 0,
       discount: Number($("bsDiscount").value) || 0,
@@ -3931,8 +4129,40 @@ async function saveBillSheet() {
       if (alerts.length) toast("📈 " + alerts[0]);
       toast("✏️ बिल सुधर गया");
     } else if (BILL_TXN) {
+      /* बैंक की entry पर बिल लगाना = एक पूरा बिल बनना।
+         पहले यहाँ सिर्फ़ vbe_bank_txns को patch किया जाता था, कोई expense
+         record बनता ही नहीं था — इसीलिए अटैच किया हुआ बिल «बिल» tab में कभी
+         नहीं दिखा और Pricebook लगभग ख़ाली रहा। अब असली बिल बनता है, दोनों
+         तरफ़ से जुड़ता है, और pricebook/flags उसी रास्ते से भरते हैं। */
+      const when = new Date(String(BILL_TXN.date).slice(0, 10) + "T12:00:00+05:30");
+      const receiptId = `WEB/${fyLabel(when)}/${Date.now().toString().slice(-6)}`;
+      const docId = receiptId.replace(/\//g, "-");
+      const rec = Object.assign({
+        receiptId,
+        submittedBy: { telegramId: "dashboard",
+          name: (auth.currentUser && auth.currentUser.displayName) || "Owner" },
+        submittedAt: firebase.firestore.Timestamp.fromDate(when),
+        source: "bank_attach",
+        vendorKey: pKey(vendor) || null,
+        status: "reimbursed",
+        billPhotoDriveUrl: (urls[0] && urls[0].url) || null,
+        photos: urls,
+        matchedBankTxnId: BILL_TXN._id,
+        reconciled: true,
+        statusHistory: [{ status: "reimbursed",
+          at: firebase.firestore.Timestamp.fromDate(when), by: "dashboard" }]
+      }, payload);
+
+      const alerts = await pricebookAdd(rec).catch(() => []);
+      rec.priceAlerts = alerts;
+      rec.flags = computeFlags(rec, alerts);
+
+      await db.collection("vbe_expenses").doc(docId).set(rec);
+      EXP.unshift(Object.assign({ _id: docId, _date: when }, rec));
+
       const patch = {
         billPhotoId: BILL_TXN._id,
+        matched: true, matchedReceiptId: receiptId,
         aiSummary: vendor ? vendor + " · " + items.length + " चीज़ें" : null,
         billVendor: vendor || null, billTotal: total, billItems: items,
         billUnit: $("bsUnit").value || null, billNote: $("bsNote").value.trim() || null,
@@ -3945,9 +4175,15 @@ async function saveBillSheet() {
       }
       await db.collection("vbe_bank_txns").doc(BILL_TXN._id).update(patch);
       await auditLog("attach_bill", null,
-        { txnId: BILL_TXN._id, amount: BILL_TXN.amount, party: BILL_TXN.party, vendor, total });
+        { txnId: BILL_TXN._id, receiptId, amount: BILL_TXN.amount,
+          party: BILL_TXN.party, vendor, total });
       Object.assign(BILL_TXN, patch);
-      toast("📎 बिल जुड़ गया");
+      if (alerts.length) toast("📈 " + alerts[0]);
+      toast("📎 बिल जुड़ गया — " + receiptId);
+      tgChallanCard(rec);
+      closeSheet("billSheet");
+      refreshAll();
+      return;
     } else {
       msg.className = "bad"; msg.textContent = "यह sheet किसी entry से नहीं जुड़ी"; return;
     }
@@ -3955,8 +4191,7 @@ async function saveBillSheet() {
     if (vendor && ($("bsGstin").value.trim() || $("bsPhone").value.trim())) {
       vcardFromBill(vendor, $("bsGstin").value.trim(), $("bsPhone").value.trim()).catch(() => {});
     }
-    tgNotify(`📎 <b>बिल जुड़ा</b>\n${vendor || "—"}${total != null ? "\n" + INR(total) : ""}` +
-      (items.length ? `\n${items.length} चीज़ें` : ""));
+    tgChallanCard(BILL_EXP || Object.assign({ receiptId: "—" }, payload));
     closeSheet("billSheet");
     refreshAll();
   } catch (err) {
@@ -4156,15 +4391,22 @@ const gfx = {
 
   /** एक tile — बड़ा अंक, नीचे बात, बदलाव, और चाहें तो चाल का ग्राफ़। */
   tile(o) {
+    // ₹1,00,000 से ऊपर की रकम लाख/करोड़ में — डिब्बे में बैठ जाती है और
+    // पूरा अंक नीचे की पंक्ति में साथ चलता है।
+    if (o.n != null && Math.abs(o.n) >= 1e5 && String(o.v).charAt(0) === "₹") {
+      o = Object.assign({}, o, { v: INRshort(o.n), full: INR(o.n) });
+    }
     const d = o.delta;
     const arrow = d == null ? "" :
       `<div class="d ${d > 0 ? "up" : d < 0 ? "down" : "flat"}">${
         d > 0 ? "▲" : d < 0 ? "▼" : "•"} ${Math.abs(Math.round(d))}% ${o.deltaWhat || ""}</div>`;
     return `<div class="card tile tilt">
       <div class="k">${o.k}</div>
-      <div class="v${String(o.v).length > 11 ? " sm" : String(o.v).length > 8 ? " md" : ""}"${
+      <div class="v${String(o.v).length > 13 ? " xs" : String(o.v).length > 10 ? " sm"
+        : String(o.v).length > 8 ? " md" : ""}"${
         o.n != null ? ` data-count="${o.n}"` : ""}>${o.v}</div>
       ${arrow}
+      ${o.full ? `<div class="s full">${o.full}</div>` : ""}
       ${o.s ? `<div class="s">${o.s}</div>` : ""}
       ${o.spark ? this.spark(o.spark, o.color || this.C.bill) :
         `<div class="bar"><i style="width:${o.pct == null ? 70 : o.pct}%;background:${o.color || this.C.bill}"></i></div>`}
@@ -4193,6 +4435,25 @@ const gfx = {
    * अंक 0 से बढ़ते हुए आएँ। सजावट नहीं — बदला हुआ आँकड़ा आँख पकड़ लेती है,
    * जो इस app में सबसे ज़रूरी बात है। धीमे फ़ोन पर अपने-आप बंद।
    */
+  /**
+   * अंक को डिब्बे में बिठाओ — गिनकर नहीं, नापकर।
+   * "₹-52.3 लाख" दस अक्षर का है पर छपता आठ खाने में है (मात्राएँ चौड़ाई नहीं
+   * लेतीं), इसलिए अक्षर गिनने से आकार ग़लत चुना जाता था और अंक कट जाता था।
+   */
+  fit(root) {
+    (root || document).querySelectorAll(".tile .v").forEach((el) => {
+      const steps = ["", "md", "sm", "xs"];
+      let i = steps.indexOf(["xs", "sm", "md"].filter((c) => el.classList.contains(c))[0] || "");
+      if (i < 0) i = 0;
+      let guard = 0;
+      while (el.scrollWidth > el.clientWidth + 1 && i < steps.length - 1 && guard++ < 4) {
+        steps.forEach((c) => c && el.classList.remove(c));
+        i++;
+        if (steps[i]) el.classList.add(steps[i]);
+      }
+    });
+  },
+
   countUp(root) {
     if (REDUCED) return;
     (root || document).querySelectorAll("[data-count]").forEach((el) => {
@@ -4364,6 +4625,7 @@ function renderBrain() {
 
 /** tab बदलना — बटन भी सही जगह चमके। */
 function goTab(v) {
+  document.body.dataset.tab = v;        // हर tab का अपना रंग-मिज़ाज
   document.querySelectorAll("#tabs button").forEach((b) =>
     b.classList.toggle("active", b.dataset.v === v));
   document.querySelectorAll(".view").forEach((s) =>
@@ -4429,8 +4691,10 @@ function billCards(rows) {
       .map((i) => esc(i.name) + (i.qty != null ? ` ${i.qty}${i.unit ? " " + esc(i.unit) : ""}` : ""));
     const more = (e.items || []).length - items.length;
     const extra = (e.photos || []).length + (e.deliveryPhotoDriveUrl ? 1 : 0);
+    const pink = needsChallan(e);
+    const s2 = paySummary(e);
     return `
-    <div class="bcard" onclick="editExpense('${esc(e._id)}')">
+    <div class="bcard ${pink ? "pinkish" : ""}" onclick="editExpense('${esc(e._id)}')">
       ${gfx.photo(url, e.receiptId)}
       <div class="bx">
         <div class="bt">
@@ -4444,7 +4708,12 @@ function billCards(rows) {
         <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <span class="chip ${esc(e.status)}"><i></i>${esc(e.status)}</span>
           ${(e.flags || []).map((f) => `<span class="badge lo" title="${esc(FLAG_TEXT[f] || f)}">${FLAG_ICONS[f] || "⚠️"}</span>`).join("")}
-          ${extra ? `<span class="badge">📷 ${extra + (url ? 0 : 0)}</span>` : ""}
+          ${extra ? `<span class="badge">📷 ${extra}</span>` : ""}
+          ${s2.due > 0.5 ? `<span class="badge lo">⚖️ ${INR(s2.due)} बाकी</span>` : ""}
+          ${e.challanNo ? `<span class="badge ok2">🧾 ${esc(e.challanNo)}</span>`
+            : pink ? `<button type="button" class="mini" style="border-color:rgba(255,111,174,.5)"
+                onclick="event.stopPropagation();setChallanNo('${esc(e._id)}')">🩷 चालान नं. डालें</button>` : ""}
+          <button type="button" class="mini" onclick="event.stopPropagation();whatsappChallan('${esc(e._id)}')">💬 भेजें</button>
           <button type="button" class="mini" onclick="event.stopPropagation();editExpense('${esc(e._id)}')">✏️ सुधारें</button>
         </div>
       </div>
@@ -4838,6 +5107,7 @@ function renderUnitTab() {
     gfx.tile({ k: "बिल", v: String(new Set(rows.map((r) => r.receiptId)).size),
       s: rangeWords(), color: gfx.C.bill, pct: 70 })
   ].join("");
+  gfx.fit($("uTiles"));
   gfx.countUp($("uTiles"));
 
   $("uRows").innerHTML = rows.length ? rows.map((r) => `
@@ -4984,7 +5254,8 @@ function tellStaff(staffName, rec) {
   const s = id ? STAFF[id] : null;
   const wa = s && String(s.whatsapp || s.phone || "").replace(/\D/g, "").slice(-10);
   if (!wa) return null;
-  const text = `नमस्ते ${s.name} जी 🙏\n` +
+  const call2 = /\s(जी|भाई|साब|सा)$/.test(s.name) ? s.name : s.name + " जी";
+  const text = `नमस्ते ${call2} 🙏\n` +
     `आपकी ख़रीद दर्ज हो गई है ✅\n` +
     `🏪 ${(rec.vendor && rec.vendor.name) || "—"}\n` +
     `💰 ${INR(rec.billTotal)}\n` +
@@ -5071,6 +5342,319 @@ function computeFlags(rec, priceAlerts) {
   if ((priceAlerts || []).length) f.push("price_spike");
   return f;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v7 — हर पैसा लौटकर आए
+   ─────────────────────────────────────────────────────────────────────
+   जो गया उसका चालान बने, जो उधार है वह याद रहे, और जो अधूरा है वह आँख
+   में चुभे — जब तक पूरा न हो जाए।
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 🧾 चालान का कार्ड ───────────────────────────────────────────────
+   स्टाफ़ को «₹11,700 · 2 चीज़ें» से चालान नहीं बनता। उसे हर आइटम चाहिए,
+   और सबसे ज़रूरी — किस रेट पर चालान बनाना है। इसलिए पूरा बिल जाता है,
+   क्रम संख्या के साथ, और नीचे लागत/चालान/मुनाफ़ा तीनों। */
+
+const NUMS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
+const numEmoji = (i) => NUMS[i] || (i + 1) + ".";
+
+function challanCardText(rec) {
+  const items = rec.items || [];
+  const p = profitOf(rec);
+  const L = [];
+  L.push("🧾 <b>चालान बनाना है</b>");
+  L.push("━━━━━━━━━━━━━━━━━━━━");
+  L.push("🏪 <b>" + esc((rec.vendor && rec.vendor.name) || "—") + "</b>");
+  const d = String(rec.billDate || "").slice(0, 10);
+  L.push("📅 " + esc(dayLabel(d) || d) +
+    (rec.receiptId ? "  ·  🧾 " + esc(rec.receiptId) : ""));
+  L.push(rec.unit ? "🎯 <b>" + esc(rec.unit) + "</b>"
+    : "🚨 <b>यूनिट नहीं चुनी — किसके लिए है?</b>");
+  L.push("━━━━━━━━━━━━━━━━━━━━");
+
+  items.forEach((it, i) => {
+    const q = Number(it.qty) || 0;
+    const u = it.unit || "Nos";
+    L.push(numEmoji(i) + " <b>" + esc(it.name) + "</b>");
+    L.push("    " + (q || "?") + " " + esc(u) +
+      (it.rate != null ? " × ₹" + it.rate + " = " + inrApp(q * (it.rate || 0)) : ""));
+    if (it.saleRate != null) {
+      L.push("    ➡️ चालान में: ₹" + it.saleRate + " = <b>" +
+        inrApp(q * it.saleRate) + "</b>");
+    }
+  });
+  if (!items.length) L.push("<i>सामान की सूची नहीं भरी</i>");
+
+  L.push("━━━━━━━━━━━━━━━━━━━━");
+  L.push("💰 लागत          <b>" + inrApp(rec.billTotal || (p && p.cost) || 0) + "</b>");
+  if (p && p.sale) {
+    L.push("🧾 चालान बनाओ    <b>" + inrApp(p.sale) + "</b>");
+    L.push("📈 मुनाफ़ा        <b>" + inrApp(p.profit) + "</b> (" + p.pct + "%)");
+  } else {
+    L.push("<i>बिक्री रेट नहीं भरा — «कितने में बेचोगे» भर दें तो चालान की रकम भी बताऊँगा</i>");
+  }
+
+  const s = paySummary(rec);
+  if (s.due > 0) L.push("⚖️ बाकी          <b>" + inrApp(s.due) + "</b>");
+  if (rec.challanNo) L.push("✅ चालान नं. <code>" + esc(rec.challanNo) + "</code>");
+  else L.push("━━━━━━━━━━━━━━━━━━━━", "📌 <b>चालान नंबर आते ही app में डाल दें</b>");
+  return L.join("\n");
+}
+
+/** भारतीय अंक-प्रणाली, ₹ के साथ — Telegram और WhatsApp दोनों के लिए। */
+function inrApp(n) {
+  return "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
+}
+
+function tgChallanCard(rec) {
+  try { tgNotify(challanCardText(rec)); } catch (e) {}
+}
+
+/** वही कार्ड, बिना HTML — WhatsApp सादा text लेता है। */
+function challanPlain(rec) {
+  return challanCardText(rec).replace(/<[^>]*>/g, "");
+}
+
+/** स्टाफ़ को WhatsApp — «आप इसका चालान बना दीजिए»। */
+function whatsappChallan(expId) {
+  const rec = EXP.filter((e) => e._id === expId)[0];
+  if (!rec) return;
+  const list = Object.keys(STAFF).filter((k) => STAFF[k].whatsapp || STAFF[k].phone);
+  if (!list.length) { toast("पहले Staff tab में नंबर भर दें"); return; }
+  const box = $("waPick");
+  box.innerHTML = list.map((k) => {
+    const st = STAFF[k];
+    const wa = String(st.whatsapp || st.phone).replace(/\D/g, "").slice(-10);
+    // "दिनेश जी" में दुबारा "जी" मत जोड़ो
+    const call = /\s(जी|भाई|साब|सा)$/.test(st.name) ? st.name : st.name + " जी";
+    const text = "नमस्ते " + call + " 🙏\n\n" + challanPlain(rec) +
+      "\n\n— विक्रम चरण, VBE बाड़मेर";
+    return `<a class="waBtn" target="_blank" rel="noopener"
+      href="https://wa.me/91${wa}?text=${encodeURIComponent(text)}">
+      <b>${st.avatar || "🧑"}</b><span>${esc(st.name)}<small>💬 ${esc(wa)}</small></span></a>`;
+  }).join("");
+  $("waPreview").textContent = challanPlain(rec);
+  openSheet("waSheet");
+}
+
+/* ── 🏪 उधार — मंडी/मार्केट का बकाया ─────────────────────────────────
+   «स्टाफ़ मेरे को उल्लू न बना पाए» — इसलिए जो बिल बिना पैसे के आया है वह
+   अपनी अलग सूची में रहता है, पार्टी-वार जुड़ता रहता है, और पेमेंट लगते ही
+   अपने-आप कटता है। */
+
+/** जिस बिल का पूरा पैसा नहीं गया, वह उधार है। */
+function udhaarBills() {
+  return EXP.filter((e) => {
+    if (!e.billTotal) return false;
+    const s = paySummary(e);
+    return s.due > 0.5;
+  });
+}
+
+function udhaarByParty() {
+  const map = {};
+  udhaarBills().forEach((e) => {
+    const name = (e.vendor && e.vendor.name) || "—";
+    const k = pKey(name) || "?";
+    map[k] = map[k] || { key: k, name, due: 0, total: 0, paid: 0, bills: [], oldest: "" };
+    const s = paySummary(e);
+    map[k].due += s.due; map[k].total += s.total; map[k].paid += s.paid;
+    map[k].bills.push(e);
+    const d = String(e.billDate || "").slice(0, 10);
+    if (!map[k].oldest || (d && d < map[k].oldest)) map[k].oldest = d;
+  });
+  return Object.values(map).sort((a, b) => b.due - a.due);
+}
+
+function daysSince(iso) {
+  if (!iso) return 0;
+  return Math.max(0, Math.round((Date.now() - new Date(iso + "T00:00:00+05:30")) / 86400000));
+}
+
+function renderUdhaar() {
+  const box = $("udList");
+  if (!box) return;
+  const parties = udhaarByParty();
+  const due = parties.reduce((a, p) => a + p.due, 0);
+  const bills = parties.reduce((a, p) => a + p.bills.length, 0);
+
+  $("udBrain").innerHTML = due > 0.5
+    ? gfx.insight({ icon: "🏪", tone: "up",
+        title: `विक्रम जी, आप पर ${INR(due)} की उधारी है`,
+        body: `<b>${bills}</b> बिल · <b>${parties.length}</b> दुकानों पर` +
+          (parties[0] ? `<br>सबसे ज़्यादा <b>${esc(parties[0].name)}</b> — ${INR(parties[0].due)}` +
+            (parties[0].oldest ? ` (${daysSince(parties[0].oldest)} दिन पुराना)` : "") : "") +
+          `<br><span class="muted">पेमेंट की रसीद लगाते ही अपने-आप कट जाएगी।</span>` })
+    : gfx.insight({ icon: "🎉", tone: "down", title: "किसी पर कुछ बकाया नहीं",
+        body: "हर बिल का पूरा पैसा जा चुका है ✅" });
+
+  box.innerHTML = parties.length ? parties.map((p) => `
+    <div class="ud">
+      <div class="udTop" onclick="this.parentNode.classList.toggle('open')">
+        <span class="udAmt">${INR(p.due)}</span>
+        <div class="udWho">
+          <b class="plink" onclick="event.stopPropagation();showParty('${esc(p.key)}')">${esc(p.name)}</b>
+          <small>${p.bills.length} बिल · कुल ${INR(p.total)} में से ${INR(p.paid)} दिया${
+            p.oldest ? " · " + daysSince(p.oldest) + " दिन पुराना" : ""}</small>
+        </div>
+        <span class="payChev">▾</span>
+      </div>
+      <div class="udMore">
+        ${gfx.meter(p.total ? (p.paid / p.total) * 100 : 0, gfx.C.warn)}
+        ${p.bills.map((e) => {
+          const s = paySummary(e);
+          return `<div class="udRow" onclick="editExpense('${esc(e._id)}')">
+            <span>${esc(dayLabel(String(e.billDate || "").slice(0, 10)))}</span>
+            <b>${INR(s.due)} बाकी</b>
+            <small>${esc(e.receiptId)} · बिल ${INR(s.total)} · दिया ${INR(s.paid)}</small>
+          </div>`; }).join("")}
+        <button type="button" class="mini primary" style="margin-top:9px"
+          onclick="openPay('${esc(p.name)}', ${Math.round(p.due)})">💸 उधारी चुकाएँ</button>
+      </div>
+    </div>`).join("") : '<div class="empty">कोई उधारी नहीं ✅</div>';
+}
+
+/**
+ * नई रसीद लगते ही देखो — इसी पार्टी का कोई बिल उधार में तो नहीं पड़ा?
+ * अगर हाँ, तो उसी में जोड़ने का सुझाव दो, ताकि दो जगह अलग-अलग entry न बने।
+ */
+function udhaarMatch(partyName, amount) {
+  const k = pKey(partyName);
+  if (!k) return null;
+  const open = udhaarBills().filter((e) => pKey(e.vendor && e.vendor.name) === k);
+  if (!open.length) return null;
+  const exact = open.filter((e) => Math.abs(paySummary(e).due - amount) < 1)[0];
+  return { bill: exact || open[0], exact: !!exact, count: open.length };
+}
+
+/* ── 🩷 चालान नंबर — जब तक न आए, गुलाबी ─────────────────────────────── */
+
+/** बिल गया किसी यूनिट में, पर चालान नहीं बना — यही सबसे बड़ा रिसाव है। */
+function needsChallan(e) {
+  return !!e.unit && !e.challanNo;
+}
+
+function challanPending() {
+  return EXP.filter((e) => needsChallan(e) && inRange(e.billDate || e.submittedAt));
+}
+
+async function setChallanNo(expId) {
+  const rec = EXP.filter((e) => e._id === expId)[0];
+  if (!rec) return;
+  const no = prompt("व्यापारी से आया चालान नंबर लिखें\n(" +
+    ((rec.vendor && rec.vendor.name) || rec.receiptId) + ")", rec.challanNo || "");
+  if (no === null) return;
+  const patch = { challanNo: no.trim() || null,
+    challanAt: no.trim() ? todayISO() : null };
+  try {
+    await db.collection("vbe_expenses").doc(expId).update(patch);
+    await auditLog("challan_no", { challanNo: rec.challanNo || null }, patch);
+    Object.assign(rec, patch);
+    toast(patch.challanNo ? "✅ चालान नं. दर्ज — " + patch.challanNo : "चालान नं. हटा दिया");
+    refreshAll();
+  } catch (err) { toast("नहीं सहेजा: " + err.message); }
+}
+
+function renderChallanWatch() {
+  const box = $("chWatch");
+  if (!box) return;
+  const pend = challanPending();
+  const amt = pend.reduce((a, e) => a + (e.billTotal || 0), 0);
+  box.innerHTML = pend.length
+    ? gfx.insight({ icon: "🩷", tone: "warn",
+        title: `${pend.length} बिल का चालान नहीं बना — ${INR(amt)}`,
+        body: `सामान यूनिट में चला गया पर चालान नंबर अभी नहीं आया। ` +
+          `जब तक नंबर नहीं पड़ता, ये गुलाबी दिखेंगे।` +
+          `<div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap">` +
+          pend.slice(0, 6).map((e) =>
+            `<button type="button" class="mini" onclick="setChallanNo('${esc(e._id)}')">` +
+            `${esc((e.vendor && e.vendor.name) || e.receiptId)} ${INR(e.billTotal)}</button>`).join("") +
+          `</div>` })
+    : gfx.insight({ icon: "✅", tone: "down", title: "हर बिल का चालान बन गया",
+        body: "जो पैसा गया, उसका काग़ज़ भी आ गया 👌" });
+}
+
+/* ── 🧠 Pricebook की भाषा-समझ — फ़ुरसत में ───────────────────────────
+   «आम लिखूँ या mango — समझ जाए». यह Gemini का काम है, पर उसकी मुफ़्त सीमा
+   है। इसलिए यह तभी चलता है जब विक्रम जी दो मिनट से app को छू नहीं रहे,
+   और एक बार में थोड़े ही नाम भेजता है। जो एक बार जुड़ गया, दुबारा नहीं
+   पूछा जाता। */
+
+let IDLE_AT = Date.now();
+["click", "touchstart", "keydown", "scroll"].forEach((ev) =>
+  window.addEventListener(ev, () => { IDLE_AT = Date.now(); }, { passive: true }));
+
+const MERGE_PROMPT =
+  'You group product names that mean the SAME item, written in different ' +
+  'languages or spellings — Hindi, English, Hinglish, or a local Rajasthani ' +
+  'word. "आम", "Aam", "mango", "Mangoes" are one item. "आलू", "Aloo", ' +
+  '"potato" are one item. Different items with similar names stay apart: ' +
+  '"आलू" and "आलू चिप्स" are NOT the same, "दूध" and "दही" are NOT the same.\n' +
+  'Input is a JSON array of names. Return STRICT JSON only:\n' +
+  '{"groups":[{"canonical":string,"names":[string,...]}]}\n' +
+  'canonical = the clearest Hindi name for the group. Include only groups ' +
+  'that have 2 or more names; leave a name out entirely if it stands alone. ' +
+  'Return only the JSON object.';
+
+async function idleMergePricebook() {
+  if (!GEMINI_KEY) return;
+  if (Date.now() - IDLE_AT < 120000) return;         // अभी काम चल रहा है
+  if (!PRICEBOOK.length) return;
+  let done = {};
+  try { done = JSON.parse(localStorage.getItem("vbeMerged") || "{}"); } catch (e) {}
+
+  const names = PRICEBOOK.map((p) => p.canonicalName).filter(Boolean)
+    .filter((n) => !done[pKey(n)]).slice(0, 40);      // एक बार में थोड़े ही
+  if (names.length < 2) return;
+
+  let r;
+  try { r = await askGemini(MERGE_PROMPT, null, JSON.stringify(names)); }
+  catch (e) { return; }
+  const groups = (r && r.groups) || [];
+  let merged = 0;
+
+  for (const g of groups) {
+    const names2 = (g.names || []).filter(Boolean);
+    if (names2.length < 2) continue;
+    const docs = names2.map((n) => PRICEBOOK.filter((p) =>
+      pKey(p.canonicalName) === pKey(n))[0]).filter(Boolean);
+    if (docs.length < 2) continue;
+
+    // सबसे ज़्यादा इतिहास वाला जीते; बाक़ी उसी में समा जाएँ।
+    docs.sort((a, b) => (b.history || []).length - (a.history || []).length);
+    const keep = docs[0];
+    keep.aliases = keep.aliases || [];
+    docs.slice(1).forEach((d) => {
+      keep.history = (keep.history || []).concat(d.history || []);
+      keep.aliases = keep.aliases.concat([d.canonicalName], d.aliases || []);
+    });
+    keep.history.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    if (keep.history.length > 150) keep.history = keep.history.slice(-150);
+    keep.aliases = [...new Set(keep.aliases)].filter((a) => a && a !== keep.canonicalName);
+    if (g.canonical) keep.canonicalName = g.canonical;
+    keep.mergedAt = new Date().toISOString();
+
+    try {
+      await db.collection("vbe_pricebook").doc(keep.id).set(keep, { merge: true });
+      // हटाते नहीं — दूसरे doc को खाली करके इसी की तरफ़ इशारा कर देते हैं,
+      // क्योंकि इस app में कुछ मिटता नहीं।
+      for (const d of docs.slice(1)) {
+        await db.collection("vbe_pricebook").doc(d.id)
+          .set({ mergedInto: keep.id, history: [], aliases: [] }, { merge: true });
+      }
+      merged++;
+    } catch (e) { /* अगली बार */ }
+    names2.forEach((n) => { done[pKey(n)] = 1; });
+  }
+  names.forEach((n) => { done[pKey(n)] = 1; });
+  try { localStorage.setItem("vbeMerged", JSON.stringify(done)); } catch (e) {}
+  if (merged) {
+    await loadData();
+    renderPricebook();
+    toast("🧠 " + merged + " चीज़ों के अलग-अलग नाम एक साथ जोड़ दिए");
+  }
+}
+setInterval(() => { idleMergePricebook().catch(() => {}); }, 180000);
 
 /* ── Tabs + 3D tilt ── */
 $("tabs").addEventListener("click", e => {
