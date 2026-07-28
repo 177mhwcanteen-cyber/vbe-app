@@ -633,7 +633,9 @@
           <div class="dicon">🏦</div>
           <h3>बैंक / PhonePe की statement यहाँ डालें</h3>
           <p class="muted">PDF या CSV — यहीं आपके फ़ोन में पढ़ी जाएगी, कहीं नहीं जाती।<br>
-            पैसा अपने-आप बिलों से मिल जाएगा।</p>
+            <b>PhonePe की statement</b> से पार्टी का नाम, समय, UTR और Transaction ID —
+            सब अपने-आप जुड़ जाएगा।<br>
+            जो entry पहले से है वह मिटेगी नहीं, सिर्फ़ छूटी जानकारी भरेगी।</p>
           <div class="frow" style="max-width:420px;margin:14px auto 0">
             <label>किस खाते की?<select id="rAccount"></select></label>
             <label style="align-self:end">
@@ -2028,7 +2030,129 @@ async function readPdfStatement(file, onProgress, password) {
       await new Promise((r) => setTimeout(r));   // let the screen repaint
     }
   }
-  return parsePdfStatement(pages);
+  // PhonePe की statement बैंक वाली से बिल्कुल अलग बनती है — इसलिए पहले
+  // पहचानो कि यह किसकी है, फिर उसी का पढ़ने वाला चलाओ।
+  return isPhonePe(pages) ? parsePhonePe(pages) : parsePdfStatement(pages);
+}
+
+/* ── 📱 PhonePe की statement ─────────────────────────────────────────
+   बैंक की statement में सब कुछ एक पंक्ति में कॉलम बनाकर छपता है। PhonePe
+   एक सौदे को चार-पाँच पंक्तियों में तोड़ता है:
+
+     Jul 28, 2026    Paid to GANPAT SINGH              DEBIT    ₹5,000
+     09:14 pm        Transaction ID T2607282114316327134670
+                     UTR No. 001527714203
+                     Paid by (AU) XXXXXXXXXXXX0481
+
+   बदले में वह वो सब देता है जो बैंक नहीं देता — पार्टी का साफ़ नाम, समय,
+   और किस खाते से गया। इसलिए इसे कॉलम ढूँढ़कर नहीं, तारीख़ से टुकड़े करके
+   पढ़ा जाता है।                                                        */
+
+const PP_MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+
+/** pdf.js की items को पढ़ने के क्रम में पंक्तियाँ बनाओ। */
+function pageLines(items) {
+  const byY = {};
+  items.forEach((i) => {
+    if (!String(i.str).trim()) return;
+    const y = Math.round(i.transform[5]);
+    (byY[y] = byY[y] || []).push({ x: i.transform[4], s: String(i.str) });
+  });
+  return Object.keys(byY).map(Number).sort((a, b) => b - a).map((y) =>
+    byY[y].sort((a, b) => a.x - b.x).map((c) => c.s).join(" ")
+      .replace(/\s+/g, " ").trim());
+}
+
+function isPhonePe(pages) {
+  const head = pageLines(pages[0] || []).join(" ");
+  return /Transaction Statement/i.test(head) &&
+    (/phonepe/i.test(head) || /UTR No\./i.test(pageLines(pages[0]).join(" ")));
+}
+
+/** "Jul 28, 2026" → "2026-07-28" */
+function ppDate(s) {
+  const m = String(s).match(/([A-Za-z]{3})[a-z]*\s+(\d{1,2}),?\s+(\d{4})/);
+  if (!m) return null;
+  const mo = PP_MON[m[1].toLowerCase()];
+  return mo ? m[3] + "-" + p2(mo) + "-" + p2(m[2]) : null;
+}
+
+/** "09:14 pm" → "21:14" (24 घंटे वाला, ताकि छाँटना सही रहे) */
+function ppTime(s) {
+  const m = String(s).match(/\b(\d{1,2}):(\d{2})\s*(am|pm)\b/i);
+  if (!m) return null;
+  let h = Number(m[1]) % 12;
+  if (/pm/i.test(m[3])) h += 12;
+  return p2(h) + ":" + m[2];
+}
+
+function parsePhonePe(pages) {
+  const lines = [];
+  pages.forEach((items) => lines.push.apply(lines, pageLines(items)));
+
+  // हर सौदा एक तारीख़ से शुरू होता है; अगली तारीख़ तक जो है, वह उसी का है।
+  const DATE = /^[A-Za-z]{3}\s+\d{1,2},?\s+\d{4}\b/;
+  const SKIP = /^(Date|Transaction Details|Type|Amount|Page \d|This is a system|Transaction Statement|\d{2} \w{3}, \d{4})/i;
+  const blocks = [];
+  lines.forEach((ln) => {
+    if (SKIP.test(ln)) return;
+    if (DATE.test(ln)) blocks.push([ln]);
+    else if (blocks.length) blocks[blocks.length - 1].push(ln);
+  });
+
+  const out = [];
+  blocks.forEach((b) => {
+    const text = b.join(" ");
+    const date = ppDate(b[0]);
+    if (!date) return;
+
+    const amtM = text.match(/₹\s*([\d,]+(?:\.\d{1,2})?)/);
+    if (!amtM) return;
+    const amount = Number(amtM[1].replace(/,/g, ""));
+    if (!amount) return;
+
+    const type = /\bCREDIT\b/i.test(text) ? "credit" : "debit";
+    const utr = (text.match(/UTR\s*No\.?\s*([A-Za-z0-9]+)/i) || [])[1] || null;
+    const txnId = (text.match(/Transaction\s*ID\s*([A-Za-z0-9]+)/i) || [])[1] || null;
+    // "Paid by (AU) XXXXXXXXXXXX0481" — यही बताता है पैसा किस खाते से गया
+    const last4 = (text.match(/(?:Paid by|Credited to|Debited from)[^\d]*(\d{4})\b/i) || [])[1] || null;
+
+    // पार्टी का नाम निकालने से पहले कॉलम वाली चीज़ें हटा दो। एक लंबा नाम
+    // ("M S RATIONAL HANDLOOM COMPANY PRIVATE LIMITED") दो-तीन पंक्तियों में
+    // टूटता है और बीच में DEBIT, ₹720 और समय आ घुसते हैं — इन्हें पहले
+    // निकाल देने से बचा हुआ हिस्सा साफ़ नाम रह जाता है।
+    const clean = text
+      .replace(/^[A-Za-z]{3}\s+\d{1,2},?\s+\d{4}/, " ")
+      .replace(/\b(DEBIT|CREDIT)\b/gi, " ")
+      .replace(/₹\s*[\d,]+(?:\.\d{1,2})?/g, " ")
+      .replace(/\b\d{1,2}:\d{2}\s*(am|pm)\b/gi, " ")
+      .replace(/\s+/g, " ").trim();
+
+    const STOP = "(?:Transaction ID|UTR No\\.|Paid by|Credited to|Debited from|" +
+      "Jio Prepaid|Reference ID|$)";
+    let party = null;
+    let m = clean.match(new RegExp(
+      "\\b(?:Paid to|Received from|Money sent to|Money received from)\\s+(.+?)\\s*" + STOP, "i"));
+    if (m) party = m[1];
+    else if (/Mobile recharged/i.test(clean)) {
+      party = "Mobile recharge " + ((clean.match(/Mobile recharged\s+(\d{6,})/i) || [])[1] || "");
+    } else {
+      m = clean.match(new RegExp("^(.+?)\\s*" + STOP, "i"));
+      if (m) party = m[1];
+    }
+    party = String(party || "").replace(/\s+/g, " ").trim().slice(0, 70) || null;
+
+    out.push({
+      date, time: ppTime(text), amount, type, party,
+      utr, txnId, accountLast4: last4, app: "PhonePe",
+      narration: [type === "credit" ? "Received from" : "Paid to", party,
+        txnId ? "· TXN " + txnId : "", utr ? "· UTR " + utr : "",
+        last4 ? "· A/c ****" + last4 : ""].filter(Boolean).join(" ").slice(0, 200),
+      source: "phonepe_statement"
+    });
+  });
+  return out;
 }
 
 let PENDING_FILE = null;
@@ -2146,8 +2270,12 @@ function renderRecon(total) {
  * तस रहे; statement सिर्फ़ छूटी हुई जगहें भरे।
  */
 function txnDoc(t, accountId, receiptId, confidence, existing) {
+  // PhonePe हर पंक्ति पर लिखता है कि पैसा किस खाते से गया ("Paid by ...0481")।
+  // वह ऊपर चुने हुए खाते से ज़्यादा भरोसे लायक है — एक ही statement में कई
+  // खाते हो सकते हैं, और ग़लत खाता चुन लेना सबसे आसान ग़लती है।
+  const rowAcc = t.accountLast4 ? matchAccount(t.bank || "", t.accountLast4) : "";
   const doc = {
-    accountId, date: t.date,
+    accountId: rowAcc || accountId, date: t.date,
     amount: t.amount, type: t.type,
     partyKey: pKey(t.party || t.narration || ""),
     source: t.source || "statement",
@@ -2159,6 +2287,11 @@ function txnDoc(t, accountId, receiptId, confidence, existing) {
   if (t.utr) doc.utr = String(t.utr).toUpperCase();
   if (t.party) doc.party = t.party;
   if (t.balance != null) doc.balance = t.balance;
+  // PhonePe की statement यह सब देती है — छोटी से छोटी चीज़ भी पार्टी के साथ
+  // जुड़ी रहनी चाहिए, क्योंकि आगे का मिलान इन्हीं पर टिकेगा।
+  if (t.txnId) doc.appTxnId = t.txnId;
+  if (t.app) doc.app = t.app;
+  if (t.accountLast4) doc.accountLast4 = t.accountLast4;
 
   // मिलान सिर्फ़ आगे बढ़े, पीछे कभी नहीं: पहले से जुड़ा बिल statement दुबारा
   // डालने से नहीं टूटना चाहिए।
@@ -2776,7 +2909,7 @@ function buildParties() {
       p.inCount = (p.inCount || 0) + 1;
       if (String(t.date) > p.last) p.last = String(t.date);
       p.rows.push({ kind: "bank", dir: "in", date: t.date, amount: t.amount,
-        account: t.accountId, time: t.time || null,
+        account: t.accountId, time: t.time || null, app: t.app || null,
         ref: t.utr ? "UTR " + t.utr : "", status: "आया", narration: t.narration });
       return;
     }
@@ -2789,7 +2922,7 @@ function buildParties() {
     }
     if (String(t.date) > p.last) p.last = String(t.date);
     p.rows.push({ kind: "bank", dir: "out", date: t.date, amount: t.amount,
-      account: t.accountId, time: t.time || null,
+      account: t.accountId, time: t.time || null, app: t.app || null,
       ref: t.matchedReceiptId || (t.utr ? "UTR " + t.utr : ""),
       status: t.matched ? "मिला" : "बिल नहीं", narration: t.narration });
   });
@@ -3927,7 +4060,9 @@ function renderMissing() {
       <div class="amt out">−${INR(t.amount)}</div>
       <div class="mx">
         <div class="pname"><span class="plink" onclick="showParty('${esc(pKey(t.party || t.narration))}')">${esc(t.party || "—")}</span></div>
-        <span class="muted">${esc(t.date)} · ${esc(accLabel(t.accountId))}${t.utr ? " · UTR " + esc(t.utr) : ""}</span>
+        <span class="muted">${esc(dayLabel(String(t.date).slice(0, 10)))}${
+          t.time ? " · 🕘 " + esc(t.time) : ""} · ${esc(accLabel(t.accountId))}${
+          t.app ? " · " + esc(t.app) : ""}${t.utr ? "<br>🔗 UTR " + esc(t.utr) : ""}</span>
         <div class="arow" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
           <button type="button" class="mini primary" onclick="openBillFor('${esc(t._id)}')">📎 बिल जोड़ें</button>
           <button type="button" class="mini" onclick="openPay('${esc(t.party || "")}', ${t.amount || 0})">💸 फिर पेमेंट</button>
