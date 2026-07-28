@@ -2051,23 +2051,43 @@ async function readPdfStatement(file, onProgress, password) {
 const PP_MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
   jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 
-/** pdf.js की items को पढ़ने के क्रम में पंक्तियाँ बनाओ। */
+/**
+ * pdf.js की items को पढ़ने लायक पंक्तियों में जोड़ो।
+ *
+ * PhonePe की PDF एक-एक अक्षर को अलग item बनाकर रखती है — "Transaction" असल
+ * में [T][r][a][ns][ac][tion] है। इन्हें space लगाकर जोड़ने पर हर शब्द टूट
+ * जाता है और कोई भी खोज नहीं मिलती (यही वजह थी कि statement "समझ नहीं आई")।
+ * इसलिए जोड़ते वक़्त दूरी देखो: अक्षर सटे हों तो बिना space, और सचमुच का
+ * ख़ाली स्थान हो तभी space।
+ */
 function pageLines(items) {
   const byY = {};
   items.forEach((i) => {
-    if (!String(i.str).trim()) return;
+    if (!String(i.str).length) return;
     const y = Math.round(i.transform[5]);
-    (byY[y] = byY[y] || []).push({ x: i.transform[4], s: String(i.str) });
+    (byY[y] = byY[y] || []).push({
+      x: i.transform[4], w: i.width || 0, s: String(i.str)
+    });
   });
-  return Object.keys(byY).map(Number).sort((a, b) => b - a).map((y) =>
-    byY[y].sort((a, b) => a.x - b.x).map((c) => c.s).join(" ")
-      .replace(/\s+/g, " ").trim());
+  return Object.keys(byY).map(Number).sort((a, b) => b - a).map((y) => {
+    const cells = byY[y].sort((a, b) => a.x - b.x);
+    let out = "", end = null;
+    cells.forEach((c) => {
+      if (end !== null && c.x - end > 1.6) out += " ";
+      out += c.s;
+      end = c.x + c.w;
+    });
+    // PhonePe समय का colon छुपे हुए NUL अक्षर से छापता है, और वह \s में नहीं
+    // गिना जाता — इसलिए हर control अक्षर को साफ़ जगह बना दो, वरना "09:14 pm"
+    // कभी समय की तरह पढ़ा ही नहीं जाएगा।
+    return out.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  }).filter(Boolean);
 }
 
 function isPhonePe(pages) {
   const head = pageLines(pages[0] || []).join(" ");
-  return /Transaction Statement/i.test(head) &&
-    (/phonepe/i.test(head) || /UTR No\./i.test(pageLines(pages[0]).join(" ")));
+  return /Transaction\s*Statement/i.test(head) ||
+    (/UTR\s*No/i.test(head) && /phonepe/i.test(head));
 }
 
 /** "Jul 28, 2026" → "2026-07-28" */
@@ -2078,13 +2098,29 @@ function ppDate(s) {
   return mo ? m[3] + "-" + p2(mo) + "-" + p2(m[2]) : null;
 }
 
-/** "09:14 pm" → "21:14" (24 घंटे वाला, ताकि छाँटना सही रहे) */
+/**
+ * "09:14 pm" → "21:14". PhonePe का colon असल में ख़ाली जगह है ("09  14pm"),
+ * इसलिए बीच में कुछ भी हो, चल जाए।
+ */
 function ppTime(s) {
-  const m = String(s).match(/\b(\d{1,2}):(\d{2})\s*(am|pm)\b/i);
+  const m = String(s).match(/\b(\d{1,2})[:.\s]{1,3}(\d{2})\s*([ap])\.?m\.?\b/i);
   if (!m) return null;
   let h = Number(m[1]) % 12;
-  if (/pm/i.test(m[3])) h += 12;
+  if (/p/i.test(m[3])) h += 12;
   return p2(h) + ":" + m[2];
+}
+
+/** अंक बीच-बीच में टूटे हुए आते हैं ("5 , 000") — जोड़कर संख्या बनाओ। */
+function ppNum(s) {
+  const t = String(s || "").replace(/[\s,]/g, "");
+  return /^\d+(\.\d+)?$/.test(t) ? Number(t) : null;
+}
+
+/** पहचान-संख्या से बीच के space हटाओ ("T 2607…" → "T2607…")। */
+function ppId(text, label, stops) {
+  const re = new RegExp(label + "\\s*([A-Za-z0-9][A-Za-z0-9\\s]*?)\\s*(?=" + stops + ")", "i");
+  const m = String(text).match(re);
+  return m ? m[1].replace(/\s+/g, "") : null;
 }
 
 function parsePhonePe(pages) {
@@ -2093,7 +2129,7 @@ function parsePhonePe(pages) {
 
   // हर सौदा एक तारीख़ से शुरू होता है; अगली तारीख़ तक जो है, वह उसी का है।
   const DATE = /^[A-Za-z]{3}\s+\d{1,2},?\s+\d{4}\b/;
-  const SKIP = /^(Date|Transaction Details|Type|Amount|Page \d|This is a system|Transaction Statement|\d{2} \w{3}, \d{4})/i;
+  const SKIP = /^(Date\b|Transaction Details|Type\b|Amount\b|Page \d|This is a system|Transaction\s*Statement|\d{2}\s+\w{3},\s+\d{4}\s+-)/i;
   const blocks = [];
   lines.forEach((ln) => {
     if (SKIP.test(ln)) return;
@@ -2101,44 +2137,48 @@ function parsePhonePe(pages) {
     else if (blocks.length) blocks[blocks.length - 1].push(ln);
   });
 
+  const STOPS = "UTR\\s*No|Transaction\\s*ID|Paid\\s*by|Credited\\s*to|Debited\\s*from|" +
+    "Jio|Reference\\s*ID|[A-Za-z]{3}\\s+\\d{1,2},\\s+\\d{4}|$";
+
   const out = [];
   blocks.forEach((b) => {
+    const head = b[0];                       // तारीख़, पार्टी, DEBIT/CREDIT, रकम
     const text = b.join(" ");
-    const date = ppDate(b[0]);
+    const date = ppDate(head);
     if (!date) return;
 
-    const amtM = text.match(/₹\s*([\d,]+(?:\.\d{1,2})?)/);
-    if (!amtM) return;
-    const amount = Number(amtM[1].replace(/,/g, ""));
+    // रकम हमेशा पहली पंक्ति के आख़िर में होती है — पूरे टुकड़े में ढूँढ़ने पर
+    // नीचे लिखा समय ("09 14pm") भी अंक समझकर उठ जाता।
+    const amtM = head.match(/₹\s*([\d][\d,\s]*)$/);
+    const amount = amtM ? ppNum(amtM[1]) : null;
     if (!amount) return;
 
-    const type = /\bCREDIT\b/i.test(text) ? "credit" : "debit";
-    const utr = (text.match(/UTR\s*No\.?\s*([A-Za-z0-9]+)/i) || [])[1] || null;
-    const txnId = (text.match(/Transaction\s*ID\s*([A-Za-z0-9]+)/i) || [])[1] || null;
-    // "Paid by (AU) XXXXXXXXXXXX0481" — यही बताता है पैसा किस खाते से गया
-    const last4 = (text.match(/(?:Paid by|Credited to|Debited from)[^\d]*(\d{4})\b/i) || [])[1] || null;
+    const type = /\bCREDIT\b/i.test(head) ? "credit" : "debit";
+    const utr = ppId(text, "UTR\\s*No\\.?", STOPS);
+    const txnId = ppId(text, "Transaction\\s*ID", STOPS);
+    // "Paid by XXXXXXXXXXXX0481" — यही बताता है पैसा किस खाते से गया
+    const l4M = text.match(/(?:Paid\s*by|Credited\s*to|Debited\s*from)[^0-9]*(\d{4})\b/i);
+    const last4 = l4M ? l4M[1] : null;
 
-    // पार्टी का नाम निकालने से पहले कॉलम वाली चीज़ें हटा दो। एक लंबा नाम
+    // पार्टी का नाम निकालने से पहले कॉलम वाली चीज़ें हटा दो। लंबा नाम
     // ("M S RATIONAL HANDLOOM COMPANY PRIVATE LIMITED") दो-तीन पंक्तियों में
-    // टूटता है और बीच में DEBIT, ₹720 और समय आ घुसते हैं — इन्हें पहले
-    // निकाल देने से बचा हुआ हिस्सा साफ़ नाम रह जाता है।
+    // टूटता है और बीच में DEBIT, ₹720 और समय आ घुसते हैं।
     const clean = text
       .replace(/^[A-Za-z]{3}\s+\d{1,2},?\s+\d{4}/, " ")
       .replace(/\b(DEBIT|CREDIT)\b/gi, " ")
-      .replace(/₹\s*[\d,]+(?:\.\d{1,2})?/g, " ")
-      .replace(/\b\d{1,2}:\d{2}\s*(am|pm)\b/gi, " ")
+      .replace(/₹\s*\d[\d,]*(?:\s*,\s*\d{2,3})*(?:\.\d{1,2})?/g, " ")
+      .replace(/\b\d{1,2}[:.\s]{1,3}\d{2}\s*[ap]\.?m\.?\b/gi, " ")
       .replace(/\s+/g, " ").trim();
 
-    const STOP = "(?:Transaction ID|UTR No\\.|Paid by|Credited to|Debited from|" +
-      "Jio Prepaid|Reference ID|$)";
     let party = null;
     let m = clean.match(new RegExp(
-      "\\b(?:Paid to|Received from|Money sent to|Money received from)\\s+(.+?)\\s*" + STOP, "i"));
+      "\\b(?:Paid\\s*to|Received\\s*from|Money\\s*sent\\s*to|Money\\s*received\\s*from)" +
+      "\\s+(.+?)\\s*(?=" + STOPS + ")", "i"));
     if (m) party = m[1];
-    else if (/Mobile recharged/i.test(clean)) {
-      party = "Mobile recharge " + ((clean.match(/Mobile recharged\s+(\d{6,})/i) || [])[1] || "");
+    else if (/Mobile\s*recharged/i.test(clean)) {
+      party = "Mobile recharge " + ((clean.match(/Mobile\s*recharged\s+(\d{6,})/i) || [])[1] || "");
     } else {
-      m = clean.match(new RegExp("^(.+?)\\s*" + STOP, "i"));
+      m = clean.match(new RegExp("^(.+?)\\s*(?=" + STOPS + ")", "i"));
       if (m) party = m[1];
     }
     party = String(party || "").replace(/\s+/g, " ").trim().slice(0, 70) || null;
