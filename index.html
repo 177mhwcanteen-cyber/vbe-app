@@ -225,6 +225,72 @@
      file inputs show up as raw grey "Choose file" boxes. */
   [hidden] { display: none !important; }
 
+  /* ══ v4 ══ तारीख़ की पट्टी — हर tab पर एक ही रूप ══ */
+  .dbar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
+    margin-bottom: 8px; scrollbar-width: none; }
+  .dbar::-webkit-scrollbar { display: none; }
+  .dbar button { white-space: nowrap; padding: 7px 13px; border-radius: 999px;
+    font-size: 12.5px; color: var(--ink-2); }
+  .dbar button.on { color: #fff; font-weight: 600;
+    background: linear-gradient(160deg, rgba(57,135,229,.38), rgba(57,135,229,.14));
+    border-color: rgba(57,135,229,.55); }
+  .dsum { font-size: 12.5px; color: var(--ink-2); margin-bottom: 10px; }
+  .dsum b { color: var(--ink); }
+  .dpick { display: flex; gap: 8px; align-items: end; margin-bottom: 10px; flex-wrap: wrap; }
+  .dpick label { font-size: 11px; color: var(--muted); }
+  .dpick input { display: block; margin-top: 4px; font: inherit; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 10px; }
+
+  /* ══ v4 ══ नीचे से उठने वाली sheet — हर popup का एक ही ढाँचा ══ */
+  .sheet { position: fixed; inset: 0; z-index: 60; display: flex;
+    align-items: flex-end; justify-content: center;
+    background: rgba(0,0,0,.66); backdrop-filter: blur(7px); }
+  .sheetBox { width: 100%; max-width: 560px; max-height: 92vh; overflow: auto;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0; padding: 16px 16px 24px;
+    box-shadow: 0 -18px 50px rgba(0,0,0,.6); animation: slideUp .22s ease; }
+  @media (min-width: 620px) {
+    .sheet { align-items: center; }
+    .sheetBox { border-radius: 20px; }
+  }
+  @keyframes slideUp { from { transform: translateY(26px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .sheetHead { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .sheetHead h3 { flex: 1; min-width: 0; font-size: 16px; }
+  .sheetHead .x { padding: 8px 13px; border-radius: 12px; font-size: 15px; }
+  .grab { width: 40px; height: 4px; border-radius: 3px; background: var(--grid);
+    margin: -6px auto 12px; }
+  .seg { display: flex; gap: 6px; margin: 12px 0; }
+  .seg button { flex: 1; padding: 9px 6px; border-radius: 11px; font-size: 12.5px; color: var(--ink-2); }
+  .seg button.on { color: #fff; font-weight: 600;
+    background: linear-gradient(160deg, rgba(57,135,229,.38), rgba(57,135,229,.14));
+    border-color: rgba(57,135,229,.55); }
+
+  /* पार्टी का नाम जहाँ भी हो — दबाने लायक */
+  .plink { color: var(--ink); font-weight: 700; cursor: pointer;
+    border-bottom: 1px dashed rgba(255,255,255,.22); }
+  .plink:active { opacity: .6; }
+
+  /* खाते के कार्ड */
+  .acc { border: 1px solid var(--border); border-radius: 14px; padding: 13px;
+    margin-bottom: 10px; background: linear-gradient(150deg, rgba(57,135,229,.12), rgba(255,255,255,.02)); }
+  .acc .an { font-size: 15px; font-weight: 700; }
+  .acc .ad { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .acc .arow { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .badge.ok2 { background: rgba(25,158,112,.18); border-color: rgba(25,158,112,.5); color: #86e3bf; }
+  .badge.warn2 { background: rgba(201,133,0,.18); border-color: rgba(201,133,0,.5); color: #f0c064; }
+
+  /* UPI ऐप चुनने के बटन */
+  .upiApps { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+  .upiApps button { padding: 13px 8px; border-radius: 14px; font-size: 12.5px; line-height: 1.35; }
+  .upiApps button b { display: block; font-size: 20px; margin-bottom: 4px; }
+
+  .ta { display: block; width: 100%; font: inherit; font-size: 12.5px; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 11px; min-height: 130px; resize: vertical; }
+  .shake { animation: shake .3s; }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
   /* बिल जोड़ने का पर्दा */
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(6px);
     display: grid; place-items: center; padding: 16px; z-index: 50; animation: rise .2s ease; }
@@ -291,6 +357,7 @@
 
     <!-- ── Overview ── -->
     <section class="view active" id="v-overview">
+      <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
       <div class="tiles" id="tiles"></div>
       <div class="card chartCard tilt">
         <h3>🟢 आया · 🔴 गया — दिन-दर-दिन</h3>
@@ -329,6 +396,10 @@
               </div>
             </div>
           </div>
+        </div>
+        <div class="pick" style="margin-bottom:10px">
+          <button type="button" onclick="copyBillPrompt(this)">📋 प्रॉम्प्ट कॉपी</button>
+          <button type="button" onclick="pasteIntoEntry()">📥 AI का जवाब पेस्ट करें</button>
         </div>
         <div id="aAiMsg" class="muted" style="margin-bottom:10px"></div>
         <div id="aShots" class="shots"></div>
@@ -371,6 +442,7 @@
 
     <!-- ── Bills ── -->
     <section class="view" id="v-bills">
+      <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
       <div class="filters">
         <select id="fStatus">
           <option value="">सब status</option>
@@ -418,18 +490,13 @@
 
     <!-- ── हिसाब: हर पैसा, समय के हिसाब से, रंगों में ── -->
     <section class="view" id="v-ledger">
+      <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
       <div class="filters">
         <select id="lAccount"><option value="">सारे खाते</option></select>
         <select id="lType">
           <option value="">आया + गया</option>
           <option value="debit">🔴 गया</option>
           <option value="credit">🟢 आया</option>
-        </select>
-        <select id="lWhen">
-          <option value="7">पिछले 7 दिन</option>
-          <option value="30">पिछले 30 दिन</option>
-          <option value="90">3 महीने</option>
-          <option value="0" selected>सब</option>
         </select>
         <select id="lBill">
           <option value="">बिल: सब</option>
@@ -444,6 +511,7 @@
 
     <!-- ── पार्टी: हर दुकान/व्यक्ति का पूरा लेखा, सारे खातों को मिलाकर ── -->
     <section class="view" id="v-party">
+      <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
       <div class="filters">
         <input id="pSearch" type="search" placeholder="नाम से खोजें — जैसे: राणा राम, chopra…">
         <select id="pSort">
@@ -482,6 +550,17 @@
         </div>
       </div>
 
+      <!-- मेरे खाते — जोड़ना, सुधारना, और एक टैप में पूरी डिटेल भेजना -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="itemsHead" style="margin-top:0">
+          <span>🏦 मेरे खाते</span>
+          <button type="button" class="primary mini" onclick="openAccount('')">➕ नया खाता</button>
+        </div>
+        <p class="muted" style="margin-bottom:10px">जो खाता यहाँ जुड़ेगा वह हर जगह के
+          फ़िल्टर में अपने-आप आ जाएगा। पूरा नंबर 🔒 PIN के बाद दिखेगा।</p>
+        <div id="accList"></div>
+      </div>
+
       <div id="rResult" hidden>
         <div class="tiles" id="rTiles"></div>
         <div class="card" style="margin-bottom:12px">
@@ -499,36 +578,214 @@
       </div>
     </section>
 
-    <!-- ── Missing (unmatched bank debits) ── -->
+    <!-- ── ❓ बकाया — जिन पैसों का बिल नहीं मिला, और उन्हें यहीं से निपटाना ── -->
     <section class="view" id="v-missing">
-      <p class="muted" style="margin-bottom:10px">बैंक की वे debit entries जिनका कोई बिल नहीं मिला।
-         CSV upload और मिलान Telegram bot से होता है।</p>
+      <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
+      <div class="card tilt" id="mBrain" style="margin-bottom:12px"></div>
+      <div class="filters">
+        <select id="mAccount"><option value="">सारे खाते</option></select>
+        <select id="mSort">
+          <option value="date">सबसे नया पहले</option>
+          <option value="amount">सबसे बड़ी रकम पहले</option>
+          <option value="party">पार्टी के नाम से</option>
+        </select>
+        <input id="mSearch" type="search" placeholder="पार्टी, रकम या UTR से खोजें…">
+      </div>
       <div class="card" id="missingList"></div>
     </section>
 
-    <!-- ── पार्टी का पूरा लेखा (ऊपर खुलने वाला) ── -->
-    <div id="partyModal" class="modal" hidden>
-      <div class="card modalBox" id="partyDetail"></div>
+    <!-- 📅 अवधि — "📅 अवधि" दबाने पर खुलता है, हर tab के लिए एक ही -->
+    <div id="datePick" class="sheet" hidden>
+      <div class="sheetBox" style="max-width:420px">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3>📅 अवधि चुनें</h3>
+          <button type="button" class="x" onclick="toggleDatePick()">✕</button>
+        </div>
+        <div class="dpick" style="margin-top:12px">
+          <label>से<input id="drFrom" type="date"></label>
+          <label>तक<input id="drTo" type="date"></label>
+        </div>
+        <button type="button" class="primary" style="width:100%" onclick="setCustomRange()">देखें</button>
+      </div>
     </div>
 
-    <!-- ── बिल जोड़ने का पर्दा ── -->
-    <div id="billModal" class="modal" hidden>
-      <div class="card modalBox">
-        <div class="itemsHead" style="margin-top:0">
-          <span>📎 बिल जोड़ें</span>
-          <button type="button" onclick="closeBill()">✕</button>
+    <!-- इकाइयों के सुझाव — जो पहले इस्तेमाल हुईं, वही आगे भी -->
+    <datalist id="unitList"></datalist>
+
+    <!-- ══ v4 sheets — सब एक ही ढाँचे में, नीचे से उठती हुई ══ -->
+
+    <!-- 🧑 पार्टी का पूरा लेखा -->
+    <div id="partySheet" class="sheet" hidden>
+      <div class="sheetBox"><div class="grab"></div><div id="partyDetail"></div></div>
+    </div>
+
+    <!-- 📎 बिल — फोटो से / हाथ से / AI से पेस्ट -->
+    <div id="billSheet" class="sheet" hidden>
+      <div class="sheetBox">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3 id="bsTitle">📎 बिल जोड़ें</h3>
+          <button type="button" class="x" onclick="closeSheet('billSheet')">✕</button>
         </div>
-        <div id="bmTxn" class="muted" style="margin-bottom:12px"></div>
-        <input type="file" id="bmFile" accept="image/*" hidden>
-        <div class="pick">
-          <button type="button" onclick="pickPhoto('bmFile', true)">📷 कैमरा से खींचें</button>
-          <button type="button" onclick="pickPhoto('bmFile', false)">🖼️ गैलरी से चुनें</button>
+        <div id="bsTxn" class="muted" style="margin-bottom:6px"></div>
+
+        <div class="seg" id="bsSeg">
+          <button type="button" data-m="photo" class="on" onclick="billMode('photo')">📷 फोटो से</button>
+          <button type="button" data-m="hand" onclick="billMode('hand')">✍️ हाथ से</button>
+          <button type="button" data-m="paste" onclick="billMode('paste')">📋 AI से पेस्ट</button>
         </div>
-        <img id="bmPreview" hidden style="width:100%;border-radius:12px;margin-top:12px">
-        <div id="bmAI" class="muted" style="margin-top:10px"></div>
-        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
-          <button class="primary" id="bmSave" onclick="saveBill()" disabled>💾 जोड़ दें</button>
-          <button type="button" onclick="closeBill()">रहने दें</button>
+
+        <!-- फोटो से -->
+        <div id="bsPhoto" class="form">
+          <input type="file" id="bmFile" accept="image/*" hidden>
+          <div class="pick">
+            <button type="button" onclick="pickPhoto('bmFile', true)">📷 कैमरा से खींचें</button>
+            <button type="button" onclick="pickPhoto('bmFile', false)">🖼️ गैलरी से चुनें</button>
+          </div>
+          <div id="bmAI" class="muted" style="margin-top:10px"></div>
+        </div>
+
+        <!-- AI से पेस्ट -->
+        <div id="bsPaste" class="form" hidden>
+          <p class="muted" style="margin-bottom:8px">प्रॉम्प्ट कॉपी करें → Claude/ChatGPT में
+            बिल की फोटो के साथ डालें → जो JSON आए वह यहाँ चिपकाएँ।</p>
+          <button type="button" class="primary" style="width:100%;margin-bottom:8px"
+            onclick="copyBillPrompt(this)">📋 प्रॉम्प्ट कॉपी करें</button>
+          <textarea id="bsJson" class="ta" placeholder='यहाँ चिपकाएँ — { "party": {...}, "items": [...] }'></textarea>
+          <button type="button" class="primary" style="width:100%;margin-top:8px"
+            onclick="applyPastedBill()">✅ भर दें</button>
+          <div id="bsPasteMsg" class="muted" style="margin-top:8px"></div>
+        </div>
+
+        <!-- सबके नीचे: वही खाने, हमेशा सुधारे जा सकते हैं -->
+        <div class="form" id="bsForm">
+          <div id="bsShots" class="shots" style="margin-top:10px"></div>
+          <div class="pick" style="margin-bottom:10px">
+            <input type="file" id="bsMore" accept="image/*" hidden>
+            <button type="button" onclick="pickPhoto('bsMore', true)">🚚 डिलीवरी/माल की फोटो</button>
+            <button type="button" onclick="pickPhoto('bsMore', false)">🖼️ गैलरी से</button>
+          </div>
+          <div class="frow">
+            <label>दुकान / पार्टी<input id="bsVendor" placeholder="जैसे: राम सब्ज़ी भंडार"></label>
+            <label>तारीख<input id="bsDate" type="date"></label>
+          </div>
+          <div class="frow">
+            <label>बिल नं.<input id="bsInvoice" placeholder="—"></label>
+            <label>मोबाइल<input id="bsPhone" inputmode="tel" placeholder="कार्ड के लिए"></label>
+          </div>
+          <div class="frow">
+            <label>GSTIN<input id="bsGstin" placeholder="—"></label>
+            <label>UTR / Ref<input id="bsUtr" placeholder="—"></label>
+          </div>
+          <div class="itemsHead"><span>सामान</span>
+            <button type="button" onclick="addBsItem()">+ और जोड़ें</button></div>
+          <div id="bsItems"></div>
+          <div class="frow">
+            <label>GST / अन्य ₹<input id="bsGst" type="number" inputmode="decimal" placeholder="0"></label>
+            <label>कुल ₹<input id="bsTotal" type="number" inputmode="decimal" placeholder="अपने-आप"></label>
+          </div>
+          <div id="bsWarn" class="badge lo" hidden style="display:block;margin-top:8px;line-height:1.5"></div>
+          <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
+            <button class="primary" id="bsSave" onclick="saveBillSheet()">💾 सहेजें</button>
+            <button type="button" onclick="closeSheet('billSheet')">रहने दें</button>
+            <span id="bsMsg" class="muted"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🏦 खाता जोड़ें / सुधारें -->
+    <div id="accSheet" class="sheet" hidden>
+      <div class="sheetBox">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3 id="asTitle">🏦 खाता</h3>
+          <button type="button" class="x" onclick="closeSheet('accSheet')">✕</button>
+        </div>
+        <div class="form">
+          <div class="frow">
+            <label>दिखने वाला नाम<input id="asLabel" placeholder="जैसे: सुशीला कंवर AU-0481"></label>
+            <label>धारक का नाम<input id="asHolder" placeholder="जैसे: सुशीला कंवर"></label>
+          </div>
+          <div class="frow">
+            <label>बैंक<input id="asBank" placeholder="जैसे: AU Small Finance Bank"></label>
+            <label>शाखा<input id="asBranch" placeholder="जैसे: बाड़मेर"></label>
+          </div>
+          <div class="frow">
+            <label>पूरा खाता नंबर<input id="asNumber" inputmode="numeric" placeholder="—"></label>
+            <label>IFSC<input id="asIfsc" placeholder="—"></label>
+          </div>
+          <div class="frow">
+            <label>UPI ID<input id="asUpi" placeholder="xxxx@aubank"></label>
+            <label>टिप्पणी<input id="asNote" placeholder="किस काम का खाता"></label>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
+            <button class="primary" onclick="saveAccount()">💾 सहेजें</button>
+            <button type="button" onclick="closeSheet('accSheet')">रहने दें</button>
+            <span id="asMsg" class="muted"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 💸 UPI से पेमेंट -->
+    <div id="paySheet" class="sheet" hidden>
+      <div class="sheetBox">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3>💸 पेमेंट करें</h3>
+          <button type="button" class="x" onclick="closeSheet('paySheet')">✕</button>
+        </div>
+        <div class="form">
+          <div class="frow">
+            <label>किसे<input id="pyName" placeholder="पार्टी का नाम"></label>
+            <label>रकम ₹<input id="pyAmt" type="number" inputmode="decimal"></label>
+          </div>
+          <label>UPI ID या मोबाइल नंबर
+            <input id="pyVpa" placeholder="जैसे: 9828822300@ybl या dukan@paytm"></label>
+          <div class="frow" style="margin-top:10px">
+            <label>किस बात का<input id="pyNote" placeholder="जैसे: सब्ज़ी का बिल 12081"></label>
+            <label>किस खाते से<select id="pyAccount"></select></label>
+          </div>
+          <p class="muted" style="margin:12px 0 8px">कौन से ऐप से भेजना है?</p>
+          <div class="upiApps">
+            <button type="button" onclick="upiPay('gpay')"><b>🟢</b>GPay</button>
+            <button type="button" onclick="upiPay('phonepe')"><b>🟣</b>PhonePe</button>
+            <button type="button" onclick="upiPay('paytm')"><b>🔵</b>Paytm</button>
+            <button type="button" onclick="upiPay('')"><b>📲</b>कोई भी</button>
+          </div>
+          <div id="pyAfter" hidden style="margin-top:16px;border-top:1px solid var(--grid);padding-top:14px">
+            <b>पैसा चला गया?</b>
+            <p class="muted" style="margin:4px 0 10px">UTR डाल दें और बिल की फोटो लगा दें —
+              एक ही बार में काम पूरा।</p>
+            <label>UTR / UPI transaction ID<input id="pyUtr" inputmode="numeric" placeholder="12 अंक"></label>
+            <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
+              <button class="primary" onclick="finishPay()">💾 दर्ज करें + बिल लगाएँ</button>
+              <button type="button" onclick="closeSheet('paySheet')">बाद में</button>
+              <span id="pyMsg" class="muted"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔒 PIN -->
+    <div id="pinSheet" class="sheet" hidden>
+      <div class="sheetBox" style="max-width:360px">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3>🔒 PIN डालें</h3>
+          <button type="button" class="x" onclick="pinCancel()">✕</button>
+        </div>
+        <p class="muted" id="pinWhy">सुधारने के लिए PIN चाहिए।</p>
+        <div class="form">
+          <input id="pinBox" type="password" inputmode="numeric" maxlength="8"
+            style="font-size:24px;text-align:center;letter-spacing:8px" placeholder="••••">
+          <div style="display:flex;gap:10px;margin-top:14px">
+            <button class="primary" style="flex:1" onclick="pinSubmit()">खोलें</button>
+            <button type="button" onclick="pinCancel()">रहने दें</button>
+          </div>
         </div>
       </div>
     </div>
@@ -649,17 +906,21 @@ const gridOpts = { grid: { color: "#2c2c2a" }, border: { color: "#383835" } };
 
 /* ── Renders ── */
 function renderAll() {
+  rebuildAccountPickers();   // हर select एक ही सूची से बने
+  renderDateBars();          // तारीख़ की पट्टी हर tab पर
   renderTiles();
   renderCharts();
   renderBillFilters();
   renderBills();
   renderPricebook();
   renderFlags();
-  renderMissing();
   initEntryForm();
   initRecon();
   initLedger();
   initParties();
+  renderAccounts();
+  renderMissing();
+  refreshUnitList();
 }
 
 function monthKey(d) { return d ? d.toISOString().slice(0, 7) : ""; }
@@ -668,24 +929,27 @@ function renderTiles() {
   // The bank statement IS the money truth — Overview must count it, not just
   // the bills. Showing zero after a full statement import was the whole
   // problem: bills are a subset of what actually moved.
-  const nowM = monthKey(new Date());
-  const inAll = BANKTXNS.filter(t => t.type === "credit");
-  const outAll = BANKTXNS.filter(t => t.type === "debit");
+  // ऊपर चुनी हुई अवधि यहाँ भी लागू — "आज" चुनकर Overview पूरा साल दिखाए,
+  // यह सबसे भ्रम फैलाने वाली चीज़ होती।
+  const rows = BANKTXNS.filter(t => inRange(t.date));
+  const inAll = rows.filter(t => t.type === "credit");
+  const outAll = rows.filter(t => t.type === "debit");
   const sum = (a) => a.reduce((x, t) => x + (t.amount || 0), 0);
   const inSum = sum(inAll), outSum = sum(outAll);
 
-  const mIn = sum(inAll.filter(t => String(t.date).slice(0, 7) === nowM));
-  const mOut = sum(outAll.filter(t => String(t.date).slice(0, 7) === nowM));
   const noBill = outAll.filter(t => !t.matchedReceiptId && !t.billPhotoId);
-  const pend = EXP.filter(e => e.status === "pending" || e.status === "approved");
+  // पार्टियाँ भी उसी अवधि की — नहीं तो "आज" चुनकर 427 पार्टियाँ दिखतीं।
+  const partySet = new Set(rows.map(t => pKey(t.party || t.narration)).filter(Boolean));
+  const bills = EXP.filter(e => inRange(e.billDate || e.submittedAt));
+  const pend = bills.filter(e => e.status === "pending" || e.status === "approved");
 
   $("tiles").innerHTML = [
-    ["🟢 कुल आया", INR(inSum), inAll.length + " entries", "#0ca30c"],
-    ["🔴 कुल गया", INR(outSum), outAll.length + " entries", "#d03b3b"],
-    ["इस महीने", INR(mIn - mOut), `आया ${INR(mIn)} · गया ${INR(mOut)}`, "#3987e5"],
+    ["🟢 आया", INR(inSum), inAll.length + " entries", "#0ca30c"],
+    ["🔴 गया", INR(outSum), outAll.length + " entries", "#d03b3b"],
+    ["बचा", INR(inSum - outSum), rangeWords(), "#3987e5"],
     ["📎 बिल बाकी", INR(sum(noBill)), noBill.length + " भुगतान", "#fab219"],
-    ["🧾 बिल दर्ज", String(EXP.length), pend.length + " approve बाकी", "#199e70"],
-    ["🧑 पार्टियाँ", String(Object.keys(PARTIES || {}).length || new Set(BANKTXNS.map(t => t.partyKey).filter(Boolean)).size), "जिनसे लेन-देन हुआ", "#d55181"]
+    ["🧾 बिल दर्ज", String(bills.length), pend.length + " approve बाकी", "#199e70"],
+    ["🧑 पार्टियाँ", String(partySet.size), "जिनसे लेन-देन हुआ", "#d55181"]
   ].map(([k, v, s2, c]) => `
     <div class="card tile tilt">
       <div class="k">${k}</div>
@@ -716,12 +980,13 @@ function topN(map, n) {
 
 function renderCharts() {
   const money = (t) => t.amount || 0;
+  const TX = BANKTXNS.filter(t => inRange(t.date));
 
   // Day-by-day in vs out — the two directions must never share a scale trick;
   // same axis, two series, colours that mean what they say.
   const days = [], inD = [], outD = [];
   const seen = {};
-  BANKTXNS.forEach(t => {
+  TX.forEach(t => {
     const d = String(t.date).slice(0, 10);
     if (!d) return;
     seen[d] = seen[d] || { in: 0, out: 0 };
@@ -745,7 +1010,7 @@ function renderCharts() {
         y: { ...gridOpts, ticks: { callback: v => "₹" + (v >= 1000 ? Math.round(v / 1000) + "k" : v) } } } }
   });
 
-  const outs = BANKTXNS.filter(t => t.type === "debit");
+  const outs = TX.filter(t => t.type === "debit");
   const byParty = sumBy(outs, t => t.party, money);
   const pt = topN(byParty, 6);
   mkChart("chVendor", {
@@ -769,7 +1034,7 @@ function renderCharts() {
   });
 
   const byMonth = {};
-  BANKTXNS.forEach(t => {
+  TX.forEach(t => {
     const m = String(t.date).slice(0, 7);
     if (!m) return;
     byMonth[m] = byMonth[m] || { in: 0, out: 0 };
@@ -821,6 +1086,7 @@ function renderBills() {
   const st = $("fStatus").value, sf = $("fStaff").value,
     q = $("fSearch").value.trim().toLowerCase();
   const rows = EXP.filter(e => {
+    if (!inRange(e.billDate || e.submittedAt)) return false;
     if (st && e.status !== st) return false;
     if (sf && !(e.submittedBy && e.submittedBy.name === sf)) return false;
     if (q) {
@@ -833,11 +1099,11 @@ function renderBills() {
 
   $("billEmpty").hidden = rows.length > 0;
   $("billRows").innerHTML = rows.map(e => `
-    <tr>
+    <tr onclick="editExpense('${esc(e._id)}')" style="cursor:pointer" title="सुधारने के लिए दबाएँ">
       <td><b>${esc(e.receiptId)}</b></td>
       <td>${e._date ? e._date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : ""}</td>
       <td>${esc(e.submittedBy && e.submittedBy.name)}</td>
-      <td>${esc(e.vendor && e.vendor.name || "—")}</td>
+      <td><span class="plink" onclick="event.stopPropagation();showParty('${esc(pKey(e.vendor && e.vendor.name))}')">${esc(e.vendor && e.vendor.name || "—")}</span></td>
       <td class="num">${e.billTotal != null ? INR(e.billTotal) : "—"}</td>
       <td>${esc(e.unit || "—")}</td>
       <td><span class="chip ${esc(e.status)}"><i></i>${esc(e.status)}</span></td>
@@ -917,16 +1183,7 @@ function renderFlags() {
     </div>`).join("") : '<div class="empty">कोई flag नहीं 🎉</div>';
 }
 
-/* ── Missing bank debits ── */
-function renderMissing() {
-  $("missingList").innerHTML = MISSING.length ? MISSING.slice(0, 100).map(t => `
-    <div class="flagRow"><div class="fi">🏦</div>
-      <div class="ft"><b>${INR(t.amount)}</b> — ${esc(t.date)} —
-        ${esc((ACCOUNTS[t.accountId] || {}).label || t.accountId)} खाता
-        <div class="muted">${esc((t.narration || "").slice(0, 80))} · बिल अभी बाकी है</div>
-      </div>
-    </div>`).join("") : '<div class="empty">👍 सभी debits का मिलान हो चुका है</div>';
-}
+/* बकाया tab अब v4 वाले renderMissing() से बनता है — नीचे देखें। */
 
 /* ══════════ नई एंट्री (manual entry, writes straight to Firestore) ══════════ */
 const UNITS_FALLBACK = ["177 Wet Canteen", "MES Canteen", "MH Vet Canteen"];
@@ -944,7 +1201,7 @@ function addItemRow(it) {
       <label class="fld"><span>मात्रा</span>
         <input class="iQty" type="number" inputmode="decimal" step="any" value="${v(it && it.qty)}"></label>
       <label class="fld"><span>इकाई</span>
-        <input class="iUnit" placeholder="किलो" value="${it && it.unit ? esc(it.unit) : ""}"></label>
+        <input class="iUnit" list="unitList" value="${esc((it && it.unit) || "Nos")}"></label>
       <label class="fld"><span>रेट ₹</span>
         <input class="iRate" type="number" inputmode="decimal" step="any" value="${v(it && it.rate)}"></label>
     </div>
@@ -1899,6 +2156,39 @@ function pickPhoto(id, fromCamera) {
 
 function aiSay(html, cls) { $("aAiMsg").className = cls || "muted"; $("aAiMsg").innerHTML = html; }
 
+/**
+ * वही AI-पेस्ट वाला रास्ता नई एंट्री में भी — विक्रम जी Claude/ChatGPT से बिल
+ * पढ़वाकर जवाब यहाँ चिपका दें। जहाँ भी बिल जुड़ता है, तीनों रास्ते मिलने चाहिए।
+ */
+function pasteIntoEntry() {
+  const raw = prompt("Claude / ChatGPT से आया पूरा जवाब यहाँ चिपकाएँ");
+  if (!raw) return;
+  let d;
+  try { d = JSON.parse(raw.replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/, "$1")); }
+  catch (e) { aiSay("यह JSON नहीं लग रहा — पूरा जवाब दोबारा कॉपी करें", "bad"); return; }
+  const party = d.party || {};
+  if (party.name) $("aVendor").value = party.name;
+  if (d.billDate) $("aDate").value = d.billDate;
+  fillIfEmpty("aInvoice", d.invoiceNo);
+  PRINTED_EXTRA = 0;
+  if (d.items && d.items.length) {
+    $("aItems").innerHTML = "";
+    d.items.forEach(addItemRow);
+    const sum = itemRows().reduce((a, i) => a + (i.amount || 0), 0);
+    if (d.total != null && sum > 0 && d.total > sum) {
+      PRINTED_EXTRA = Math.round((d.total - sum) * 100) / 100;
+    }
+  }
+  recalcTotal();
+  if (d.total != null) $("aTotal").value = d.total;
+  if (party.name && (party.gstin || party.phone)) {
+    vcardFromBill(party.name, party.gstin, party.phone).catch(() => {});
+  }
+  aiSay("✅ " + esc(d.summary || "भर दिया") + ` · <b>${(d.items || []).length}</b> चीज़ें` +
+    "<br><span class='muted'>नीचे जाँचकर दर्ज करें।</span>", "ok");
+  priceHints();
+}
+
 /** Only fill a box the owner has not already typed into. */
 function fillIfEmpty(id, val) {
   if (val == null || val === "") return;
@@ -2061,14 +2351,13 @@ const tgNotify = (text) => botCall("notify", { text });
 
 function ledgerRows() {
   const acc = $("lAccount").value, type = $("lType").value;
-  const days = Number($("lWhen").value), bill = $("lBill").value;
+  const bill = $("lBill").value;
   const q = $("lSearch").value.trim().toLowerCase();
-  const from = days ? new Date(Date.now() - days * 86400000).toISOString().slice(0, 10) : "";
 
   return BANKTXNS.filter((t) => {
     if (acc && t.accountId !== acc) return false;
     if (type && t.type !== type) return false;
-    if (from && String(t.date) < from) return false;
+    if (!inRange(t.date)) return false;
     if (bill === "no" && (t.matchedReceiptId || t.billPhotoId)) return false;
     if (bill === "yes" && !(t.matchedReceiptId || t.billPhotoId)) return false;
     if (q) {
@@ -2102,7 +2391,8 @@ function renderLedger() {
     <div class="mrow txn ${paid ? "out" : "in"}">
       <div class="amt ${paid ? "out" : "in"}">${paid ? "−" : "+"}${INR(t.amount)}</div>
       <div class="mx">
-        <div class="pname">${esc(t.party || "—")}</div>
+        <div class="pname"><span class="plink"
+          onclick="showParty('${esc(pKey(t.party || t.narration))}')">${esc(t.party || "—")}</span></div>
         <span class="muted">${esc(t.date)}${t.time ? " · " + esc(t.time) : ""} ·
           ${esc(accLabel(t.accountId))}</span>
         ${t.utr ? `<br><span class="muted">UTR ${esc(t.utr)}</span>` : ""}
@@ -2124,7 +2414,7 @@ function initLedger() {
   if (keep) $("lAccount").value = keep;
   renderLedger();
 }
-["lAccount", "lType", "lWhen", "lBill", "lSearch"].forEach((id) =>
+["lAccount", "lType", "lBill", "lSearch"].forEach((id) =>
   $(id).addEventListener("input", renderLedger));
 
 /* ══════════ 🧑 पार्टी — एक ही नाम, सारे खाते, सारा इतिहास ══════════
@@ -2184,7 +2474,8 @@ const accLabel = (id) => (ACCOUNTS[id] && ACCOUNTS[id].label) || id || "—";
 function renderParties() {
   const q = pKey($("pSearch").value);
   const sort = $("pSort").value;
-  let list = Object.values(PARTIES);
+  let list = Object.values(PARTIES)
+    .filter((p) => p.rows.some((r) => inRange(r.date)));
   if (q) list = list.filter((p) => p.key.includes(q));
   list.sort((a, b) => sort === "count" ? b.count - a.count
     : sort === "last" ? String(b.last).localeCompare(String(a.last))
@@ -2206,28 +2497,44 @@ function renderParties() {
   }).join("") : '<div class="empty">कोई पार्टी नहीं मिली</div>';
 }
 
-function closeParty() { $("partyModal").hidden = true; }
+function closeParty() { closeSheet("partySheet"); }
 
+/**
+ * पार्टी का नाम app में जहाँ भी लिखा है — बकाया, हिसाब, मिलान, बिल —
+ * वहीं से यह खुलती है, इसलिए "पहले इनके साथ क्या-क्या हुआ" हमेशा एक टैप दूर है।
+ * ऊपर का तारीख़-फ़िल्टर यहाँ भी लगता है, पर पूरा हिसाब भी दिखता रहे इसलिए
+ * दोनों गिनतियाँ साथ बताई जाती हैं।
+ */
 function showParty(key) {
   const p = PARTIES[key];
-  if (!p) return;
+  if (!p) { toast("इस नाम का कोई हिसाब नहीं मिला"); return; }
   const accs = Object.keys(p.accounts);
-  const box = $("partyDetail");
-  $("partyModal").hidden = false;
-  box.innerHTML = `
-    <div class="itemsHead" style="margin-top:0">
-      <span class="pname" style="font-size:17px">${esc(p.name)}</span>
-      <button type="button" onclick="closeParty()">✕</button>
+  const rows = p.rows.filter((r) => inRange(r.date));
+  const inSum = rows.reduce((a, r) => a + (r.amount || 0), 0);
+  const noBill = p.rows.filter((r) => r.kind === "bank" && r.status === "बिल नहीं").length;
+
+  openSheet("partySheet");
+  $("partyDetail").innerHTML = `
+    <div class="sheetHead">
+      <h3>${esc(p.name)}</h3>
+      <button type="button" class="x" onclick="closeParty()">✕</button>
     </div>
-    <div class="tiles" style="margin-bottom:10px">
-      <div class="card tile"><div class="k">कुल</div><div class="v">${INR(p.total)}</div>
-        <div class="s">${p.count} बार</div></div>
-      <div class="card tile"><div class="k">आख़िरी</div><div class="v" style="font-size:18px">${esc(p.last || "—")}</div>
-        <div class="s">${accs.length} खाते से</div></div>
+    <div class="tiles" style="margin:10px 0">
+      <div class="card tile"><div class="k">कुल दिया</div><div class="v">${INR(p.total)}</div>
+        <div class="s">${p.count} बार · आख़िरी ${esc(p.last || "—")}</div></div>
+      <div class="card tile"><div class="k">चुनी अवधि में</div><div class="v">${INR(inSum)}</div>
+        <div class="s">${rows.length} बार</div></div>
+    </div>
+    ${noBill ? `<div class="badge lo" style="margin-bottom:10px">⚠️ ${noBill} पेमेंट का बिल अभी बाकी है</div>` : ""}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button type="button" class="primary mini" onclick="openPay('${esc(p.name)}')">💸 पेमेंट करें</button>
+      <button type="button" class="mini" onclick="editVcard()">💼 कार्ड भरें/सुधारें</button>
     </div>
     <div id="vcardBox"></div>
-    ${p.rows.slice(0, 200).map(r => `
-      <div class="mrow">
+    <div class="itemsHead"><span>📜 पुराने लेन-देन</span>
+      <span class="muted">${rows.length || p.rows.length}</span></div>
+    ${(rows.length ? rows : p.rows).slice(0, 200).map((r) => `
+      <div class="mrow txn out">
         <div class="amt">${INR(r.amount)}</div>
         <div class="mx">
           <b>${esc(r.date || "—")}</b> · ${r.kind === "bill" ? "🧾 बिल" : "🏦 बैंक"}
@@ -2235,8 +2542,11 @@ function showParty(key) {
           <br><span class="muted">${esc(accLabel(r.account))}${r.unit ? " · " + esc(r.unit) : ""}
             ${r.status ? " · " + esc(r.status) : ""}</span>
           ${r.narration ? '<br><span class="muted">' + esc(String(r.narration).slice(0, 70)) + "</span>" : ""}
+          ${r.kind === "bill" && r.id
+            ? `<div style="margin-top:7px"><button type="button" class="mini"
+                 onclick="editExpense('${esc(r.id)}')">✏️ सुधारें</button></div>` : ""}
         </div>
-      </div>`).join("")}`;
+      </div>`).join("") || '<div class="empty">इस अवधि में कुछ नहीं</div>'}`;
   renderVcard(p);
 }
 
@@ -2250,39 +2560,52 @@ const VCARD_PROMPT =
 
 let VCARD_PARTY = null;
 
+/**
+ * बिज़नेस कार्ड। अधूरा भी चलेगा — सिर्फ़ मोबाइल नंबर पता हो तो वही डाल दें,
+ * बाक़ी बाद में। इसलिए भरने के तीनों रास्ते (फोटो, हाथ, बिल से अपने-आप)
+ * हमेशा खुले रहते हैं, कार्ड बना हो तब भी।
+ */
 function renderVcard(p) {
   VCARD_PARTY = p;
-  const c = (VCARDS && VCARDS[p.key]) || null;
-  const box = $("vcardBox");
-  if (!c) {
-    box.innerHTML = `
-      <div class="card vcard" style="margin-bottom:10px">
-        <div class="muted">इस पार्टी का बिज़नेस कार्ड नहीं है</div>
-        <input type="file" id="vcFile" accept="image/*" hidden>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <button type="button" class="primary mini" onclick="pickPhoto('vcFile', true)">📷 कार्ड खींचें</button>
-          <button type="button" class="primary mini" onclick="pickPhoto('vcFile', false)">🖼️ गैलरी से</button>
-          <button type="button" class="mini" onclick="editVcard()">✍️ हाथ से भरें</button>
-        </div>
-        <div id="vcMsg" class="muted" style="margin-top:8px"></div>
-      </div>`;
-    $("vcFile").addEventListener("change", vcardFromPhoto);
-    return;
-  }
+  const c = (VCARDS && VCARDS[p.key]) || {};
+  const has = Object.keys(c).some((k) => ["firm", "person", "phone", "gstin", "address", "upi"].includes(k) && c[k]);
   const wa = c.phone ? String(c.phone).replace(/\D/g, "").slice(-10) : "";
-  box.innerHTML = `
-    <div class="card vcard" style="margin-bottom:10px">
+  const full = !!(c.phone && c.gstin && c.address);
+  const missing = [!c.phone && "मोबाइल", !c.gstin && "GSTIN", !c.address && "पता"].filter(Boolean);
+
+  $("vcardBox").innerHTML = `
+    <div class="card vcard" style="margin-bottom:12px">
       <div class="pname">${esc(c.firm || p.name)}</div>
       ${c.person ? `<div class="muted">${esc(c.person)}</div>` : ""}
+      ${c.phone ? `<div class="muted">📱 ${esc(c.phone)}</div>` : ""}
       ${c.gstin ? `<div class="muted">GSTIN: ${esc(c.gstin)}</div>` : ""}
+      ${c.upi ? `<div class="muted">UPI: ${esc(c.upi)}</div>` : ""}
       ${c.address ? `<div class="muted">${esc(c.address)}</div>` : ""}
-      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        ${wa ? `<a class="badge hi" style="padding:8px 14px" href="tel:+91${wa}">📞 कॉल</a>
-                <a class="badge hi" style="padding:8px 14px" target="_blank"
-                   href="https://wa.me/91${wa}?text=${encodeURIComponent("नमस्ते " + (c.firm || p.name) + " जी, विक्रम चरण — VBE बाड़मेर")}">💬 WhatsApp</a>` : ""}
-        <button type="button" class="mini" onclick="editVcard()">✍️ सुधारें</button>
+      <div style="margin-top:9px">
+        <span class="badge ${full ? "ok2" : "warn2"}">${full ? "✅ पूरी डिटेल है"
+          : has ? "⚠️ अधूरी — " + missing.join(", ") + " बाकी" : "⚠️ कुछ नहीं भरा"}</span>
       </div>
+      <input type="file" id="vcFile" accept="image/*" hidden>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        ${wa ? `<a class="badge hi" style="padding:9px 14px" href="tel:+91${wa}">📞 कॉल</a>
+                <a class="badge hi" style="padding:9px 14px" target="_blank"
+                   href="https://wa.me/91${wa}?text=${encodeURIComponent("नमस्ते " + (c.firm || p.name) + " जी, विक्रम चरण — VBE बाड़मेर")}">💬 WhatsApp</a>` : ""}
+        <button type="button" class="mini" onclick="editVcard()">✍️ ${has ? "सुधारें" : "हाथ से भरें"}</button>
+        <button type="button" class="mini" onclick="pickPhoto('vcFile', true)">📷 कार्ड खींचें</button>
+        <button type="button" class="mini" onclick="pickPhoto('vcFile', false)">🖼️ गैलरी</button>
+        ${has ? `<button type="button" class="mini" onclick="copyVcard()">📋 कॉपी</button>` : ""}
+      </div>
+      <div id="vcMsg" class="muted" style="margin-top:8px"></div>
     </div>`;
+  $("vcFile").addEventListener("change", vcardFromPhoto);
+}
+
+async function copyVcard() {
+  const c = (VCARDS && VCARDS[VCARD_PARTY.key]) || {};
+  await copyText([c.firm || VCARD_PARTY.name, c.person, c.phone,
+    c.gstin ? "GSTIN: " + c.gstin : null, c.upi ? "UPI: " + c.upi : null,
+    c.address].filter(Boolean).join("\n"));
+  toast("📋 कॉपी हो गया");
 }
 
 async function vcardFromPhoto(e) {
@@ -2300,15 +2623,23 @@ async function vcardFromPhoto(e) {
   }
 }
 
+/** जितना पता है उतना भरें — खाली छोड़ी हुई चीज़ पुरानी वाली मिटाती नहीं। */
 function editVcard() {
   const c = (VCARDS && VCARDS[VCARD_PARTY.key]) || {};
-  const firm = prompt("फर्म का नाम", c.firm || VCARD_PARTY.name);
+  const ask = (label, was) => {
+    const v = prompt(label + " (पता न हो तो खाली छोड़ दें)", was || "");
+    return v === null ? null : v.trim();
+  };
+  const firm = ask("फर्म / दुकान का नाम", c.firm || VCARD_PARTY.name);
   if (firm === null) return;
-  const person = prompt("व्यक्ति का नाम", c.person || "") || "";
-  const phone = prompt("मोबाइल नंबर", c.phone || "") || "";
-  const gstin = prompt("GSTIN", c.gstin || "") || "";
-  const address = prompt("पता", c.address || "") || "";
-  saveVcard({ firm, person, phone, gstin, address });
+  const out = { firm: firm || c.firm || VCARD_PARTY.name };
+  [["व्यक्ति का नाम", "person"], ["मोबाइल नंबर", "phone"], ["GSTIN", "gstin"],
+   ["UPI ID", "upi"], ["पता", "address"]].forEach(([label, key]) => {
+    const v = ask(label, c[key]);
+    if (v) out[key] = v;
+    else if (c[key]) out[key] = c[key];
+  });
+  saveVcard(out);
 }
 
 /**
@@ -2355,7 +2686,7 @@ function initParties() {
    public repo में कुछ नहीं जाता। बैंक का डेटा AI को कभी नहीं भेजा जाता,
    सिर्फ़ बिल की फोटो। */
 
-let GEMINI_KEY = null, APP_CFG = null, BILL_TXN = null, BILL_DATA = null, BILL_PARSED = null;
+let GEMINI_KEY = null, APP_CFG = null;
 
 async function loadAppConfig() {
   try {
@@ -2388,77 +2719,812 @@ async function readBillWithAI(dataUrl) {
   return askGemini(BILL_PROMPT, dataUrl);
 }
 
-function openBillFor(txnId) {
-  BILL_TXN = BANKTXNS.filter((t) => t._id === txnId)[0];
-  if (!BILL_TXN) return;
-  BILL_DATA = null; BILL_PARSED = null;
-  $("bmPreview").hidden = true;
-  $("bmAI").textContent = GEMINI_KEY ? "" : "(AI बंद है — बिल फिर भी जुड़ जाएगा)";
-  $("bmSave").disabled = true;
-  $("bmTxn").innerHTML = `<b class="pname">${esc(BILL_TXN.party || "—")}</b>
-    ${INR(BILL_TXN.amount)} · ${esc(BILL_TXN.date)} · ${esc(accLabel(BILL_TXN.accountId))}`;
-  $("billModal").hidden = false;
+/* ═══════════════════════════════════════════════════════════════════════
+   v4 — जो दिख रहा है, उसी जगह से जोड़ा/सुधारा/भेजा जा सके।
+   सब कुछ एक ही sheet, एक ही तारीख़-पट्टी, एक ही PIN से चलता है।
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 🔒 PIN — सुधार का ताला ─────────────────────────────────────────
+   PIN कभी Firestore में नहीं जाता; एक बार खुलने पर 15 मिनट खुला रहता है,
+   ताकि एक बैठक में दस सुधार करने पर दस बार न पूछे। */
+const APP_PIN = "1234";
+const PIN_MINUTES = 15;
+let PIN_OK_TILL = 0, PIN_AFTER = null;
+
+function pinNeeded() { return Date.now() > PIN_OK_TILL; }
+
+/** काम को PIN के पीछे रखें: askPin("खाता सुधारने", () => { … }) */
+function askPin(why, then) {
+  if (!pinNeeded()) { then(); return; }
+  PIN_AFTER = then;
+  $("pinWhy").textContent = why + " के लिए PIN चाहिए।";
+  $("pinBox").value = "";
+  openSheet("pinSheet");
+  setTimeout(() => $("pinBox").focus(), 120);
 }
-function closeBill() { $("billModal").hidden = true; }
+
+function pinSubmit() {
+  const box = $("pinBox");
+  if (box.value !== APP_PIN) {
+    box.value = "";
+    box.classList.remove("shake");
+    void box.offsetWidth;             // reflow, वरना दूसरी बार animation नहीं चलती
+    box.classList.add("shake");
+    return;
+  }
+  PIN_OK_TILL = Date.now() + PIN_MINUTES * 60000;
+  closeSheet("pinSheet");
+  const fn = PIN_AFTER; PIN_AFTER = null;
+  if (fn) fn();
+}
+function pinCancel() { PIN_AFTER = null; closeSheet("pinSheet"); }
+$("pinBox").addEventListener("keydown", (e) => { if (e.key === "Enter") pinSubmit(); });
+
+/* ── sheets ─────────────────────────────────────────────────────── */
+function openSheet(id) { $(id).hidden = false; document.body.style.overflow = "hidden"; }
+function closeSheet(id) { $(id).hidden = true; document.body.style.overflow = ""; }
+// बाहर टैप करने पर बंद — पर अंदर टैप करने पर नहीं
+document.querySelectorAll(".sheet").forEach((s) =>
+  s.addEventListener("click", (e) => { if (e.target === s) closeSheet(s.id); }));
+
+/* ── 📅 तारीख़ की पट्टी — पूरे app के लिए एक ही अवधि ────────────────
+   हर tab अपनी अलग अवधि रखता तो "आज का हिसाब" देखकर पार्टी tab खोलने पर
+   फिर से पूरा साल दिखता। इसलिए एक ही range, हर जगह वही, और याद भी रहे। */
+let DR = { from: "", to: "", key: "all" };
+try { DR = JSON.parse(localStorage.getItem("vbeRange")) || DR; } catch (e) {}
+
+function shiftDays(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+}
+function monthStart(back) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - (back || 0));
+  return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-01";
+}
+function monthEnd(back) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - (back || 0) + 1);
+  d.setDate(0);
+  return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+}
+function weekStart() {
+  const d = new Date();
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));   // सोमवार से
+  return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+}
+
+const RANGES = [
+  ["today", "आज", () => ({ from: todayISO(), to: todayISO() })],
+  ["yday", "कल", () => ({ from: shiftDays(-1), to: shiftDays(-1) })],
+  ["week", "इस हफ़्ते", () => ({ from: weekStart(), to: todayISO() })],
+  ["month", "इस महीने", () => ({ from: monthStart(0), to: todayISO() })],
+  ["lastmonth", "पिछला महीना", () => ({ from: monthStart(1), to: monthEnd(1) })],
+  ["all", "सब", () => ({ from: "", to: "" })]
+];
+
+function setRange(key) {
+  const r = RANGES.filter((x) => x[0] === key)[0];
+  if (r) Object.assign(DR, r[2](), { key });
+  else DR.key = "custom";
+  try { localStorage.setItem("vbeRange", JSON.stringify(DR)); } catch (e) {}
+  renderDateBars();
+  refreshAll();
+}
+function setCustomRange() {
+  DR.from = $("drFrom").value; DR.to = $("drTo").value;
+  closeSheet("datePick");
+  setRange("custom");
+}
+
+/** एक ही पट्टी, हर tab में — इसलिए सब जगह एक जैसी दिखती और चलती है। */
+function renderDateBars() {
+  const chips = RANGES.map(([k, label]) =>
+    `<button type="button" class="${DR.key === k ? "on" : ""}" onclick="setRange('${k}')">${label}</button>`
+  ).join("") +
+  `<button type="button" class="${DR.key === "custom" ? "on" : ""}" onclick="toggleDatePick()">📅 अवधि</button>`;
+
+  document.querySelectorAll("[data-dbar]").forEach((el) => { el.innerHTML = chips; });
+  document.querySelectorAll("[data-dsum]").forEach((el) => { el.innerHTML = rangeSummary(); });
+}
+
+function toggleDatePick() {
+  const box = $("datePick");
+  if (box.hidden) {
+    $("drFrom").value = DR.from || monthStart(0);
+    $("drTo").value = DR.to || todayISO();
+    openSheet("datePick");
+  } else closeSheet("datePick");
+}
+
+function inRange(dateStr) {
+  const d = String(dateStr || "").slice(0, 10);
+  if (!d) return !DR.from && !DR.to;
+  if (DR.from && d < DR.from) return false;
+  if (DR.to && d > DR.to) return false;
+  return true;
+}
+
+function dayLabel(iso) {
+  if (!iso) return "";
+  const M = ["जन", "फ़र", "मार्च", "अप्रैल", "मई", "जून", "जुल", "अग", "सित", "अक्तू", "नव", "दिस"];
+  const [y, m, d] = iso.split("-");
+  return Number(d) + " " + M[Number(m) - 1] + " " + y;
+}
+
+/** चुनी हुई अवधि को शब्दों में — tile के नीचे लिखने लायक। */
+function rangeWords() {
+  if (!DR.from && !DR.to) return "पूरा हिसाब";
+  if (DR.from === DR.to) return dayLabel(DR.from);
+  const r = RANGES.filter((x) => x[0] === DR.key)[0];
+  return r ? r[1] : dayLabel(DR.from) + " – " + dayLabel(DR.to);
+}
+
+function rangeSummary() {
+  const rows = BANKTXNS.filter((t) => inRange(t.date));
+  const out = rows.filter((t) => t.type === "debit").reduce((a, t) => a + (t.amount || 0), 0);
+  const inn = rows.filter((t) => t.type === "credit").reduce((a, t) => a + (t.amount || 0), 0);
+  const bills = EXP.filter((e) => inRange(e.billDate || e.submittedAt)).length;
+  const when = DR.from || DR.to
+    ? (DR.from === DR.to ? dayLabel(DR.from) : dayLabel(DR.from) + " – " + dayLabel(DR.to))
+    : "पूरा हिसाब";
+  if (!rows.length && !bills) return `📅 <b>${when}</b> · इस अवधि में कुछ नहीं`;
+  return `📅 <b>${when}</b> · ${rows.length} entries · ` +
+    `<b style="color:#d03b3b">${INR(out)}</b> गए · <b style="color:#0ca30c">${INR(inn)}</b> आए` +
+    (bills ? ` · ${bills} बिल` : "");
+}
+
+/** इकाइयों के सुझाव: जो पहले लिखी गईं, वही आगे एक टैप पर मिलें। */
+function refreshUnitList() {
+  const seen = { Nos: 1, KG: 1, LTR: 1, PKT: 1, "नग": 1, "किलो": 1, "पेटी": 1, "बोरी": 1 };
+  EXP.forEach((e) => (e.items || []).forEach((it) => { if (it.unit) seen[it.unit] = 1; }));
+  const el = $("unitList");
+  if (el) el.innerHTML = Object.keys(seen).map((u) => `<option value="${esc(u)}">`).join("");
+}
+
+/** एक जगह बदलाव = हर जगह बदलाव। */
+function refreshAll() {
+  try { refreshUnitList(); renderDateBars(); } catch (e) {}
+  try { renderTiles(); renderCharts(); } catch (e) {}
+  try { renderBills(); } catch (e) {}
+  try { renderLedger(); } catch (e) {}
+  try { PARTIES = buildParties(); renderParties(); } catch (e) {}
+  try { renderMissing(); } catch (e) {}
+  try { renderAccounts(); renderCoverage(); } catch (e) {}
+}
+
+/* ── 🏦 खाते — जोड़ना, सुधारना, और एक टैप में भेजना ─────────────────
+   खाते Firestore के vbe_accounts में हैं; यहाँ से जुड़ते ही हर select
+   दोबारा बनता है, इसलिए नया खाता अपने-आप हर फ़िल्टर में आ जाता है। */
+
+let ACC_EDIT = "";
+
+function last4(n) {
+  const s = String(n || "").replace(/\D/g, "");
+  return s ? s.slice(-4) : "";
+}
+
+function renderAccounts() {
+  const ids = Object.keys(ACCOUNTS);
+  $("accList").innerHTML = ids.length ? ids.map((id) => {
+    const a = ACCOUNTS[id] || {};
+    const full = a.accountNumber ? String(a.accountNumber) : "";
+    const shown = full ? (pinNeeded() ? "•••• " + last4(full) : full) : "नंबर नहीं भरा";
+    const done = full && a.ifsc && a.bank;
+    return `
+    <div class="acc">
+      <div class="an">${esc(a.label || id)}</div>
+      <div class="ad">${esc(a.bank || "बैंक नहीं भरा")} · A/c ${esc(shown)}</div>
+      ${a.ifsc ? `<div class="ad">IFSC ${esc(a.ifsc)}${a.branch ? " · " + esc(a.branch) : ""}</div>` : ""}
+      ${a.upi ? `<div class="ad">UPI ${esc(a.upi)}</div>` : ""}
+      <div class="arow">
+        <span class="badge ${done ? "ok2" : "warn2"}">${done ? "✅ पूरी डिटेल है" : "⚠️ अधूरी — भर दें"}</span>
+        <button type="button" class="mini" onclick="copyAccount('${esc(id)}')">📋 पूरी डिटेल कॉपी</button>
+        <button type="button" class="mini" onclick="openAccount('${esc(id)}')">✏️ सुधारें</button>
+      </div>
+    </div>`;
+  }).join("") : '<div class="empty">अभी कोई खाता नहीं — ऊपर ➕ से जोड़ें</div>';
+}
+
+function openAccount(id) {
+  askPin(id ? "खाता सुधारने" : "नया खाता जोड़ने", () => {
+    ACC_EDIT = id || "";
+    const a = (id && ACCOUNTS[id]) || {};
+    $("asTitle").textContent = id ? "✏️ " + (a.label || id) : "➕ नया खाता";
+    [["asLabel", a.label], ["asHolder", a.holder], ["asBank", a.bank],
+     ["asBranch", a.branch], ["asNumber", a.accountNumber], ["asIfsc", a.ifsc],
+     ["asUpi", a.upi], ["asNote", a.note]].forEach(([f, v]) => { $(f).value = v || ""; });
+    $("asMsg").textContent = "";
+    openSheet("accSheet");
+    renderAccounts();       // PIN खुलते ही पूरे नंबर दिखने लगें
+  });
+}
+
+async function saveAccount() {
+  const msg = $("asMsg");
+  const label = $("asLabel").value.trim();
+  if (!label) { msg.className = "bad"; msg.textContent = "नाम तो भरें"; return; }
+  const id = ACC_EDIT || "acc_" + pKey(label).slice(0, 18).toLowerCase() + "_" + Date.now().toString(36).slice(-4);
+  const before = ACC_EDIT ? Object.assign({}, ACCOUNTS[ACC_EDIT]) : null;
+  const doc = {
+    label,
+    holder: $("asHolder").value.trim() || null,
+    bank: $("asBank").value.trim() || null,
+    branch: $("asBranch").value.trim() || null,
+    accountNumber: $("asNumber").value.replace(/\s/g, "") || null,
+    ifsc: $("asIfsc").value.trim().toUpperCase() || null,
+    upi: $("asUpi").value.trim() || null,
+    note: $("asNote").value.trim() || null,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  msg.className = "muted"; msg.textContent = "सहेज रहा हूँ…";
+  try {
+    await db.collection("vbe_accounts").doc(id).set(doc, { merge: true });
+    await auditLog(ACC_EDIT ? "edit_account" : "add_account", before, Object.assign({ id }, doc));
+    ACCOUNTS[id] = Object.assign({}, ACCOUNTS[id], doc);
+    closeSheet("accSheet");
+    rebuildAccountPickers();      // हर जगह का फ़िल्टर एक साथ
+    refreshAll();
+  } catch (err) {
+    msg.className = "bad"; msg.textContent = "नहीं सहेजा: " + err.message;
+  }
+}
+
+/** खाते का select हर उस जगह दोबारा बनाओ जहाँ वह है — चुना हुआ बचा रहे। */
+function rebuildAccountPickers() {
+  const opts = Object.keys(ACCOUNTS)
+    .map((id) => `<option value="${esc(id)}">${esc(accLabel(id))}</option>`).join("");
+  [["rAccount", "— खाता चुनें —"], ["lAccount", "सारे खाते"],
+   ["mAccount", "सारे खाते"], ["aAccount", "— बाद में चुनूँगा —"],
+   ["pyAccount", "— चुनें —"]].forEach(([id, blank]) => {
+    const el = $(id);
+    if (!el) return;
+    const keep = el.value;
+    el.innerHTML = `<option value="">${blank}</option>` + opts;
+    if (keep) el.value = keep;
+  });
+}
+
+/** "विक्रम जी, अकाउंट नंबर भेजो" — एक टैप, चिपकाने लायक डिटेल। */
+function copyAccount(id) {
+  askPin("पूरा खाता नंबर देखने", async () => {
+    const a = ACCOUNTS[id] || {};
+    const text = [a.holder || a.label, a.bank,
+      a.accountNumber ? "A/c: " + a.accountNumber : null,
+      a.ifsc ? "IFSC: " + a.ifsc : null,
+      a.branch ? "शाखा: " + a.branch : null,
+      a.upi ? "UPI: " + a.upi : null].filter(Boolean).join("\n");
+    await copyText(text);
+    toast("📋 कॉपी हो गया — अब WhatsApp में चिपका दें");
+    renderAccounts();
+  });
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    // clipboard API हर जगह नहीं चलती (http, पुराना WebView) — पुराना तरीका
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+}
+
+let TOAST_T = null;
+function toast(text) {
+  let el = $("toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "toast";
+    el.style.cssText = "position:fixed;left:50%;bottom:26px;transform:translateX(-50%);" +
+      "background:#222221;border:1px solid rgba(255,255,255,.14);color:#f0efe7;" +
+      "padding:11px 18px;border-radius:14px;font-size:13px;z-index:90;max-width:90vw;" +
+      "box-shadow:0 10px 30px rgba(0,0,0,.5)";
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.hidden = false;
+  clearTimeout(TOAST_T);
+  TOAST_T = setTimeout(() => { el.hidden = true; }, 2600);
+}
+
+async function auditLog(action, before, after) {
+  try {
+    await db.collection("_audit_logs").add({
+      at: firebase.firestore.FieldValue.serverTimestamp(),
+      actorTelegramId: "dashboard-" + (auth.currentUser ? auth.currentUser.uid : "?"),
+      action, before: before || null, after: after || null
+    });
+  } catch (e) { /* लॉग न लिखा जाए तो भी काम न रुके */ }
+}
+
+/* ── 📎 बिल sheet — फोटो से / हाथ से / AI से पेस्ट ─────────────────
+   तीनों रास्ते एक ही खाकों में उतरते हैं, इसलिए आगे का काम एक जैसा है।
+   यही sheet नई entry, बकाया की पंक्ति, और पुराने बिल के सुधार — तीनों
+   जगह चलती है। */
+
+let BILL_TXN = null;        // बैंक की जिस entry से जुड़ रहा है
+let BILL_EXP = null;        // या जो पुराना बिल सुधर रहा है
+let BILL_SHOTS = { bill: null, extra: [] };
+let BILL_MODE = "photo";
+
+function billMode(m) {
+  BILL_MODE = m;
+  document.querySelectorAll("#bsSeg button").forEach((b) =>
+    b.classList.toggle("on", b.dataset.m === m));
+  $("bsPhoto").hidden = m !== "photo";
+  $("bsPaste").hidden = m !== "paste";
+}
+
+function addBsItem(it) {
+  const v = (x) => (x == null || x === "" ? "" : x);
+  const d = document.createElement("div");
+  d.className = "irow";
+  d.innerHTML = `
+    <div class="iTop">
+      <input placeholder="सामान का नाम" class="iName" value="${it ? esc(it.name) : ""}">
+      <button type="button" class="del" title="हटाएँ">✕</button>
+    </div>
+    <div class="iNums">
+      <label class="fld"><span>मात्रा</span>
+        <input class="iQty" type="number" inputmode="decimal" step="any" value="${v(it && it.qty)}"></label>
+      <label class="fld"><span>इकाई</span>
+        <input class="iUnit" list="unitList" value="${esc((it && it.unit) || "Nos")}"></label>
+      <label class="fld"><span>रेट ₹</span>
+        <input class="iRate" type="number" inputmode="decimal" step="any" value="${v(it && it.rate)}"></label>
+    </div>
+    <div class="iAmt"></div>`;
+  d.querySelector(".del").onclick = () => { d.remove(); bsRecalc(); };
+  d.querySelectorAll("input").forEach((i) => i.addEventListener("input", () => {
+    rowAmount(d); bsRecalc();
+  }));
+  $("bsItems").appendChild(d);
+  rowAmount(d);
+  return d;
+}
+
+function bsItems() {
+  return [...document.querySelectorAll("#bsItems .irow")].map((r) => {
+    const val = (c) => r.querySelector(c).value.trim();
+    const num = (c) => (val(c) === "" ? null : Number(val(c)));
+    const name = val(".iName");
+    if (!name) return null;
+    const qty = num(".iQty"), rate = num(".iRate");
+    return { name, qty, unit: val(".iUnit") || "Nos", rate,
+      amount: (qty != null && rate != null) ? Math.round(qty * rate * 100) / 100 : null };
+  }).filter(Boolean);
+}
+
+function bsRecalc() {
+  const sum = bsItems().reduce((a, i) => a + (i.amount || 0), 0);
+  const gst = Number($("bsGst").value) || 0;
+  if (sum > 0) $("bsTotal").value = Math.round((sum + gst) * 100) / 100;
+  bsCheckAmount();
+}
+
+/**
+ * बैंक से ₹900 गए और बिल ₹1,065 का लग रहा है — यह चुपचाप नहीं जाना चाहिए।
+ * यही वह गड़बड़ है जो महीनों बाद मिलान के वक़्त पकड़ में आती है।
+ */
+function bsCheckAmount() {
+  const box = $("bsWarn");
+  if (!box) return;
+  const total = Number($("bsTotal").value);
+  if (!BILL_TXN || !total || !BILL_TXN.amount || Math.abs(BILL_TXN.amount - total) <= 1) {
+    box.hidden = true; return;
+  }
+  const diff = total - BILL_TXN.amount;
+  box.hidden = false;
+  box.innerHTML = `⚠️ बैंक से <b>${INR(BILL_TXN.amount)}</b> गए थे पर बिल ` +
+    `<b>${INR(total)}</b> का है — ${INR(Math.abs(diff))} ${diff > 0 ? "ज़्यादा" : "कम"}। ` +
+    `बाक़ी नकद/किसी और खाते से गया हो तो ठीक है, वरना जाँच लें।`;
+}
+["bsGst"].forEach((id) => $(id).addEventListener("input", bsRecalc));
+$("bsTotal").addEventListener("input", bsCheckAmount);
+
+function bsShowShots() {
+  const all = (BILL_SHOTS.bill ? [{ u: BILL_SHOTS.bill, t: "बिल" }] : [])
+    .concat(BILL_SHOTS.extra.map((u, i) => ({ u, t: "फोटो " + (i + 1) })));
+  $("bsShots").innerHTML = all.map((s) => `<img src="${s.u}" title="${s.t}">`).join("");
+}
+
+/** एक ही जगह से खुले — बैंक की entry हो, पुराना बिल हो, या कोरा नया। */
+function openBillSheet(opts) {
+  BILL_TXN = opts.txn || null;
+  BILL_EXP = opts.exp || null;
+  BILL_SHOTS = { bill: null, extra: [] };
+  billMode(BILL_TXN || BILL_EXP ? "photo" : "hand");
+  $("bsTitle").textContent = BILL_EXP ? "✏️ बिल सुधारें" : "📎 बिल जोड़ें";
+  $("bsJson").value = "";
+  $("bsPasteMsg").textContent = "";
+  $("bmAI").textContent = GEMINI_KEY ? "" : "(AI बंद है — बिल फिर भी जुड़ जाएगा)";
+  $("bsMsg").textContent = "";
+  $("bsItems").innerHTML = "";
+  ["bsVendor", "bsInvoice", "bsPhone", "bsGstin", "bsUtr", "bsGst", "bsTotal"]
+    .forEach((id) => { $(id).value = ""; });
+  $("bsDate").value = todayISO();
+
+  if (BILL_TXN) {
+    $("bsTxn").innerHTML = `<span class="pname">${esc(BILL_TXN.party || "—")}</span> ·
+      ${INR(BILL_TXN.amount)} · ${esc(BILL_TXN.date)} · ${esc(accLabel(BILL_TXN.accountId))}`;
+    $("bsVendor").value = BILL_TXN.party || "";
+    $("bsDate").value = String(BILL_TXN.date || todayISO()).slice(0, 10);
+    $("bsTotal").value = BILL_TXN.amount || "";
+    $("bsUtr").value = BILL_TXN.utr || "";
+  } else if (BILL_EXP) {
+    $("bsTxn").innerHTML = `<span class="muted">${esc(BILL_EXP.receiptId || "")}</span>`;
+    $("bsVendor").value = (BILL_EXP.vendor && BILL_EXP.vendor.name) || "";
+    $("bsInvoice").value = (BILL_EXP.vendor && BILL_EXP.vendor.invoiceNo) || "";
+    $("bsGstin").value = (BILL_EXP.vendor && BILL_EXP.vendor.gstin) || "";
+    $("bsDate").value = String(BILL_EXP.billDate || todayISO()).slice(0, 10);
+    $("bsTotal").value = BILL_EXP.billTotal != null ? BILL_EXP.billTotal : "";
+    $("bsUtr").value = (BILL_EXP.payment && BILL_EXP.payment.upiRef) || "";
+    (BILL_EXP.items || []).forEach(addBsItem);
+  } else {
+    $("bsTxn").textContent = "";
+  }
+  if (!document.querySelectorAll("#bsItems .irow").length) addBsItem();
+  openSheet("billSheet");
+}
+
+/** पुराना बिल सुधारना — PIN के बाद ही। */
+function editExpense(id) {
+  const e = EXP.filter((x) => x._id === id)[0];
+  if (!e) return;
+  askPin("बिल सुधारने", () => openBillSheet({ exp: e }));
+}
+
+function openBillFor(txnId) {
+  const t = BANKTXNS.filter((x) => x._id === txnId)[0];
+  if (t) openBillSheet({ txn: t });
+}
 
 $("bmFile").addEventListener("change", async (e) => {
   const f = e.target.files[0];
   if (!f) return;
   const ai = $("bmAI");
-  ai.className = "muted"; ai.textContent = "फोटो तैयार कर रहा हूँ…";
+  ai.className = "muted"; ai.innerHTML = '<span class="thinking"></span> फोटो तैयार कर रहा हूँ…';
   try {
-    BILL_DATA = await shrinkImage(f);
-    $("bmPreview").src = BILL_DATA;
-    $("bmPreview").hidden = false;
-    $("bmSave").disabled = false;
-    if (GEMINI_KEY) {
-      ai.textContent = "🧠 AI बिल पढ़ रहा है…";
-      BILL_PARSED = await readBillWithAI(BILL_DATA);
-      ai.className = "ok";
-      ai.textContent = "🧠 " + (BILL_PARSED.summary || "पढ़ लिया") +
-        (BILL_PARSED.total != null ? ` · कुल ${INR(BILL_PARSED.total)}` : "");
-    }
+    BILL_SHOTS.bill = await shrinkImage(f, 1800, 0.85);
+    bsShowShots();
+    if (!GEMINI_KEY) { ai.textContent = "फोटो लग गई (AI बंद है — नीचे हाथ से भर दें)"; return; }
+    ai.innerHTML = '<span class="thinking"></span> 🧠 AI बिल पढ़ रहा है…';
+    const r = await askGemini(BILL_PROMPT, BILL_SHOTS.bill);
+    fillBillSheet({
+      party: { name: r.vendor, phone: r.phone, gstin: r.gstin },
+      invoiceNo: r.invoiceNo, billDate: r.billDate, items: r.items,
+      gst: r.gst, total: r.total, summary: r.summary
+    });
+    ai.className = "ok";
+    ai.innerHTML = "🧠 " + esc(r.summary || "पढ़ लिया") +
+      (r.total != null ? ` · कुल <b>${INR(r.total)}</b>` : "") +
+      "<br><span class='muted'>नीचे जाँचकर सुधार लें।</span>";
   } catch (err) {
     ai.className = "bad";
     ai.textContent = "AI नहीं पढ़ पाया (बिल फिर भी जुड़ जाएगा): " + err.message;
   }
 });
 
-async function saveBill() {
-  const btn = $("bmSave"), ai = $("bmAI");
-  if (!BILL_TXN || !BILL_DATA) return;
-  btn.disabled = true;
-  ai.className = "muted"; ai.textContent = "जोड़ रहा हूँ…";
+$("bsMore").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  BILL_SHOTS.extra.push(await shrinkImage(f));
+  bsShowShots();
+  toast("📷 फोटो जुड़ गई — सहेजने पर Drive में चली जाएगी");
+});
+
+/** तीनों रास्तों का एक ही उतरने का रास्ता। */
+function fillBillSheet(d) {
+  const party = d.party || {};
+  if (party.name) $("bsVendor").value = party.name;
+  if (party.phone) $("bsPhone").value = party.phone;
+  if (party.gstin) $("bsGstin").value = party.gstin;
+  if (d.invoiceNo) $("bsInvoice").value = d.invoiceNo;
+  if (d.billDate) $("bsDate").value = d.billDate;
+  if (d.items && d.items.length) {
+    $("bsItems").innerHTML = "";
+    d.items.forEach(addBsItem);
+  }
+  const sum = bsItems().reduce((a, i) => a + (i.amount || 0), 0);
+  const gst = d.gst != null ? d.gst
+    : (d.total != null && sum > 0 && d.total > sum ? Math.round((d.total - sum) * 100) / 100 : null);
+  if (gst != null) $("bsGst").value = gst;
+  bsRecalc();
+  if (d.total != null) $("bsTotal").value = d.total;
+}
+
+/* 📋 AI से पेस्ट — विक्रम जी Claude/ChatGPT से पढ़वाकर यहाँ चिपकाते हैं।
+   प्रॉम्प्ट docs/AI-BILL-PROMPT.md में भी है, दोनों एक ही रहें। */
+const PASTE_PROMPT = [
+  "तुम एक भारतीय खरीद-बिल पढ़ने वाले सहायक हो। साथ लगी बिल की फोटो पढ़ो और",
+  "सिर्फ़ JSON लौटाओ — कोई बात नहीं, कोई घेरा नहीं, बस JSON।",
+  "",
+  "रूप बिल्कुल यही रखो:",
+  "",
+  '{',
+  '  "party":   { "name": string|null, "phone": string|null,',
+  '               "gstin": string|null, "address": string|null },',
+  '  "invoiceNo": string|null,',
+  '  "billDate":  "YYYY-MM-DD"|null,',
+  '  "items": [',
+  '    { "name": string, "qty": number|null, "unit": string,',
+  '      "rate": number|null, "amount": number|null }',
+  '  ],',
+  '  "subTotal": number|null,',
+  '  "gst":      number|null,',
+  '  "roundOff": number|null,',
+  '  "total":    number|null,',
+  '  "paidVia":  string|null,',
+  '  "summary":  string',
+  '}',
+  "",
+  "नियम:",
+  "",
+  "1. party.name = बिल के सबसे ऊपर छपा दुकान/फर्म का नाम, जैसा छपा है वैसा ही।",
+  "2. phone, gstin, address भी ऊपर के हिस्से से लो। न मिले तो null।",
+  "3. थर्मल पर्ची में लाइनें टूटती हैं: सामान का नाम एक लाइन में और उसकी",
+  "   QTY / RATE / AMT अगली लाइन में छप सकती है। इन्हें क्रम से जोड़ो — जो",
+  "   पहला नाम है उसी की पहली संख्याएँ हैं। अगर पर्ची पर गिनती छपी है",
+  '   (जैसे "NITEMS: 8") तो उतने ही आइटम लौटाओ।',
+  "4. हर आइटम में amount = qty × rate होना चाहिए। न मिले तो उस पंक्ति को",
+  "   दोबारा पढ़ो।",
+  '5. unit = इकाई (KG, LTR, PKT, नग…)। बिल में न लिखी हो तो "Nos" लिखो।',
+  "6. total = आख़िरी देय रकम (GST और राउंड-ऑफ़ के बाद वाली TOTAL पंक्ति),",
+  "   subTotal नहीं।",
+  '7. सब रकम सादे अंक: ₹ नहीं, कॉमा नहीं। "1,665.0" → 1665',
+  '8. तारीख़ भारतीय ढंग की है — DD-MM-YYYY। "27-07-2026" → "2026-07-27"',
+  "9. paidVia = CASH / UPI / CARD / CREDIT, अगर बिल पर लिखा हो।",
+  "10. सामान के नाम जैसे छपे हैं वैसे ही रखो — हिंदी हो तो हिंदी में।",
+  "11. summary = एक छोटी हिंदी पंक्ति: दुकान का नाम और क्या ख़रीदा।",
+  "12. जो सचमुच पढ़ा न जाए उसे null रखो — अंदाज़े से कोई अंक मत भरो।",
+  "",
+  "सिर्फ़ JSON लौटाओ।"
+].join("\n");
+
+async function copyBillPrompt(btn) {
+  await copyText(PASTE_PROMPT);
+  const old = btn.textContent;
+  btn.textContent = "✅ कॉपी हो गया — अब Claude/ChatGPT में चिपकाएँ";
+  setTimeout(() => { btn.textContent = old; }, 2600);
+}
+
+function applyPastedBill() {
+  const msg = $("bsPasteMsg");
+  let raw = $("bsJson").value.trim();
+  if (!raw) { msg.className = "bad"; msg.textContent = "पहले JSON चिपकाएँ"; return; }
+  // AI अक्सर ```json का घेरा या आगे-पीछे बात लगा देता है — बीच का { … } निकाल लो।
+  raw = raw.replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/, "$1");
+  let d;
+  try { d = JSON.parse(raw); }
+  catch (e) { msg.className = "bad"; msg.textContent = "यह JSON नहीं लग रहा — पूरा जवाब दोबारा कॉपी करें"; return; }
+  fillBillSheet(d);
+  billMode("hand");
+  msg.className = "ok";
+  msg.textContent = "✅ भर दिया — नीचे जाँचकर सहेज दें";
+  toast("✅ " + ((d.items || []).length) + " चीज़ें भर दीं");
+}
+
+/** एक ही save — बैंक entry से जुड़ रहा हो, पुराना सुधर रहा हो, या नया बने। */
+async function saveBillSheet() {
+  const msg = $("bsMsg");
+  const items = bsItems();
+  const total = $("bsTotal").value === "" ? null : Number($("bsTotal").value);
+  const vendor = $("bsVendor").value.trim();
+  if (!vendor && !items.length) {
+    msg.className = "bad"; msg.textContent = "दुकान का नाम या एक सामान तो भरें"; return;
+  }
+  msg.className = "muted"; msg.textContent = "सहेज रहा हूँ…";
   try {
-    const photoId = BILL_TXN._id;
-    await db.collection("vbe_bill_photos").doc(photoId).set({
-      dataUrl: BILL_DATA, txnId: BILL_TXN._id,
-      at: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    const patch = {
-      billPhotoId: photoId,
-      aiSummary: (BILL_PARSED && BILL_PARSED.summary) || null,
-      billVendor: (BILL_PARSED && BILL_PARSED.vendor) || null,
-      billTotal: (BILL_PARSED && BILL_PARSED.total) != null ? BILL_PARSED.total : null,
-      billItems: (BILL_PARSED && BILL_PARSED.items) || []
+    const photos = [];
+    if (BILL_SHOTS.bill) photos.push({ kind: "bill", dataUrl: BILL_SHOTS.bill });
+    BILL_SHOTS.extra.forEach((u) => photos.push({ kind: "extra", dataUrl: u }));
+    const urls = [];
+    for (const p of photos) {
+      const up = await driveUpload(p.dataUrl, p.kind + "_" + (vendor || "bill"));
+      urls.push({ kind: p.kind, url: up && up.ok ? up.url : null, dataUrl: up && up.ok ? null : p.dataUrl });
+    }
+
+    const payload = {
+      vendor: { name: vendor || null, gstin: $("bsGstin").value.trim() || null,
+                invoiceNo: $("bsInvoice").value.trim() || null },
+      items, billTotal: total,
+      billDate: $("bsDate").value || todayISO(),
+      gstAmount: Number($("bsGst").value) || 0,
+      payment: { upiRef: $("bsUtr").value.trim() || null, amount: total }
     };
-    await db.collection("vbe_bank_txns").doc(BILL_TXN._id).update(patch);
-    await db.collection("_audit_logs").add({
-      at: firebase.firestore.FieldValue.serverTimestamp(),
-      actorTelegramId: "dashboard-" + auth.currentUser.uid,
-      action: "attach_bill", receiptId: null, before: null,
-      after: { txnId: BILL_TXN._id, amount: BILL_TXN.amount, party: BILL_TXN.party }
-    });
-    Object.assign(BILL_TXN, patch);
-    closeBill();
-    renderLedger();
-    initParties();
+
+    if (BILL_EXP) {
+      const before = JSON.parse(JSON.stringify({
+        vendor: BILL_EXP.vendor, items: BILL_EXP.items, billTotal: BILL_EXP.billTotal }));
+      const patch = Object.assign({}, payload);
+      if (urls.length) patch.photos = (BILL_EXP.photos || []).concat(urls);
+      await db.collection("vbe_expenses").doc(BILL_EXP._id).update(patch);
+      await auditLog("edit_bill", before, Object.assign({ id: BILL_EXP._id }, payload));
+      Object.assign(BILL_EXP, patch);
+      toast("✏️ बिल सुधर गया");
+    } else if (BILL_TXN) {
+      const patch = {
+        billPhotoId: BILL_TXN._id,
+        aiSummary: vendor ? vendor + " · " + items.length + " चीज़ें" : null,
+        billVendor: vendor || null, billTotal: total, billItems: items,
+        billPhotos: urls
+      };
+      if (BILL_SHOTS.bill && !(urls[0] && urls[0].url)) {
+        await db.collection("vbe_bill_photos").doc(BILL_TXN._id)
+          .set({ dataUrl: BILL_SHOTS.bill, txnId: BILL_TXN._id,
+                 at: firebase.firestore.FieldValue.serverTimestamp() });
+      }
+      await db.collection("vbe_bank_txns").doc(BILL_TXN._id).update(patch);
+      await auditLog("attach_bill", null,
+        { txnId: BILL_TXN._id, amount: BILL_TXN.amount, party: BILL_TXN.party, vendor, total });
+      Object.assign(BILL_TXN, patch);
+      toast("📎 बिल जुड़ गया");
+    } else {
+      msg.className = "bad"; msg.textContent = "यह sheet किसी entry से नहीं जुड़ी"; return;
+    }
+
+    if (vendor && ($("bsGstin").value.trim() || $("bsPhone").value.trim())) {
+      vcardFromBill(vendor, $("bsGstin").value.trim(), $("bsPhone").value.trim()).catch(() => {});
+    }
+    tgNotify(`📎 <b>बिल जुड़ा</b>\n${vendor || "—"}${total != null ? "\n" + INR(total) : ""}` +
+      (items.length ? `\n${items.length} चीज़ें` : ""));
+    closeSheet("billSheet");
+    refreshAll();
   } catch (err) {
-    ai.className = "bad";
-    ai.textContent = "नहीं जुड़ा: " + err.message;
-    btn.disabled = false;
+    msg.className = "bad"; msg.textContent = "नहीं सहेजा: " + err.message;
   }
 }
+
+/* ── 💸 UPI से सीधे पेमेंट ───────────────────────────────────────────
+   Android का UPI deep link एक तरफ़ा है — ऐप का जवाब browser को वापस नहीं
+   मिलता (यह UPI/Android की सीमा है)। इसलिए लौटने पर UTR माँगा जाता है, पर
+   उसी स्क्रीन पर बिल भी — तो दो चक्कर एक हो जाते हैं। */
+
+let PAY_FOR = null;
+
+function openPay(name, amount, vpa) {
+  PAY_FOR = { name: name || "", amount: amount || null };
+  $("pyName").value = name || "";
+  $("pyAmt").value = amount || "";
+  $("pyVpa").value = vpa || guessVpa(name) || "";
+  $("pyNote").value = "";
+  $("pyUtr").value = "";
+  $("pyMsg").textContent = "";
+  $("pyAfter").hidden = true;
+  openSheet("paySheet");
+}
+
+/** कार्ड में UPI ID हो तो वही, वरना मोबाइल नंबर से बना लो। */
+function guessVpa(name) {
+  const c = VCARDS[pKey(name)] || {};
+  if (c.upi) return c.upi;
+  const ph = String(c.phone || "").replace(/\D/g, "").slice(-10);
+  return ph ? ph + "@upi" : "";
+}
+
+/** हर UPI ऐप का अपना scheme है; upi:// वाला सबको चुनने का पर्दा खोलता है। */
+function upiLink(app) {
+  const vpa = $("pyVpa").value.trim();
+  if (!vpa) return null;
+  const amt = Number($("pyAmt").value) || 0;
+  const pa = /@/.test(vpa) ? vpa : vpa.replace(/\D/g, "") + "@upi";
+  const q = "pa=" + encodeURIComponent(pa) +
+    "&pn=" + encodeURIComponent($("pyName").value.trim() || "VBE") +
+    (amt ? "&am=" + amt.toFixed(2) : "") +
+    "&cu=INR&tn=" + encodeURIComponent($("pyNote").value.trim() || "VBE भुगतान");
+  const host = app === "gpay" ? "tez://upi/pay?"
+    : app === "phonepe" ? "phonepe://pay?"
+    : app === "paytm" ? "paytmmp://pay?"
+    : "upi://pay?";
+  return host + q;
+}
+
+function upiPay(app) {
+  const link = upiLink(app);
+  if (!link) { $("pyMsg").className = "bad"; $("pyMsg").textContent = "UPI ID या नंबर भरें"; return; }
+  window.location.href = link;
+  // लौटने पर यही स्क्रीन खुली मिले, UTR माँगती हुई
+  $("pyAfter").hidden = false;
+  $("pyMsg").className = "muted";
+  $("pyMsg").textContent = "ऐप न खुले तो 'कोई भी' दबाएँ।";
+}
+
+/** UTR + बिल — एक ही जगह, एक ही बार। */
+async function finishPay() {
+  const msg = $("pyMsg");
+  const utr = $("pyUtr").value.trim();
+  const amt = Number($("pyAmt").value) || 0;
+  const name = $("pyName").value.trim();
+  if (!utr) { msg.className = "bad"; msg.textContent = "UTR डालें — इसी से statement मिलती है"; return; }
+  msg.className = "muted"; msg.textContent = "दर्ज कर रहा हूँ…";
+  try {
+    const id = "utr-" + utr.toUpperCase();
+    await db.collection("vbe_bank_txns").doc(id).set({
+      date: todayISO(), amount: amt, type: "debit", party: name,
+      narration: "APP/UPI/" + utr + "/" + name, utr, matched: false,
+      accountId: $("pyAccount").value || "",
+      source: "app_upi", importedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    await auditLog("app_upi_payment", null, { utr, amount: amt, party: name });
+    const t = { _id: id, date: todayISO(), amount: amt, type: "debit",
+      party: name, utr, matched: false, accountId: $("pyAccount").value || "" };
+    if (!BANKTXNS.some((x) => x._id === id)) BANKTXNS.push(t);
+    tgNotify(`💸 <b>पेमेंट</b>\n${name}\n${INR(amt)}\nUTR ${utr}`);
+    closeSheet("paySheet");
+    refreshAll();
+    toast("💸 दर्ज हो गया — अब बिल लगा दें");
+    openBillSheet({ txn: t });          // सीधे बिल माँगो, दूसरा चक्कर न पड़े
+  } catch (err) {
+    msg.className = "bad"; msg.textContent = "नहीं हुआ: " + err.message;
+  }
+}
+
+/* ── ❓ बकाया — जिन पैसों का बिल नहीं है, उन्हें यहीं निपटाओ ───────── */
+
+function missingRows() {
+  const acc = $("mAccount").value;
+  const q = $("mSearch").value.trim().toLowerCase();
+  const sort = $("mSort").value;
+  let rows = BANKTXNS.filter((t) =>
+    t.type === "debit" && !t.matched && !t.matchedReceiptId && !t.billPhotoId &&
+    inRange(t.date) && (!acc || t.accountId === acc));
+  if (q) rows = rows.filter((t) =>
+    [t.party, t.narration, t.utr, t.amount].join(" ").toLowerCase().includes(q));
+  rows.sort((a, b) => sort === "amount" ? (b.amount || 0) - (a.amount || 0)
+    : sort === "party" ? String(a.party || "").localeCompare(String(b.party || ""))
+    : String(b.date).localeCompare(String(a.date)));
+  return rows;
+}
+
+function renderMissing() {
+  const rows = missingRows();
+  const total = rows.reduce((a, t) => a + (t.amount || 0), 0);
+
+  // 🧠 ऊपर की समझ — गिनती नहीं, बात।
+  const byParty = {};
+  rows.forEach((t) => {
+    const k = pKey(t.party || t.narration) || "?";
+    byParty[k] = byParty[k] || { name: t.party || "—", n: 0, sum: 0 };
+    byParty[k].n++; byParty[k].sum += t.amount || 0;
+  });
+  const top = Object.values(byParty).sort((a, b) => b.sum - a.sum).slice(0, 3);
+  $("mBrain").innerHTML = rows.length ? `
+    <div class="k muted">🧠 इस अवधि की समझ</div>
+    <div style="font-size:19px;font-weight:700;margin:6px 0">
+      ${rows.length} पेमेंट बिना बिल के — <span style="color:#d03b3b">${INR(total)}</span></div>
+    <div class="muted">सबसे ज़्यादा: ${top.map((p) =>
+      `<b>${esc(p.name)}</b> ${INR(p.sum)} (${p.n})`).join(" · ") || "—"}</div>
+    <div class="muted" style="margin-top:6px">नीचे किसी भी पंक्ति पर 📎 दबाकर बिल लगाएँ,
+      या नाम पर टैप करके पूरा हिसाब देखें।</div>`
+    : `<div style="font-size:19px;font-weight:700">शाबाश — इस अवधि में हर पैसे का बिल लगा है ✅</div>
+       <div class="muted" style="margin-top:6px">ऊपर से दूसरी अवधि चुनकर देख सकते हैं।</div>`;
+
+  $("missingList").innerHTML = rows.length ? rows.slice(0, 300).map((t) => `
+    <div class="mrow txn out">
+      <div class="amt out">−${INR(t.amount)}</div>
+      <div class="mx">
+        <div class="pname"><span class="plink" onclick="showParty('${esc(pKey(t.party || t.narration))}')">${esc(t.party || "—")}</span></div>
+        <span class="muted">${esc(t.date)} · ${esc(accLabel(t.accountId))}${t.utr ? " · UTR " + esc(t.utr) : ""}</span>
+        <div class="arow" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="mini primary" onclick="openBillFor('${esc(t._id)}')">📎 बिल जोड़ें</button>
+          <button type="button" class="mini" onclick="openPay('${esc(t.party || "")}', ${t.amount || 0})">💸 फिर पेमेंट</button>
+          <button type="button" class="mini" onclick="showParty('${esc(pKey(t.party || t.narration))}')">🧑 पार्टी</button>
+        </div>
+      </div>
+    </div>`).join("") : '<div class="empty">इस अवधि में कोई बकाया नहीं ✅</div>';
+}
+
+["mAccount", "mSort", "mSearch"].forEach((id) => {
+  const el = $(id);
+  if (el) el.addEventListener("input", renderMissing);
+});
 
 /* ── Tabs + 3D tilt ── */
 $("tabs").addEventListener("click", e => {
