@@ -387,6 +387,12 @@
     .view, .sheetBox { animation: none !important; }
   }
 
+  /* गिनती वाले क़दम */
+  .steps { margin: 10px 0 0 0; padding-left: 22px; font-size: 12.5px;
+    color: var(--ink-2); line-height: 1.75; }
+  .steps li::marker { color: var(--s1); font-weight: 700; }
+  .steps b { color: var(--ink); }
+
   /* पहले से लगी हुई फोटो */
   .haveRow { display: flex; gap: 9px; overflow-x: auto; padding: 2px 0 6px; }
   .haveRow figure { flex: 0 0 auto; width: 78px; text-align: center; cursor: pointer; }
@@ -746,7 +752,9 @@
                 placeholder="जैसे: जन्मतिथि DDMMYYYY, PAN, या मोबाइल के अंक"></label>
             <button class="primary" style="margin-top:8px;width:100%" onclick="retryWithPassword()">खोलें</button>
           </div>
-          <button type="button" style="width:100%;margin-top:10px" onclick="openBulk()">
+          <button type="button" style="width:100%;margin-top:10px" onclick="openStmtPaste()">
+            📋 PDF नहीं है? काग़ज़ के statement को AI से पढ़वाकर पेस्ट करें</button>
+          <button type="button" style="width:100%;margin-top:8px" onclick="openBulk()">
             📥 या एक साथ कई रसीदें डालें (statement से पहले)</button>
           <div id="rStatus" class="muted" style="margin-top:12px"></div>
           <div id="rCoverage" style="margin-top:14px"></div>
@@ -1108,6 +1116,35 @@ placeholder="917568 माजीसा डिस्पोजल
             <span id="stMsg" class="muted"></span>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 📋 काग़ज़ का statement — AI से पढ़वाकर पेस्ट -->
+    <div id="stmtSheet" class="sheet" hidden>
+      <div class="sheetBox">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3>📋 statement पेस्ट करें</h3>
+          <button type="button" class="x" onclick="closeSheet('stmtSheet')">✕</button>
+        </div>
+        <p class="muted">PDF न मिले तो काग़ज़ की फोटो से भी चढ़ सकती है —
+          <b>2–4 पन्ने एक बार में</b>।</p>
+        <ol class="steps">
+          <li>नीचे से <b>प्रॉम्प्ट कॉपी</b> करें</li>
+          <li>Claude / ChatGPT खोलें → चिपकाएँ → साथ में <b>पन्नों की फोटो</b> लगाएँ</li>
+          <li>जो JSON आए, उसे कॉपी करके यहाँ चिपकाएँ</li>
+          <li><b>जाँचें</b> दबाएँ — app हर पंक्ति का हिसाब मिलाएगा</li>
+        </ol>
+        <button type="button" class="primary" style="width:100%;margin:10px 0"
+          onclick="copyStmtPrompt(this)">📋 प्रॉम्प्ट कॉपी करें</button>
+        <textarea id="stmtJson" class="ta" style="min-height:150px"
+          placeholder='यहाँ चिपकाएँ — { "transactions": [ … ] }'></textarea>
+        <button type="button" class="primary" style="width:100%;margin-top:8px"
+          onclick="checkPastedStatement()">🛡️ जाँचें</button>
+        <div id="stmtMsg" class="muted" style="margin-top:10px"></div>
+        <div id="stmtPreview" style="margin-top:10px"></div>
+        <button type="button" id="stmtSave" hidden class="primary"
+          style="width:100%;margin-top:12px" onclick="savePastedStatement()">💾 जोड़ दें</button>
       </div>
     </div>
 
@@ -6013,6 +6050,292 @@ function renderCheques() {
         </div>
       </div>
     </div>`).join("") : '<div class="empty">सब चेक के नाम लिखे जा चुके हैं ✅</div>';
+}
+
+/* ── 📋 statement को हाथ से पेस्ट करना ───────────────────────────────
+   PDF हमेशा नहीं मिलती — काग़ज़ का statement भी होता है। तब विक्रम जी उसकी
+   फोटो अपने Claude/ChatGPT में डालकर JSON बनवाते हैं और यहाँ चिपका देते हैं।
+
+   app ख़ुद कभी बैंक का डेटा किसी AI को नहीं भेजता (VISION.md का पक्का नियम) —
+   यह उनके अपने खाते से होकर आता है, app सिर्फ़ चिपकाया हुआ पाठ पढ़ता है।
+
+   AI अंक ग़लत पढ़ सकता है, इसलिए भरोसा नहीं किया जाता — जाँचा जाता है। हर
+   पंक्ति के आगे बची हुई रकम छपी होती है, तो पूरा हिसाब जोड़कर मिलाया जाता
+   है। जो पंक्ति न मिले वही पकड़कर दिखा दी जाती है।                       */
+
+const STMT_PROMPT = [
+  "तुम भारतीय बैंक statement पढ़ने वाले सहायक हो। साथ लगी statement की फ़ोटो",
+  "पढ़ो और सिर्फ़ JSON लौटाओ — कोई बात नहीं, कोई घेरा नहीं, बस JSON।",
+  "",
+  "रूप बिल्कुल यही रखो:",
+  "",
+  "{",
+  '  "account": { "name": string|null, "number": string|null, "bank": string|null },',
+  '  "period":  { "from": "YYYY-MM-DD"|null, "to": "YYYY-MM-DD"|null },',
+  '  "openingBalance": number|null,',
+  '  "transactions": [',
+  "    {",
+  '      "date":        "YYYY-MM-DD",',
+  '      "description": string,',
+  '      "chequeNo":    string|null,',
+  '      "utr":         string|null,',
+  '      "party":       string|null,',
+  '      "debit":       number|null,',
+  '      "credit":      number|null,',
+  '      "balance":     number|null',
+  "    }",
+  "  ]",
+  "}",
+  "",
+  "नियम — ध्यान से पढ़ो, हर एक ज़रूरी है:",
+  "",
+  "1. एक पंक्ति = एक सौदा। एक भी मत छोड़ो, एक भी दुबारा मत लिखो।",
+  "   पन्ने के क्रम में ही लिखो, ऊपर से नीचे।",
+  "",
+  "2. debit और credit अलग-अलग खाने हैं। जो खाली है उसमें null लिखो।",
+  '   कभी दोनों मत भरो। "गया" = debit, "आया" = credit.',
+  "",
+  '3. balance वही लिखो जो उस पंक्ति के आगे छपा है। "CR"/"DR" हटा दो, सिर्फ़',
+  "   संख्या रखो। यह सबसे ज़रूरी खाना है — इसी से जाँच होगी।",
+  "",
+  '4. सब रकम सादे अंक: ₹ नहीं, कॉमा नहीं। "1,50,000.00" → 150000',
+  '   पैसे हों तो रखो: "90,004.72" → 90004.72',
+  "",
+  '5. तारीख़ Post Date वाली लो। "02-04-2026" → "2026-04-02"',
+  "",
+  "6. description में उस सौदे की सारी पंक्तियाँ जोड़कर लिखो, जैसी छपी हैं।",
+  "   एक सौदा तीन-चार लाइनों में फैला हो तो सबको एक ही description में डालो।",
+  "",
+  "7. party = जिसे पैसा गया या जिससे आया, उसका नाम। इन रूपों को पहचानो:",
+  '   • "CHEQUE TRANSFER TO 0039867691276 OF Miss. SHIVANI ." → "SHIVANI"',
+  '   • "CAS CASH CHEQUE / MANOJ DAN"                        → "MANOJ DAN"',
+  '   • "Chq 917586 Sess 2 BALAJI TIMBER 000907701"          → "BALAJI TIMBER"',
+  '   • "CAS PRES CHQ / MINAXI AGENCY"                       → "MINAXI AGENCY"',
+  '   • "UPI/CR/032771344249/MANISH"                         → "MANISH"',
+  '   • "NEFT*UBIN0918628*0107144631 72*KV JALIPA PM SHRI*B" → "72 KV JALIPA PM SHRI B"',
+  '   नाम कहीं न लिखा हो (जैसे "REMT THRU CHQ / NEFT UTR NO: SBIN…") तो',
+  "   party में null लिखो — अंदाज़ा मत लगाओ। चेक नंबर से नाम बाद में जुड़ जाएगा।",
+  "",
+  '8. chequeNo = "Cheque No/Reference" खाने में छपा नंबर (जैसे 917568)।',
+  "   न हो तो null।",
+  "",
+  "9. utr = UTR / UPI transaction ID / NEFT reference — जो भी छपा हो",
+  '   (जैसे "SBIN426092856383" या "032771344249")। न हो तो null।',
+  "",
+  "10. जो अंक साफ़ न दिखे उसे अंदाज़े से मत भरो — null लिखो। ग़लत अंक से",
+  "    पूरा हिसाब बिगड़ता है, खाली खाने से नहीं।",
+  "",
+  '11. openingBalance = "BROUGHT FORWARD" वाली पंक्ति की रकम, अगर दिखे।',
+  "",
+  "सिर्फ़ JSON लौटाओ।"
+].join("\n");
+
+async function copyStmtPrompt(btn) {
+  await copyText(STMT_PROMPT);
+  const old = btn.textContent;
+  btn.textContent = "✅ कॉपी हो गया — अब Claude/ChatGPT में चिपकाएँ";
+  setTimeout(() => { btn.textContent = old; }, 2600);
+}
+
+function openStmtPaste() {
+  $("stmtJson").value = "";
+  $("stmtMsg").innerHTML = "";
+  $("stmtPreview").innerHTML = "";
+  $("stmtSave").hidden = true;
+  openSheet("stmtSheet");
+}
+
+/** चिपकाए हुए पाठ में से JSON निकालो — आगे-पीछे की बातें छोड़कर। */
+function parsePastedStatement(raw) {
+  let t = String(raw || "").trim();
+  if (!t) throw new Error("पहले JSON चिपकाएँ");
+  t = t.replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/, "$1");
+  let d;
+  try { d = JSON.parse(t); }
+  catch (e) { throw new Error("यह JSON नहीं लग रहा — पूरा जवाब दोबारा कॉपी करें"); }
+  const list = d.transactions || d.txns || [];
+  if (!list.length) throw new Error("इसमें कोई सौदा नहीं मिला");
+
+  const rows = list.map((x) => {
+    const debit = num(x.debit), credit = num(x.credit);
+    return {
+      date: String(x.date || "").slice(0, 10),
+      amount: debit != null ? debit : credit,
+      type: debit != null ? "debit" : "credit",
+      balance: num(x.balance),
+      // नाम न हो तो चेक नंबर ही पहचान — «—» से कुछ पता नहीं चलता, और
+      // 🧾 चेक tab वहीं से नाम भरवा देता है
+      party: x.party ? String(x.party).trim().slice(0, 60)
+        : (x.chequeNo ? "चेक " + String(x.chequeNo).replace(/\D/g, "") : null),
+      utr: x.utr ? String(x.utr).toUpperCase().replace(/\s/g, "") : null,
+      chequeNo: x.chequeNo ? String(x.chequeNo).replace(/\D/g, "") : null,
+      narration: String(x.description || "").replace(/\s+/g, " ").slice(0, 200),
+      // पेस्ट किया हुआ नाम पूरा माना जाता है — विक्रम जी की अपनी नज़र से
+      // गुज़रा है। पर «चेक 917568» नाम नहीं, सिर्फ़ जगह भरने के लिए है, इसलिए
+      // वह किसी असली नाम को हटा न दे।
+      partyTruncated: !x.party,
+      app: (d.account && d.account.bank) || "statement",
+      source: "pasted_statement"
+    };
+  }).filter((r) => r.date && r.amount);
+  return { rows, meta: d };
+
+  function num(v) {
+    if (v == null || v === "") return null;
+    const n = Number(String(v).replace(/[₹,\s]/g, ""));
+    return isFinite(n) && n !== 0 ? n : (n === 0 ? null : null);
+  }
+}
+
+/**
+ * हर पंक्ति का हिसाब मिलाओ: पिछली बची रकम − गया + आया = इस पंक्ति की बची रकम।
+ * यही वह जाँच है जो AI की ग़लती को चुपचाप अंदर नहीं जाने देती।
+ */
+function verifyLedger(rows, opening) {
+  const bad = [];
+  let prev = opening != null ? Number(opening) : null;
+  let checked = 0;
+  rows.forEach((r, i) => {
+    if (r.balance == null) return;
+    if (prev != null) {
+      const want = r.type === "debit" ? prev - r.amount : prev + r.amount;
+      checked++;
+      if (Math.abs(want - r.balance) > 0.05) {
+        bad.push({ i, r, want: Math.round(want * 100) / 100,
+          diff: Math.round((r.balance - want) * 100) / 100 });
+      }
+    }
+    prev = r.balance;
+  });
+  return { checked, bad };
+}
+
+let STMT_ROWS = null;
+
+function checkPastedStatement() {
+  const msg = $("stmtMsg"), prev = $("stmtPreview");
+  $("stmtSave").hidden = true;
+  STMT_ROWS = null;
+  let parsed;
+  try { parsed = parsePastedStatement($("stmtJson").value); }
+  catch (e) { msg.className = "bad"; msg.textContent = e.message; prev.innerHTML = ""; return; }
+
+  const rows = parsed.rows;
+  const opening = parsed.meta.openingBalance != null
+    ? Number(parsed.meta.openingBalance)
+    : (rows[0] && rows[0].balance != null
+        ? (rows[0].type === "debit" ? rows[0].balance + rows[0].amount
+                                    : rows[0].balance - rows[0].amount)
+        : null);
+  const v = verifyLedger(rows, opening);
+  const already = rows.filter((r) => findExisting(r, $("rAccount").value)).length;
+  const out = rows.reduce((a, r) => a + (r.type === "debit" ? r.amount : 0), 0);
+  const inn = rows.reduce((a, r) => a + (r.type === "credit" ? r.amount : 0), 0);
+
+  msg.className = v.bad.length ? "bad" : "ok";
+  msg.innerHTML = v.bad.length
+    ? `⚠️ <b>${v.bad.length}</b> पंक्ति का हिसाब नहीं मिला — नीचे देखिए`
+    : `✅ <b>${v.checked}</b> में से <b>${v.checked}</b> पंक्तियों का हिसाब मिला`;
+
+  prev.innerHTML =
+    gfx.insight({
+      icon: v.bad.length ? "🚨" : "🛡️",
+      tone: v.bad.length ? "up" : "down",
+      title: `${rows.length} सौदे पढ़े${already ? ` · ${already} पहले से हैं` : ""}`,
+      body: `🔴 गया <b>${INR(out)}</b> · 🟢 आया <b>${INR(inn)}</b>` +
+        (parsed.meta.account && parsed.meta.account.name
+          ? `<br>🏦 ${esc(parsed.meta.account.name)}` +
+            (parsed.meta.account.number ? ` · ${esc(parsed.meta.account.number)}` : "") : "") +
+        (v.bad.length
+          ? `<br><span class="muted">जिन पंक्तियों का हिसाब नहीं मिला, उन्हीं पन्ने की
+             फोटो दोबारा भेजकर ठीक करवा लें।</span>`
+          : `<br><span class="muted">हर पंक्ति के बाद बची रकम का हिसाब सही है —
+             यानी कोई अंक ग़लत नहीं पढ़ा गया।</span>`)
+    }) +
+    (v.bad.length ? v.bad.slice(0, 8).map((b) => `
+      <div class="mrow txn out">
+        <div class="amt out">${INR(b.r.amount)}</div>
+        <div class="mx">
+          <div class="pname">पंक्ति ${b.i + 1} — ${esc(b.r.party || b.r.narration.slice(0, 30))}</div>
+          <span class="muted">${esc(dayLabel(b.r.date))} · इसमें बची रकम
+            <b>${INR(b.r.balance)}</b> लिखी है, पर हिसाब से <b>${INR(b.want)}</b> होनी चाहिए
+            (${b.diff > 0 ? "+" : ""}${INR(b.diff)} का फ़र्क़)</span>
+        </div>
+      </div>`).join("") : "") +
+    `<div class="itemsHead" style="margin-top:12px"><span>पहली कुछ पंक्तियाँ</span></div>` +
+    rows.slice(0, 6).map((r) => `
+      <div class="mrow txn ${r.type === "debit" ? "out" : "in"}">
+        <div class="amt ${r.type === "debit" ? "out" : "in"}">${
+          r.type === "debit" ? "−" : "+"}${INR(r.amount)}</div>
+        <div class="mx">
+          <div class="pname">${esc(r.party || (r.chequeNo ? "चेक " + r.chequeNo : "—"))}</div>
+          <span class="muted">${esc(dayLabel(r.date))}${
+            r.utr ? " · UTR " + esc(r.utr) : ""}${r.chequeNo ? " · चेक " + esc(r.chequeNo) : ""}</span>
+        </div>
+      </div>`).join("");
+
+  STMT_ROWS = rows;
+  $("stmtSave").hidden = false;
+  $("stmtSave").textContent = v.bad.length
+    ? `⚠️ ${v.bad.length} गड़बड़ के बावजूद जोड़ें`
+    : `💾 ${rows.length} सौदे जोड़ दें`;
+  $("stmtSave").className = v.bad.length ? "" : "primary";
+}
+
+/** जाँच के बाद वही रास्ता जो PDF वाले statement का है — कुछ अलग नहीं। */
+async function savePastedStatement() {
+  if (!STMT_ROWS) return;
+  const acc = $("rAccount").value;
+  if (!acc) { $("stmtMsg").className = "bad";
+    $("stmtMsg").textContent = "पहले ऊपर खाता चुनें"; return; }
+  const btn = $("stmtSave");
+  btn.disabled = true;
+  $("stmtMsg").className = "muted";
+  $("stmtMsg").textContent = "सहेज रहा हूँ…";
+  let added = 0, enriched = 0, renamed = 0;
+  try {
+    for (const t of STMT_ROWS) {
+      const seen = findExisting(t, acc);
+      if (seen) {
+        const row = seen.row, patch = {};
+        const nm = betterName(row.party, t.party, t.partyTruncated);
+        if (nm && nm !== row.party) {
+          patch.party = nm; patch.partyKey = pKey(nm); renamed++;
+        }
+        if (t.chequeNo && !row.chequeNo) patch.chequeNo = t.chequeNo;
+        if (t.utr && !row.utr) patch.utr = t.utr;
+        if (t.balance != null && row.balance == null) patch.balance = t.balance;
+        if (t.narration && t.narration.length > String(row.narration || "").length) {
+          patch.narration = t.narration;
+        }
+        if (Object.keys(patch).length) {
+          await db.collection("vbe_bank_txns").doc(row._id).set(patch, { merge: true });
+          Object.assign(row, patch);
+          enriched++;
+        }
+        continue;
+      }
+      const id = txnId(acc, t);
+      const doc = txnDoc(t, acc, null, null, null);
+      await db.collection("vbe_bank_txns").doc(id).set(doc, { merge: true });
+      BANKTXNS.push(Object.assign({ _id: id }, doc));
+      added++;
+    }
+    await auditLog("paste_statement", null,
+      { accountId: acc, read: STMT_ROWS.length, added, enriched, renamed });
+    $("stmtMsg").className = "ok";
+    $("stmtMsg").innerHTML = importReport({
+      total: STMT_ROWS.length, added, existed: STMT_ROWS.length - added,
+      enriched, renamed, linked: 0 });
+    $("stmtJson").value = "";
+    $("stmtPreview").innerHTML = "";
+    btn.hidden = true;
+    STMT_ROWS = null;
+    refreshAll();
+  } catch (err) {
+    $("stmtMsg").className = "bad";
+    $("stmtMsg").textContent = "नहीं सहेजा: " + err.message;
+  } finally { btn.disabled = false; }
 }
 
 /* ── Tabs + 3D tilt ── */
