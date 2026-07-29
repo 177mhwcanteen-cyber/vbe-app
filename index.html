@@ -95,6 +95,29 @@
     color: #fff; background: linear-gradient(160deg, rgba(57,135,229,.35), rgba(57,135,229,.12));
     border-color: rgba(57,135,229,.5); font-weight: 600;
   }
+  /* डेटा की पट्टी — कब का डेटा है और आज कितनी पढ़ाई बची */
+  .sync {
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; gap: 11px;
+    padding: 9px 13px; margin-bottom: 12px;
+    border: 1px solid var(--border); border-radius: 13px;
+    background: linear-gradient(160deg, rgba(255,255,255,.055), rgba(255,255,255,.015));
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    font-size: 12.5px; color: var(--ink-2); line-height: 1.35;
+  }
+  .sync span { flex: 1; min-width: 0; }
+  .sync b { color: var(--ink); font-weight: 700; }
+  .sync small { color: var(--muted); font-size: 11px; }
+  .sync button { flex: none; }
+  .sync > i {
+    position: absolute; left: 0; bottom: 0; height: 2px;
+    background: linear-gradient(90deg, var(--s1), var(--s5));
+    transition: width .4s ease;
+  }
+  .sync.hot { border-color: rgba(250,178,25,.45); }
+  .sync.hot > i { background: linear-gradient(90deg, var(--warning), var(--critical)); }
+  .sync.hot small { color: var(--warning); }
+
   .view { display: none; animation: rise .25s ease; }
   .view.active { display: block; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -563,6 +586,9 @@
       <button data-v="cheque">🧾 चेक</button>
       <button data-v="missing">❓ बकाया</button>
     </nav>
+
+    <!-- डेटा कब का है + आज कितनी पढ़ाई ख़र्च हुई -->
+    <div id="syncBar"></div>
 
     <!-- ── Overview ── -->
     <section class="view active" id="v-overview">
@@ -1283,12 +1309,134 @@ auth.onAuthStateChanged(async user => {
 /* ── Data ── */
 const toDate = v => (v && v.toDate) ? v.toDate() : (v ? new Date(v) : null);
 
-async function loadData() {
+/* ── 💾 डेटा और उसका ख़र्च ────────────────────────────────────────────
+   Firebase के मुफ़्त (Spark) खाते में रोज़ **50,000 पढ़ाई** मिलती है, और सीमा
+   पार होते ही उस दिन के लिए पढ़ना बंद — app ख़ाली दिखने लगता है।
+
+   एक बार पूरा डेटा पढ़ने में ~3,000 दस्तावेज़ लगते हैं (bank entries, बिल,
+   pricebook, पार्टियाँ…), यानी सीमा सिर्फ़ 16-17 बार खोलने में ही ख़त्म।
+   इसीलिए अब डेटा फ़ोन में ही सँभाला जाता है: app खुलते ही वही दिखता है, और
+   Firebase से तभी माँगा जाता है जब डेटा पुराना हो जाए या विक्रम जी ख़ुद 🔄
+   दबाएँ। सहेजने के बाद पूरा डेटा दुबारा पढ़ने की भी ज़रूरत नहीं — जो बदला
+   वह यहीं का यहीं जोड़ दिया जाता है।
+
+   गिनती भी रखी जाती है ताकि पता रहे कि आज कितना ख़र्च हुआ।              */
+
+const CACHE_KEY = "vbeData";
+const CACHE_HOURS = 8;           // इतने घंटे बाद अपने-आप ताज़ा
+let READS_TODAY = 0, LAST_SYNC = 0;
+
+function readCount(n) {
+  const today = todayISO();
+  let log = null;
+  try { log = JSON.parse(localStorage.getItem("vbeReads") || "null"); } catch (e) {}
+  if (!log || log.d !== today) log = { d: today, n: 0 };
+  log.n += n;
+  READS_TODAY = log.n;
+  try { localStorage.setItem("vbeReads", JSON.stringify(log)); } catch (e) {}
+  return log.n;
+}
+function readsToday() {
+  try {
+    const log = JSON.parse(localStorage.getItem("vbeReads") || "null");
+    return log && log.d === todayISO() ? log.n : 0;
+  } catch (e) { return 0; }
+}
+
+/**
+ * Firestore की Timestamp सीधे सहेजी नहीं जा सकती — JSON में वह
+ * {seconds, nanoseconds} बन जाती है और वापस पढ़ने पर तारीख़ ही ग़लत हो
+ * जाती। इसलिए सहेजने से पहले हर तारीख़ को सादे ISO पाठ में बदल देते हैं;
+ * `toDate` उसे वैसे ही पढ़ लेता है जैसे असली Timestamp को।
+ */
+function tsClean(v, depth) {
+  depth = depth || 0;
+  if (v == null || depth > 6) return v == null ? null : v;
+  if (typeof v.toDate === "function") { try { return v.toDate().toISOString(); } catch (e) { return null; } }
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === "object" && typeof v.seconds === "number" && "nanoseconds" in v)
+    return new Date(v.seconds * 1000).toISOString();
+  if (Array.isArray(v)) return v.map((x) => tsClean(x, depth + 1));
+  if (typeof v === "object") {
+    const o = {};
+    for (const k in v) if (k !== "_date") o[k] = tsClean(v[k], depth + 1);
+    return o;
+  }
+  return v;
+}
+
+function cachePayload(slim) {
+  return {
+    at: Date.now(),
+    EXP: EXP.map((e) => {
+      const c = tsClean(e);
+      if (slim && c.extractedText) c.extractedText = String(c.extractedText).slice(0, 300);
+      return c;
+    }),
+    ACCOUNTS: tsClean(ACCOUNTS),
+    BANKTXNS: tsClean(BANKTXNS),
+    VCARDS: tsClean(VCARDS),
+    STAFF: tsClean(STAFF),
+    CHEQUES: tsClean(CHEQUES),
+    // pricebook का इतिहास सबसे भारी है — कैश में छोटा रखो
+    PRICEBOOK: PRICEBOOK.map((x) => Object.assign(tsClean(x),
+      { history: slim ? [] : (x.history || []).slice(-25) }))
+  };
+}
+
+function saveCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload(false)));
+    LAST_SYNC = Date.now();
+  } catch (e) {
+    // फ़ोन में जगह कम पड़ गई — हल्का रूप सहेजो, वह भी न बने तो कैश छोड़ दो
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload(true)));
+      LAST_SYNC = Date.now();
+    } catch (e2) {
+      try { localStorage.removeItem(CACHE_KEY); } catch (e3) {}
+    }
+  }
+  renderSync();
+}
+
+function loadCache() {
+  let c = null;
+  try { c = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch (e) {}
+  if (!c || !c.at || !Array.isArray(c.BANKTXNS)) return false;
+  EXP = (c.EXP || []).map((e) => Object.assign({}, e, { _date: toDate(e.submittedAt) }));
+  ACCOUNTS = c.ACCOUNTS || {};
+  PRICEBOOK = c.PRICEBOOK || [];
+  BANKTXNS = c.BANKTXNS || [];
+  VCARDS = c.VCARDS || {};
+  STAFF = c.STAFF || {};
+  CHEQUES = c.CHEQUES || {};
+  LAST_SYNC = c.at;
+  recomputeMissing();
+  return true;
+}
+
+const cacheStale = () => Date.now() - LAST_SYNC > CACHE_HOURS * 3600000;
+
+function recomputeMissing() {
+  MISSING = BANKTXNS.filter(t => t.type === "debit" && !t.matched)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+
+/** एक bank entry को यहीं का यहीं जोड़ो/सुधारो — दुबारा पढ़े बिना। */
+function memTxn(id, doc) {
+  const i = BANKTXNS.findIndex((t) => t._id === id);
+  if (i < 0) BANKTXNS.push(Object.assign({ _id: id }, doc));
+  else BANKTXNS[i] = Object.assign({}, BANKTXNS[i], doc);
+}
+
+/** Firebase से सचमुच पढ़ना — सिर्फ़ ज़रूरत पर। */
+async function fetchAll() {
   const [expSnap, accSnap, pbSnap, bankSnap] = await Promise.all([
     db.collection("vbe_expenses").orderBy("submittedAt", "desc").limit(500).get(),
     db.collection("vbe_accounts").get(),
     db.collection("vbe_pricebook").limit(300).get(),
-    db.collection("vbe_bank_txns").limit(1500).get()
+    db.collection("vbe_bank_txns").limit(2000).get()
   ]);
   EXP = expSnap.docs.map(d => {
     const x = d.data(); x._id = d.id; x._date = toDate(x.submittedAt); return x;
@@ -1300,19 +1448,73 @@ async function loadData() {
     .map(d => ({ id: d.id, ...d.data() }))
     .sort((a, b) => String(a.canonicalName).localeCompare(String(b.canonicalName), "hi"));
   BANKTXNS = bankSnap.docs.map(d => Object.assign({ _id: d.id }, d.data()));
+  let n = expSnap.size + accSnap.size + pbSnap.size + bankSnap.size;
   try {
     const vs = await db.collection("vbe_parties").limit(500).get();
     VCARDS = {};
     vs.docs.forEach(d => { VCARDS[d.id] = d.data(); });
+    n += vs.size;
   } catch (e) { VCARDS = {}; }
   try {
     const st = await db.collection("vbe_staff").limit(100).get();
     STAFF = {};
     st.docs.forEach(d => { STAFF[d.id] = d.data(); });
+    n += st.size;
   } catch (e) { STAFF = {}; }
   await loadCheques();
-  MISSING = BANKTXNS.filter(t => t.type === "debit" && !t.matched)
-    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  n += 1;
+  readCount(n);
+  recomputeMissing();
+  saveCache();
+  return n;
+}
+
+/**
+ * पहले फ़ोन का सँभाला हुआ डेटा, फिर ज़रूरत हो तभी Firebase।
+ * force = विक्रम जी ने ख़ुद 🔄 दबाया।
+ */
+async function loadData(force) {
+  const had = loadCache();
+  if (had && !force && !cacheStale()) { renderSync(); return 0; }
+  try {
+    const n = await fetchAll();
+    renderSync();
+    return n;
+  } catch (err) {
+    // सीमा पार हो गई या नेट नहीं है — सँभाले हुए डेटा से काम चलता रहे,
+    // ख़ाली app दिखाने से यह हमेशा बेहतर है
+    if (had) { renderSync(err); return 0; }
+    throw err;
+  }
+}
+
+/** ऊपर की पट्टी: डेटा कब का है, आज कितना ख़र्च हुआ, और 🔄 का बटन। */
+function renderSync(err) {
+  const box = $("syncBar");
+  if (!box) return;
+  const used = readsToday();
+  const pct = Math.min(100, (used / 50000) * 100);
+  const when = LAST_SYNC
+    ? new Date(LAST_SYNC).toLocaleString("hi-IN",
+        { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : "—";
+  const hot = pct > 70;
+  box.innerHTML =
+    '<div class="sync' + (hot ? " hot" : "") + '">' +
+      '<button type="button" class="mini" onclick="refreshData(this)">🔄 ताज़ा करें</button>' +
+      '<span>डेटा <b>' + esc(when) + '</b> का' +
+        (err ? ' · ⚠️ नया नहीं मिल पाया' : '') + '<br>' +
+        '<small>आज ' + used.toLocaleString("en-IN") + ' / 50,000 पढ़ाई' +
+        (hot ? ' — अब सँभालकर' : '') + '</small></span>' +
+      '<i style="width:' + pct.toFixed(1) + '%"></i>' +
+    '</div>';
+}
+
+async function refreshData(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "… ला रहा हूँ"; }
+  try { await loadData(true); renderAll(); toast("🔄 ताज़ा हो गया"); }
+  catch (e) { toast("नहीं मिला: " + e.message); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "🔄 ताज़ा करें"; } }
 }
 
 /* ── Chart defaults (mark specs: thin marks, 4px rounded ends, hairline grid) ── */
@@ -1871,7 +2073,9 @@ async function saveEntry() {
     // wipe this very line.
     msg.className = "ok";
     msg.textContent = `✅ दर्ज हो गया — ${receiptId} · Telegram पर भी भेज दिया`;
-    await loadData();
+    // पूरा डेटा दुबारा पढ़ने की ज़रूरत नहीं — जो जुड़ा वह पहले ही यहीं है
+    EXP.unshift(Object.assign({ _id: docId, _date: when }, rec));
+    saveCache();
     renderAll();
   } catch (err) {
     msg.className = "bad";
@@ -2888,14 +3092,17 @@ async function commitRecon() {
       const id = txnId(RECON.account, m.t);
       const keep = sel.value;                        // "" = owner said no
       const had = existingTxn(id);
-      await db.collection("vbe_bank_txns").doc(id).set(
-        txnDoc(m.t, RECON.account, keep ? m.e.receiptId : null,
-               sel.dataset.sure === "1" ? "high" : "low", had), { merge: true });
+      const doc = txnDoc(m.t, RECON.account, keep ? m.e.receiptId : null,
+                         sel.dataset.sure === "1" ? "high" : "low", had);
+      await db.collection("vbe_bank_txns").doc(id).set(doc, { merge: true });
+      memTxn(id, doc);
       if (had) enriched++; else added++;
       saved++;
       if (keep) {
         await db.collection("vbe_expenses").doc(keep)
           .update({ reconciled: true, matchedBankTxnId: id });
+        const ex = EXP.filter((x) => x._id === keep)[0];
+        if (ex) { ex.reconciled = true; ex.matchedBankTxnId = id; }
         linked++;
       }
     }
@@ -2904,8 +3111,9 @@ async function commitRecon() {
     for (const m of RECON.noBill.concat((RECON.credits || []).map((t) => ({ t })))) {
       const id2 = txnId(RECON.account, m.t);
       const had2 = existingTxn(id2);
-      await db.collection("vbe_bank_txns").doc(id2)
-        .set(txnDoc(m.t, RECON.account, null, null, had2), { merge: true });
+      const doc2 = txnDoc(m.t, RECON.account, null, null, had2);
+      await db.collection("vbe_bank_txns").doc(id2).set(doc2, { merge: true });
+      memTxn(id2, doc2);
       if (had2) enriched++; else added++;
       saved++;
     }
@@ -2920,7 +3128,10 @@ async function commitRecon() {
     status.innerHTML = importReport({
       total: saved + (RECON.dupes || []).length, added,
       existed: enriched + (RECON.dupes || []).length, enriched, linked });
-    await loadData(); renderAll();
+    // सब कुछ यहीं जुड़ चुका है — दुबारा पूरा डेटा पढ़ने की ज़रूरत नहीं
+    recomputeMissing();
+    saveCache();
+    renderAll();
   } catch (err) {
     status.className = "bad";
     status.textContent = "नहीं सहेज पाया: " + err.message;
@@ -4751,7 +4962,7 @@ const gfx = {
     // ₹1,00,000 से ऊपर की रकम लाख/करोड़ में — डिब्बे में बैठ जाती है और
     // पूरा अंक नीचे की पंक्ति में साथ चलता है।
     if (o.n != null && Math.abs(o.n) >= 1e5 && String(o.v).charAt(0) === "₹") {
-      o = Object.assign({}, o, { v: INRshort(o.n), full: INR(o.n) });
+      o = Object.assign({}, o, { v: INRshort(o.n), full: INR(o.n), short: true });
     }
     const d = o.delta;
     const arrow = d == null ? "" :
@@ -4761,7 +4972,7 @@ const gfx = {
       <div class="k">${o.k}</div>
       <div class="v${String(o.v).length > 13 ? " xs" : String(o.v).length > 10 ? " sm"
         : String(o.v).length > 8 ? " md" : ""}"${
-        o.n != null ? ` data-count="${o.n}"` : ""}>${o.v}</div>
+        o.n != null ? ` data-count="${o.n}"${o.short ? ' data-fmt="short"' : ""}` : ""}>${o.v}</div>
       ${arrow}
       ${o.full ? `<div class="s full">${o.full}</div>` : ""}
       ${o.s ? `<div class="s">${o.s}</div>` : ""}
@@ -4803,7 +5014,9 @@ const gfx = {
       let i = steps.indexOf(["xs", "sm", "md"].filter((c) => el.classList.contains(c))[0] || "");
       if (i < 0) i = 0;
       let guard = 0;
-      while (el.scrollWidth > el.clientWidth + 1 && i < steps.length - 1 && guard++ < 4) {
+      // एक pixel की भी छूट नहीं: "₹-3.46 लाख" डिब्बे से सिर्फ़ 1px बाहर था और
+      // उतने में ही " लाख" कटकर "₹-3.46 …" रह जाता था।
+      while (el.scrollWidth > el.clientWidth && i < steps.length - 1 && guard++ < 4) {
         steps.forEach((c) => c && el.classList.remove(c));
         i++;
         if (steps[i]) el.classList.add(steps[i]);
@@ -4817,11 +5030,15 @@ const gfx = {
       const to = Number(el.dataset.count);
       if (!isFinite(to) || Math.abs(to) < 1) return;
       const text = el.textContent, t0 = performance.now(), dur = 620;
+      // "₹3.46 लाख" जैसे छोटे रूप में सीधे अंक बदलने पर बीच में
+      // "₹-346,251.46 लाख" जैसा बेढंगा अंक झलक जाता था — इसलिए गिनती भी
+      // उसी रूप में चले जिस रूप में अंक छपा है।
+      const short = el.dataset.fmt === "short";
       const step = (t) => {
         const k = Math.min(1, (t - t0) / dur);
         const e = 1 - Math.pow(1 - k, 3);
-        el.textContent = text.replace(/[\d,]+/, () =>
-          Math.round(to * e).toLocaleString("en-IN"));
+        el.textContent = short ? INRshort(to * e)
+          : text.replace(/[\d,]+/, () => Math.round(to * e).toLocaleString("en-IN"));
         if (k < 1) requestAnimationFrame(step);
         else el.textContent = text;
       };
@@ -5671,6 +5888,10 @@ async function pricebookAdd(rec) {
     doc.avg3Rate = Math.round((last3.reduce((a, b) => a + b, 0) / last3.length) * 100) / 100;
 
     await ref.set(doc, { merge: true });
+    // सूची यहीं सुधार दो — इसके लिए पूरा pricebook दुबारा पढ़ने की ज़रूरत नहीं
+    const at = PRICEBOOK.findIndex((x) => x.id === ck);
+    if (at < 0) PRICEBOOK.push(Object.assign({ id: ck }, doc));
+    else PRICEBOOK[at] = Object.assign({}, PRICEBOOK[at], doc, { id: ck });
     idx.aliases[nameKey] = ck;
     idx.names[ck] = doc.canonicalName;
   }
@@ -5976,6 +6197,15 @@ async function idleMergePricebook() {
     const docs = names2.map((n) => PRICEBOOK.filter((p) =>
       pKey(p.canonicalName) === pKey(n))[0]).filter(Boolean);
     if (docs.length < 2) continue;
+    // फ़ोन में सँभाला हुआ इतिहास छोटा रखा जाता है (जगह बचाने को)। जोड़ने से
+    // पहले पूरा असली इतिहास Firebase से ले लो — वरना merge करते ही पुराने
+    // भाव कट जाते, और इस app में कुछ मिटता नहीं।
+    try {
+      const fresh = await Promise.all(docs.map((d) =>
+        db.collection("vbe_pricebook").doc(d.id).get()));
+      readCount(fresh.length);
+      fresh.forEach((f, i) => { if (f.exists) Object.assign(docs[i], f.data()); });
+    } catch (e) { continue; }
 
     // सबसे ज़्यादा इतिहास वाला जीते; बाक़ी उसी में समा जाएँ।
     docs.sort((a, b) => (b.history || []).length - (a.history || []).length);
@@ -5998,6 +6228,8 @@ async function idleMergePricebook() {
       for (const d of docs.slice(1)) {
         await db.collection("vbe_pricebook").doc(d.id)
           .set({ mergedInto: keep.id, history: [], aliases: [] }, { merge: true });
+        // यहाँ की सूची में भी वैसा ही — दुबारा पूरा डेटा पढ़े बिना
+        d.mergedInto = keep.id; d.history = []; d.aliases = [];
       }
       merged++;
     } catch (e) { /* अगली बार */ }
@@ -6006,7 +6238,8 @@ async function idleMergePricebook() {
   names.forEach((n) => { done[pKey(n)] = 1; });
   try { localStorage.setItem("vbeMerged", JSON.stringify(done)); } catch (e) {}
   if (merged) {
-    await loadData();
+    PRICEBOOK = PRICEBOOK.filter((x) => !x.mergedInto);
+    saveCache();
     renderPricebook();
     toast("🧠 " + merged + " चीज़ों के अलग-अलग नाम एक साथ जोड़ दिए");
   }
