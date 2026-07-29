@@ -548,6 +548,7 @@
       <button data-v="unit">🎯 यूनिट</button>
       <button data-v="staff">🧑‍🤝‍🧑 Staff</button>
       <button data-v="udhaar">🏪 उधार</button>
+      <button data-v="cheque">🧾 चेक</button>
       <button data-v="missing">❓ बकाया</button>
     </nav>
 
@@ -806,6 +807,27 @@
         <p class="muted" style="margin-bottom:10px">जिस बिल का पूरा पैसा नहीं गया वह यहीं
           दिखेगा। पेमेंट की रसीद लगाते ही अपने-आप कट जाएगा।</p>
         <div id="udList"></div>
+      </div>
+    </section>
+
+    <!-- ── 🧾 चेक रजिस्टर — बैंक नाम नहीं देता, हम देते हैं ── -->
+    <section class="view" id="v-cheque">
+      <div id="chqBrain"></div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="itemsHead" style="margin-top:0"><span>✍️ एक साथ कई चेक</span></div>
+        <p class="muted" style="margin-bottom:8px">चेक-बुक देखकर एक पंक्ति में एक —
+          पहले नंबर, फिर नाम:</p>
+        <textarea id="chqBulk" class="ta" style="min-height:110px"
+placeholder="917568 माजीसा डिस्पोजल
+917569 बालाजी टिम्बर
+917570 विजय लक्ष्मी ज्वेलर्स"></textarea>
+        <button type="button" class="primary" style="width:100%;margin-top:8px"
+          onclick="bulkNameCheques()">✅ सबके नाम लगा दें</button>
+        <div id="chqMsg" class="muted" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <div class="itemsHead" style="margin-top:0"><span>🧾 जिनका नाम बाकी है</span></div>
+        <div id="chqList"></div>
       </div>
     </section>
 
@@ -1237,6 +1259,7 @@ async function loadData() {
     STAFF = {};
     st.docs.forEach(d => { STAFF[d.id] = d.data(); });
   } catch (e) { STAFF = {}; }
+  await loadCheques();
   MISSING = BANKTXNS.filter(t => t.type === "debit" && !t.matched)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
@@ -1281,6 +1304,7 @@ function renderAll() {
   renderUnitWatch();
   renderChallanWatch();
   renderUdhaar();
+  renderCheques();
   renderStaff();
 }
 
@@ -2255,15 +2279,34 @@ function parseSBI(pages) {
     const cols = sbiColumns(byY);
     const ys = Object.keys(byY).map(Number).sort((a, b) => b - a);
 
-    // विवरण वाला खाना — बीच की तीन पंक्तियों में बँटा रहता है
-    const descOf = (anchorY) => {
+    // विवरण वाला खाना — बीच की कई पंक्तियों में बँटा रहता है। चालू खाते में
+    // एक सौदा पाँच पंक्तियों तक जाता है, इसलिए दायरा तारीख़ों से तय होता है:
+    // अगली तारीख़ आने तक जो है, वह इसी सौदे का है।
+    const anchorYs = ys.filter((y) => {
+      const c0 = byY[y][0];
+      return c0 && c0.x <= 80 && sbiDate(c0.s);
+    });
+    const spanOf = (anchorY) => {
+      const k = anchorYs.indexOf(anchorY);
+      const hi = k > 0 ? (anchorY + anchorYs[k - 1]) / 2 : anchorY + 16;
+      const lo = k < anchorYs.length - 1 ? (anchorY + anchorYs[k + 1]) / 2 : anchorY - 16;
+      return [lo, hi];
+    };
+    const colText = (anchorY, x1, x2) => {
+      const [lo, hi] = spanOf(anchorY);
       const parts = [];
       ys.forEach((y) => {
-        if (Math.abs(y - anchorY) > 13) return;
-        byY[y].forEach((c) => { if (c.x > 135 && c.x < 300) parts.push({ y, s: c.s }); });
+        if (y <= lo || y >= hi) return;
+        byY[y].forEach((c) => { if (c.x > x1 && c.x < x2) parts.push({ y, s: c.s }); });
       });
       return parts.sort((a, b) => b.y - a.y).map((p) => p.s).join(" ")
         .replace(/\s+/g, " ").trim();
+    };
+    const descOf = (y) => colText(y, 135, 285);
+    const chqOf = (y) => {
+      const t = colText(y, 285, 362);
+      const m = t.match(/\b(\d{5,8})\b/);
+      return m ? m[1] : null;
     };
 
     ys.forEach((y) => {
@@ -2290,6 +2333,8 @@ function parseSBI(pages) {
       const desc = descOf(y);
       // UPI/CR/032771344249/MANISH — बीच का लंबा अंक ही UTR है
       let utr = (desc.match(/\b(?:UPI|IMPS|NEFT|RTGS)\/(?:CR|DR)\/(\d{9,22})/i) || [])[1] || null;
+      // "NEFT UTR NO: SBIN426092856383" — बैंक का अपना UTR भी यही है
+      if (!utr) utr = (desc.match(/\b([A-Z]{4}[A-Z0-9]{8,20})\b/) || [])[1] || null;
       if (!utr) utr = (desc.match(/\b(?:UTR|RRN|REF)[:\s#-]*([A-Za-z0-9]{9,22})\b/i) || [])[1] || null;
       // सादा लंबा अंक तभी UTR माना जाए जब पंक्ति सचमुच किसी transfer की हो —
       // वरना चेक/instrument नंबर UTR बन जाता और दो अलग सौदे एक हो सकते थे।
@@ -2297,25 +2342,49 @@ function parseSBI(pages) {
         utr = (desc.match(/\b(\d{12,22})\b/) || [])[1] || null;
       }
 
-      // पार्टी: UTR के बाद वाला हिस्सा। SBI इसे काट देता है ("MANJIND"),
-      // इसीलिए इसे कच्चा माना जाता है — बाद में पूरा नाम मिलने पर सुधर जाए।
-      let party = null;
-      let m = desc.match(/\b(?:UPI|IMPS)\/(?:CR|DR)\/\d+\/(.+)$/i);
-      if (m) party = m[1];
-      else {
-        m = desc.match(/\b(?:NEFT|RTGS)[\/\s-]+(?:CR|DR)?[\/\s-]*(?:[A-Z0-9]+[\/\s-]+)?(.+)$/i);
-        if (m) party = m[1];
-        else party = desc.replace(/^(DEP TFR|WDL TFR|DIRECT DR|DIRECT CR|CASH WITHDRAWAL|BY TRANSFER|TO TRANSFER)\s*/i, "");
+      /* पार्टी का नाम — SBI हर तरह के सौदे को अलग ढंग से लिखता है, और बचत
+         खाते में नाम काट भी देता है। चालू खाते (चेक वाले) के अपने रूप हैं,
+         इसलिए सबको अलग-अलग पहचाना जाता है। */
+      const chq = chqOf(y);
+      let party = null, cut = true;
+      let m;
+      if ((m = desc.match(/\b(?:UPI|IMPS)\/(?:CR|DR)\/\d+\/(.+)$/i))) {
+        party = m[1];                                    // UPI — नाम कटा हुआ
+      } else if ((m = desc.match(/CHEQUE TRANSFER TO\s+\d+\s+OF\s+(?:Mr\.?|Miss\.?|Mrs\.?|M\/s\.?)?\s*(.+?)\s*(?:AT\s+\d{4,}|$)/i))) {
+        party = m[1]; cut = false;                       // चेक से भेजा — पूरा नाम
+      } else if ((m = desc.match(/CAS\s+CASH\s+CHEQUE\s+(.+?)\s*(?:AT\s+\d{4,}|$)/i))) {
+        party = m[1]; cut = false;                       // नकद चेक
+      } else if ((m = desc.match(/Chq\s+\d+\s+Sess\s*\d*\s+(.+?)\s*(?:\d{6,}|AT\s+\d{4,}|$)/i))) {
+        party = m[1]; cut = false;                       // चेक जमा हुआ
+      } else if ((m = desc.match(/CAS\s+PRES\s+CHQ\s+(.+?)\s*(?:\d{6,}|AT\s+\d{4,}|$)/i))) {
+        party = m[1]; cut = false;
+      } else if ((m = desc.match(/\b(?:NEFT|RTGS)\*[A-Z0-9]+\*[0-9]*\s*(.+?)\s*(?:AT\s+\d{4,}|$)/i))) {
+        party = m[1]; cut = false;                       // NEFT*बैंक*संदर्भ नाम
+      } else if ((m = desc.match(/\b(?:NEFT|RTGS)[\/\s-]+(?:CR|DR)?[\/\s-]*(?:[A-Z0-9]+[\/\s-]+)?(.+)$/i))) {
+        party = m[1];
+      } else {
+        party = desc.replace(/^(DEP TFR|WDL TFR|DIRECT DR|DIRECT CR|CASH WITHDRAWAL|BY TRANSFER|TO TRANSFER|REMT THRU CHQ)\s*/i, "");
       }
-      party = String(party || "").replace(/\s+/g, " ").trim().slice(0, 60) || null;
+      party = String(party || "")
+        .replace(/\b(NEFT|RTGS|IMPS)?\s*UTR\s*NO\.?:?/ig, "")
+        .replace(/\b[A-Z]{4}[A-Z0-9]{8,20}\b/g, "")     // बैंक का reference
+        .replace(/\b\d{9,}\b/g, "")                      // लंबे खाता/reference अंक
+        .replace(/\bAT\s+\d{4,}.*$/i, "")                // "AT 64678 MILITARY STATION..."
+        .replace(/[*]+/g, " ")                             // NEFT*UBIN*… के तारे
+        .replace(/^[\s.:,-]+|[\s.:,-]+$/g, "")
+        .replace(/\s+/g, " ").trim().slice(0, 60) || null;
+      if (party && (party.length < 3 || /^(NO|OF|TO|CR|DR|SESS)$/i.test(party))) party = null;
+      // सिर्फ़ UTR/अंक बचे हों तो वह नाम नहीं है — चेक नंबर से पहचान होगी
+      if (party && /^[\d\s.*-]+$/.test(party)) party = null;
 
       out.push({
         date, time: null,
         amount: debit != null ? debit : credit,
         type: debit != null ? "debit" : "credit",
-        party, utr, balance,
-        narration: desc.slice(0, 200),
-        partyTruncated: true,        // SBI नाम काटता है — बाद में सुधारा जाए
+        party: party || (chq ? "चेक " + chq : null),
+        utr, balance, chequeNo: chq,
+        narration: (desc + (chq ? " · चेक " + chq : "")).slice(0, 200),
+        partyTruncated: cut,   // UPI वाले नाम कटे होते हैं, चेक वाले पूरे
         app: "SBI", source: "sbi_statement"
       });
     });
@@ -2602,6 +2671,9 @@ function txnDoc(t, accountId, receiptId, confidence, existing) {
   // वह ऊपर चुने हुए खाते से ज़्यादा भरोसे लायक है — एक ही statement में कई
   // खाते हो सकते हैं, और ग़लत खाता चुन लेना सबसे आसान ग़लती है।
   const rowAcc = t.accountLast4 ? matchAccount(t.bank || "", t.accountLast4) : "";
+  // इस चेक का नाम पहले लिखा जा चुका है तो वही चले — बैंक तो नाम देता ही नहीं
+  if (t.chequeNo && CHEQUES[t.chequeNo]) t = Object.assign({}, t,
+    { party: CHEQUES[t.chequeNo], partyTruncated: false });
   const doc = {
     accountId: rowAcc || accountId, date: t.date,
     amount: t.amount, type: t.type,
@@ -2634,6 +2706,7 @@ function txnDoc(t, accountId, receiptId, confidence, existing) {
   // PhonePe की statement यह सब देती है — छोटी से छोटी चीज़ भी पार्टी के साथ
   // जुड़ी रहनी चाहिए, क्योंकि आगे का मिलान इन्हीं पर टिकेगा।
   if (t.txnId) doc.appTxnId = t.txnId;
+  if (t.chequeNo) doc.chequeNo = t.chequeNo;
   if (t.app) doc.app = t.app;
   if (t.accountLast4) doc.accountLast4 = t.accountLast4;
 
@@ -3760,7 +3833,7 @@ function refreshAll() {
   try { renderMissing(); } catch (e) {}
   try { renderAccounts(); renderCoverage(); } catch (e) {}
   try { renderUnitTab(); renderUnitWatch(); renderChallanWatch(); } catch (e) {}
-  try { renderUdhaar(); renderStaff(); } catch (e) {}
+  try { renderUdhaar(); renderCheques(); renderStaff(); } catch (e) {}
 }
 
 /* ── 🏦 खाते — जोड़ना, सुधारना, और एक टैप में भेजना ─────────────────
@@ -5835,6 +5908,112 @@ async function idleMergePricebook() {
   }
 }
 setInterval(() => { idleMergePricebook().catch(() => {}); }, 180000);
+
+/* ── 🧾 चेक रजिस्टर ──────────────────────────────────────────────────
+   चालू खाते की statement में «REMT THRU CHQ» वाली पंक्ति पर पार्टी का नाम
+   होता ही नहीं — बैंक सिर्फ़ चेक नंबर छापता है। पर विक्रम जी को याद है कि
+   917568 वाला चेक किसे दिया था। इसलिए नाम एक बार चेक नंबर के सामने लिख दें,
+   और उस नंबर वाली हर पंक्ति पर वह नाम अपने-आप बैठ जाए — आज की भी, और आगे
+   जो statement आएँगी उनकी भी।                                          */
+
+let CHEQUES = {};
+
+async function loadCheques() {
+  try {
+    const d = await db.collection("vbe_meta").doc("cheques").get();
+    CHEQUES = (d.exists && d.data().map) || {};
+  } catch (e) { CHEQUES = {}; }
+}
+
+/** बिना नाम वाले चेक — जिन्हें भरना बाकी है। */
+function unnamedCheques() {
+  const map = {};
+  BANKTXNS.forEach((t) => {
+    if (!t.chequeNo || CHEQUES[t.chequeNo]) return;
+    if (t.party && !/^चेक\s/.test(t.party)) return;      // नाम पहले से है
+    const k = t.chequeNo;
+    map[k] = map[k] || { no: k, amount: 0, n: 0, date: t.date, ids: [] };
+    map[k].amount += t.amount || 0; map[k].n++; map[k].ids.push(t._id);
+    if (String(t.date) < String(map[k].date)) map[k].date = t.date;
+  });
+  return Object.values(map).sort((a, b) => b.amount - a.amount);
+}
+
+/** नाम भरो — और उसी नंबर वाली हर पंक्ति पर लगा दो। */
+async function nameCheque(no, preset) {
+  const name = (preset != null ? preset :
+    prompt("चेक " + no + " किसे दिया था?\n(नाम लिखते ही इस नंबर की हर entry पर लग जाएगा)",
+      CHEQUES[no] || "") || "").trim();
+  if (!name) return 0;
+  CHEQUES[no] = name;
+  let n = 0;
+  for (const t of BANKTXNS.filter((x) => x.chequeNo === no)) {
+    const nm = betterName(t.party, name, false);
+    if (nm === t.party) continue;
+    await db.collection("vbe_bank_txns").doc(t._id)
+      .set({ party: nm, partyKey: pKey(nm), chequeNamedBy: "owner" }, { merge: true });
+    t.party = nm; t.partyKey = pKey(nm);
+    n++;
+  }
+  await db.collection("vbe_meta").doc("cheques").set({ map: CHEQUES }, { merge: true });
+  await auditLog("name_cheque", null, { chequeNo: no, name, rows: n });
+  if (n) toast("🧾 चेक " + no + " → " + name + " · " + n + " entries पर लग गया");
+  refreshAll();
+  return n;
+}
+
+/**
+ * एक साथ कई चेक — «917568 माजीसा डिस्पोजल» एक पंक्ति में एक। चेक-बुक हाथ
+ * में लेकर एक बार में सब लिख देना, बार-बार एक-एक करने से आसान है।
+ */
+async function bulkNameCheques() {
+  const raw = $("chqBulk").value.trim();
+  if (!raw) { toast("पहले नीचे लिखिए"); return; }
+  let done = 0, rows = 0;
+  for (const line of raw.split("\n")) {
+    const m = line.trim().match(/^(\d{4,8})[\s,:\-—]+(.+)$/);
+    if (!m) continue;
+    rows += await nameCheque(m[1], m[2].trim());
+    done++;
+  }
+  $("chqMsg").className = done ? "ok" : "bad";
+  $("chqMsg").textContent = done
+    ? `✅ ${done} चेक के नाम लिखे — ${rows} entries पर लग गए`
+    : "कोई पंक्ति समझ नहीं आई। ऐसे लिखें: 917568 माजीसा डिस्पोजल";
+  if (done) { $("chqBulk").value = ""; renderCheques(); }
+}
+
+function renderCheques() {
+  const box = $("chqList");
+  if (!box) return;
+  const pend = unnamedCheques();
+  const named = Object.keys(CHEQUES).length;
+  const total = pend.reduce((a, c) => a + c.amount, 0);
+
+  $("chqBrain").innerHTML = pend.length
+    ? gfx.insight({ icon: "🧾", tone: "warn",
+        title: `${pend.length} चेक का नाम नहीं लिखा — ${INR(total)}`,
+        body: `बैंक चेक वाली पंक्ति पर पार्टी का नाम छापता ही नहीं, सिर्फ़ नंबर ` +
+          `देता है। चेक-बुक देखकर नाम लिख दें — फिर उस नंबर की हर entry पर, ` +
+          `आज की भी और आगे आने वाली statement की भी, नाम अपने-आप लग जाएगा।` +
+          (named ? `<br><span class="muted">${named} चेक के नाम पहले से लिखे हैं।</span>` : "") })
+    : gfx.insight({ icon: "✅", tone: "down", title: "हर चेक का नाम लिखा है",
+        body: named ? `${named} चेक दर्ज हैं।` : "अभी कोई चेक वाली entry नहीं आई।" });
+
+  box.innerHTML = pend.length ? pend.map((c) => `
+    <div class="mrow txn out">
+      <div class="amt out">${INR(c.amount)}</div>
+      <div class="mx">
+        <div class="pname">चेक ${esc(c.no)}</div>
+        <span class="muted">${esc(dayLabel(String(c.date).slice(0, 10)))}${
+          c.n > 1 ? " · " + c.n + " entries" : ""}</span>
+        <div style="margin-top:7px">
+          <button type="button" class="mini primary" onclick="nameCheque('${esc(c.no)}')">
+            ✍️ नाम लिखें</button>
+        </div>
+      </div>
+    </div>`).join("") : '<div class="empty">सब चेक के नाम लिखे जा चुके हैं ✅</div>';
+}
 
 /* ── Tabs + 3D tilt ── */
 $("tabs").addEventListener("click", e => {
