@@ -2184,7 +2184,143 @@ async function readPdfStatement(file, onProgress, password) {
   }
   // PhonePe की statement बैंक वाली से बिल्कुल अलग बनती है — इसलिए पहले
   // पहचानो कि यह किसकी है, फिर उसी का पढ़ने वाला चलाओ।
-  return isPhonePe(pages) ? parsePhonePe(pages) : parsePdfStatement(pages);
+  if (isPhonePe(pages)) return parsePhonePe(pages);
+  if (isSBI(pages)) return parseSBI(pages);
+  return parsePdfStatement(pages);
+}
+
+/* ── 🏦 SBI की statement ──────────────────────────────────────────────
+   SBI एक सौदे को तीन पंक्तियों में छापता है, बीच वाली में तारीख़ें और रकम:
+
+     DEP TFR                                        ← किस तरह का सौदा
+     02-04-2026  02-04-2026     250.00   311.93CR   ← तारीख़, रकम, बचत
+     UPI/CR/032771344249/MANISH                     ← किसका, किस UTR से
+
+   डेबिट और क्रेडिट अलग-अलग खानों में छपते हैं — इसलिए यह जगह से तय होता है,
+   किसी शब्द से नहीं। खानों की जगह header से नापी जाती है ताकि दूसरी शाखा की
+   statement में थोड़ी हेर-फेर हो तो भी चले।                              */
+
+function sbiCells(items) {
+  const byY = {};
+  items.forEach((i) => {
+    const t = String(i.str).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+    if (!t) return;
+    const y = Math.round(i.transform[5]);
+    (byY[y] = byY[y] || []).push({ x: i.transform[4], r: i.transform[4] + (i.width || 0), s: t });
+  });
+  Object.keys(byY).forEach((y) => byY[y].sort((a, b) => a.x - b.x));
+  return byY;
+}
+
+function isSBI(pages) {
+  const flat = [];
+  (pages[0] || []).forEach((i) => flat.push(String(i.str)));
+  const head = flat.join(" ");
+  return /STATE BANK OF INDIA/i.test(head) ||
+    (/Post Date/i.test(head) && /Value Date/i.test(head) && /Balance/i.test(head));
+}
+
+/** "02-04-2026" → "2026-04-02" */
+function sbiDate(s) {
+  const m = String(s).match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  return m ? m[3] + "-" + m[2] + "-" + m[1] : null;
+}
+
+function sbiNum(s) {
+  const t = String(s).replace(/(CR|DR)$/i, "").replace(/[,\s]/g, "");
+  return /^\d+(\.\d+)?$/.test(t) ? Number(t) : null;
+}
+
+/** header की पंक्ति से Debit / Credit / Balance खानों के बीच का पता लगाओ। */
+function sbiColumns(byY) {
+  let cols = null;
+  Object.keys(byY).forEach((y) => {
+    const line = byY[y];
+    const txt = line.map((c) => c.s).join(" ");
+    if (!/Debit/i.test(txt) || !/Credit/i.test(txt) || !/Balance/i.test(txt)) return;
+    const at = (re) => {
+      const c = line.filter((x) => re.test(x.s))[0];
+      return c ? (c.x + c.r) / 2 : null;
+    };
+    const d = at(/^Debit$/i), cr = at(/^Credit$/i), b = at(/^Balance$/i);
+    if (d && cr && b) cols = { debit: d, credit: cr, balance: b };
+  });
+  return cols || { debit: 395, credit: 465, balance: 538 };
+}
+
+function parseSBI(pages) {
+  const out = [];
+  pages.forEach((items) => {
+    const byY = sbiCells(items);
+    const cols = sbiColumns(byY);
+    const ys = Object.keys(byY).map(Number).sort((a, b) => b - a);
+
+    // विवरण वाला खाना — बीच की तीन पंक्तियों में बँटा रहता है
+    const descOf = (anchorY) => {
+      const parts = [];
+      ys.forEach((y) => {
+        if (Math.abs(y - anchorY) > 13) return;
+        byY[y].forEach((c) => { if (c.x > 135 && c.x < 300) parts.push({ y, s: c.s }); });
+      });
+      return parts.sort((a, b) => b.y - a.y).map((p) => p.s).join(" ")
+        .replace(/\s+/g, " ").trim();
+    };
+
+    ys.forEach((y) => {
+      const line = byY[y];
+      const date = sbiDate(line[0] && line[0].s);
+      if (!date || line[0].x > 80) return;
+
+      // रकम वाले खाने: जो जिस खाने के सबसे पास है, वही उसका है
+      let debit = null, credit = null, balance = null;
+      line.forEach((c) => {
+        const v = sbiNum(c.s);
+        if (v == null) return;
+        const mid = (c.x + c.r) / 2;
+        const near = [["debit", Math.abs(mid - cols.debit)],
+          ["credit", Math.abs(mid - cols.credit)],
+          ["balance", Math.abs(mid - cols.balance)]].sort((a, b) => a[1] - b[1])[0];
+        if (near[1] > 45) return;                    // किसी खाने का नहीं
+        if (near[0] === "debit") debit = v;
+        else if (near[0] === "credit") credit = v;
+        else balance = v;
+      });
+      if (debit == null && credit == null) return;
+
+      const desc = descOf(y);
+      // UPI/CR/032771344249/MANISH — बीच का लंबा अंक ही UTR है
+      let utr = (desc.match(/\b(?:UPI|IMPS|NEFT|RTGS)\/(?:CR|DR)\/(\d{9,22})/i) || [])[1] || null;
+      if (!utr) utr = (desc.match(/\b(?:UTR|RRN|REF)[:\s#-]*([A-Za-z0-9]{9,22})\b/i) || [])[1] || null;
+      // सादा लंबा अंक तभी UTR माना जाए जब पंक्ति सचमुच किसी transfer की हो —
+      // वरना चेक/instrument नंबर UTR बन जाता और दो अलग सौदे एक हो सकते थे।
+      if (!utr && /\b(UPI|IMPS|NEFT|RTGS|UTR|RRN|REF)\b/i.test(desc)) {
+        utr = (desc.match(/\b(\d{12,22})\b/) || [])[1] || null;
+      }
+
+      // पार्टी: UTR के बाद वाला हिस्सा। SBI इसे काट देता है ("MANJIND"),
+      // इसीलिए इसे कच्चा माना जाता है — बाद में पूरा नाम मिलने पर सुधर जाए।
+      let party = null;
+      let m = desc.match(/\b(?:UPI|IMPS)\/(?:CR|DR)\/\d+\/(.+)$/i);
+      if (m) party = m[1];
+      else {
+        m = desc.match(/\b(?:NEFT|RTGS)[\/\s-]+(?:CR|DR)?[\/\s-]*(?:[A-Z0-9]+[\/\s-]+)?(.+)$/i);
+        if (m) party = m[1];
+        else party = desc.replace(/^(DEP TFR|WDL TFR|DIRECT DR|DIRECT CR|CASH WITHDRAWAL|BY TRANSFER|TO TRANSFER)\s*/i, "");
+      }
+      party = String(party || "").replace(/\s+/g, " ").trim().slice(0, 60) || null;
+
+      out.push({
+        date, time: null,
+        amount: debit != null ? debit : credit,
+        type: debit != null ? "debit" : "credit",
+        party, utr, balance,
+        narration: desc.slice(0, 200),
+        partyTruncated: true,        // SBI नाम काटता है — बाद में सुधारा जाए
+        app: "SBI", source: "sbi_statement"
+      });
+    });
+  });
+  return out;
 }
 
 /* ── 📱 PhonePe की statement ─────────────────────────────────────────
@@ -2475,10 +2611,26 @@ function txnDoc(t, accountId, receiptId, confidence, existing) {
   };
   // ये सिर्फ़ तभी लिखो जब कुछ हो — खाली मान पुरानी क़ीमत न मिटाए।
   if (t.time) doc.time = t.time;
-  if (t.narration) doc.narration = t.narration;
+  if (t.narration && (!existing || !existing.narration ||
+      String(t.narration).length > String(existing.narration).length)) {
+    doc.narration = t.narration;
+  }
   if (t.utr) doc.utr = String(t.utr).toUpperCase();
-  if (t.party) doc.party = t.party;
   if (t.balance != null) doc.balance = t.balance;
+
+  // पार्टी का नाम सिर्फ़ बेहतर हो सकता है, बुरा कभी नहीं (नीचे betterName देखें)
+  const nm = betterName(existing && existing.party, t.party, t.partyTruncated);
+  if (nm && nm !== (existing && existing.party)) {
+    doc.party = nm;
+    doc.partyKey = pKey(nm);
+  }
+  if (t.party && (!existing || existing.party !== t.party)) {
+    doc.partyAliases = [...new Set(((existing && existing.partyAliases) || [])
+      .concat([t.party]).filter(Boolean))].slice(0, 6);
+  }
+  // जिस स्रोत का नाम पूरा था, वही आगे भी पूरा माना जाए
+  if (t.partyTruncated && !(existing && existing.partyFull)) doc.partyTruncated = true;
+  else if (t.party && !t.partyTruncated) { doc.partyFull = true; doc.partyTruncated = false; }
   // PhonePe की statement यह सब देती है — छोटी से छोटी चीज़ भी पार्टी के साथ
   // जुड़ी रहनी चाहिए, क्योंकि आगे का मिलान इन्हीं पर टिकेगा।
   if (t.txnId) doc.appTxnId = t.txnId;
@@ -2499,6 +2651,33 @@ function txnDoc(t, accountId, receiptId, confidence, existing) {
   return doc;
 }
 
+/**
+ * दो नामों में से बेहतर कौन सा?
+ *
+ * SBI विवरण के खाने में नाम काट देता है — «माजीसा डिस्पोजल» वहाँ सिर्फ़
+ * «MAJISA» बनकर आता है। वही सौदा जब GPay/PhonePe से आता है तो पूरा नाम
+ * लिखा होता है। दोनों की पहचान एक ही UTR है, इसलिए बाद में पूरा नाम मिलते
+ * ही पुराना कटा हुआ नाम अपने-आप सुधर जाना चाहिए — और उल्टा कभी नहीं।
+ */
+function betterName(oldName, newName, newIsTruncated) {
+  const a = String(oldName || "").trim();
+  const b = String(newName || "").trim();
+  if (!b) return a || null;
+  if (!a) return b;
+  if (a === b) return a;
+
+  const ka = pKey(a), kb = pKey(b);
+  // एक दूसरे की शुरुआत है → लंबा वाला पूरा नाम है (MANJIND → MANJINDER SINGH)
+  if (kb.startsWith(ka) && kb.length > ka.length) return b;
+  if (ka.startsWith(kb) && ka.length > kb.length) return a;
+  // कटे हुए स्रोत का नाम पूरे नाम को कभी न हटाए
+  if (newIsTruncated) return a;
+  // दोनों अलग — जिसमें ज़्यादा शब्द हों वह ज़्यादा बताता है
+  const words = (x) => x.split(/\s+/).filter(Boolean).length;
+  if (words(b) > words(a)) return b;
+  return b.length > a.length + 2 ? b : a;
+}
+
 /** इस entry के बारे में जो पहले से हमारे पास है। */
 function existingTxn(id) {
   return BANKTXNS.filter((b) => b._id === id)[0] || null;
@@ -2511,6 +2690,7 @@ function importReport(r) {
     title: `${r.total} entries पढ़ीं — ${r.added} नई जुड़ीं`,
     body: `🔁 <b>${r.existed}</b> पहले से थीं (दुबारा नहीं जोड़ीं)` +
       (r.enriched ? ` · ✍️ <b>${r.enriched}</b> में छूटी जानकारी भर दी` : "") +
+      (r.renamed ? ` · 🪪 <b>${r.renamed}</b> पार्टी का पूरा नाम मिल गया` : "") +
       (r.linked ? ` · 🔗 <b>${r.linked}</b> बिल से जुड़ीं` : "") +
       `<br><span class="muted">पहले से भरी कोई चीज़ मिटाई नहीं गई — बिल, फोटो और
        मिलान सब वैसे के वैसे हैं।</span>`
