@@ -120,6 +120,69 @@
     content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px;
     border-radius: 2px; background: linear-gradient(90deg, var(--s1), var(--s3));
   }
+  /* 🏦 बिल से बैंक की entry चुनना */
+  .pick4 { flex-wrap: wrap; }
+  .pick4 button { flex: 1 0 44%; }
+  .tpRow { display: flex; align-items: center; gap: 10px; padding: 11px 2px;
+    border-bottom: 1px solid var(--grid); cursor: pointer; min-height: 52px; }
+  .tpRow:last-child { border-bottom: 0; }
+  .tpRow:active { background: rgba(255,255,255,.04); }
+  .tpRow.fits { border-left: 3px solid var(--good); padding-left: 9px;
+    background: linear-gradient(90deg, rgba(12,163,12,.10), transparent 55%); }
+  .tpAmt { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700;
+    font-size: 14px; color: #ff9c9c; }
+  .tpMid { flex: 1; min-width: 0; }
+  .tpName { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tpSub { font-size: 11.5px; color: var(--muted); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tpFit { flex: 0 0 auto; font-size: 11px; color: #7de3b6; }
+
+  /* 🪪 नाम मिलाने का सवाल */
+  .mergeBar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    padding: 10px 13px; border-radius: 13px; font-size: 13px; color: var(--ink-2);
+    border: 1px solid rgba(213,81,129,.45);
+    background: linear-gradient(160deg, rgba(213,81,129,.16), rgba(213,81,129,.04)); }
+  .mergeBar span { flex: 1; min-width: 0; }
+  .mergeBar b { color: var(--ink); }
+  .mergeBar.quiet { border-color: var(--border); background: rgba(255,255,255,.04); }
+  .pairCard { border: 1px solid var(--border); border-radius: 15px;
+    padding: 4px 14px 12px; margin: 12px 0; background: rgba(255,255,255,.035); }
+  .pairOne { display: flex; gap: 11px; align-items: flex-start; padding: 12px 0; }
+  .pairOne b { font-size: 14.5px; display: block; line-height: 1.35; }
+  .pairOne small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+  .pTag { font-size: 17px; flex: 0 0 auto; }
+  .pairVs { text-align: center; font-size: 11px; color: var(--muted);
+    letter-spacing: 2px; position: relative; }
+  .pairVs::before, .pairVs::after { content: ""; position: absolute; top: 50%;
+    width: calc(50% - 28px); height: 1px; background: var(--border); }
+  .pairVs::before { left: 0; } .pairVs::after { right: 0; }
+  .pairWhy { font-size: 12px; color: var(--muted); padding-top: 10px;
+    border-top: 1px solid var(--border); }
+  .pairBtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pairBtns button { padding: 13px 10px; border-radius: 13px; font-size: 13.5px; }
+
+  /* 🎨 मुनीम जी — ख़ाली पन्ने पर खड़े, रास्ता दिखाते हुए */
+  .toonBox { display: flex; align-items: center; gap: 14px; padding: 18px 14px;
+    border-radius: 16px; border: 1px solid var(--border);
+    background: linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); }
+  .toonArt { flex: 0 0 auto; }
+  .toonSay { flex: 1; min-width: 0; }
+  .toonSay b { display: block; font-size: 14.5px; margin-bottom: 4px; }
+  .toonSay p { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: 0; }
+  .toonAct { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 11px; }
+  .toonBox.warn { border-color: rgba(208,59,59,.45); margin-bottom: 12px;
+    background: linear-gradient(160deg, rgba(208,59,59,.14), rgba(208,59,59,.03)); }
+  .toon { display: block; overflow: visible; animation: saans 3.4s ease-in-out infinite; }
+  @keyframes saans {
+    0%, 100% { transform: translateY(0)   rotate(0deg); }
+    50%      { transform: translateY(-3px) rotate(-.8deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .toon { animation: none; } }
+  @media (max-width: 380px) {
+    .toonBox { gap: 10px; padding: 15px 11px; }
+    .toonArt svg { width: 76px; height: 76px; }
+  }
+
   /* 🏛️ व्यापार — अलग संसार, इसलिए दिखने में भी अलग */
   .vyWall { font-size: 12px; color: var(--ink-2); line-height: 1.5;
     padding: 9px 12px; border-radius: 12px; margin-bottom: 12px;
@@ -902,7 +965,7 @@
       <div id="fNote" hidden></div>
       <div class="card">
         <div id="billRows"></div>
-        <div id="billEmpty" class="empty" hidden>इस अवधि में कोई बिल नहीं</div>
+        <div id="billEmpty" hidden></div>
       </div>
     </section>
 
@@ -984,8 +1047,18 @@
         </select>
       </div>
       <div id="pIO"></div>
+      <div id="pMerge"></div>
       <div class="card" id="partyList"></div>
 
+      <!-- 🪪 «यह एक ही पार्टी लगती है?» — app जोड़ता नहीं, पूछता है -->
+      <div id="pairSheet" class="sheet" hidden>
+        <div class="sheetBox" style="max-width:440px">
+          <div class="grab"></div>
+          <div class="sheetHead"><h3>🪪 नाम मिलाएँ</h3>
+            <button class="x" onclick="closeSheet('pairSheet')">✕</button></div>
+          <div id="pairBody"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ── मिलान: statement upload + auto-match (कोई AI नहीं, सब यहीं ब्राउज़र में) ── -->
@@ -1321,10 +1394,11 @@ placeholder="917568 माजीसा डिस्पोजल
           <div class="itemsHead" style="margin-top:16px"><span>💳 पेमेंट</span>
             <span class="muted">कई हो सकते हैं</span></div>
           <input type="file" id="bsPayShot" accept="image/*" hidden>
-          <div class="pick" style="margin-bottom:8px">
+          <div class="pick pick4" style="margin-bottom:8px">
             <button type="button" onclick="pickPhoto('bsPayShot')">🖼️ रसीद</button>
             <button type="button" onclick="addPayManual()">✍️ हाथ से</button>
             <button type="button" onclick="addPayCash()">💵 नकद</button>
+            <button type="button" onclick="openPickTxn()">🏦 बैंक से</button>
           </div>
           <div id="bsPayMsg" class="muted" style="margin-bottom:8px"></div>
           <div id="bsPays"></div>
@@ -1338,6 +1412,20 @@ placeholder="917568 माजीसा डिस्पोजल
             <span id="bsMsg" class="muted"></span>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 🏦 बैंक की entry चुनकर इसी बिल का पेमेंट बनाना -->
+    <div id="txnPickSheet" class="sheet" hidden>
+      <div class="sheetBox" style="max-width:460px">
+        <div class="grab"></div>
+        <div class="sheetHead"><h3>🏦 किस entry से पैसा गया?</h3>
+          <button class="x" onclick="closeSheet('txnPickSheet')">✕</button></div>
+        <div id="tpNote" class="muted" style="margin-bottom:8px"></div>
+        <input id="tpSearch" type="search" placeholder="नाम · ₹रकम · UTR"
+          style="width:100%;font:inherit;color:var(--ink);background:var(--surface-2);
+                 border:1px solid var(--border);border-radius:999px;padding:9px 14px">
+        <div id="tpList" style="margin-top:10px"></div>
       </div>
     </div>
 
@@ -1973,13 +2061,12 @@ function renderTodo() {
   const skipped = Object.keys(TODO_SKIP).length;
 
   if (!rows.length) {
-    box.innerHTML = gfx.insight({ icon: "✅", tone: "down",
-      title: skipped ? "सब निपट गए — बस «अभी नहीं» वाले बचे हैं"
-                     : "शाबाश — हर पेमेंट पर बिल लग गया",
-      body: skipped
-        ? `${skipped} entries आपने «अभी नहीं» कही थीं।
-           <button type="button" class="mini" onclick="todoUnskipAll()">↩️ वापस लाएँ</button>`
-        : "जैसे ही कोई नया पेमेंट बिना बिल का आएगा, वह यहीं दिखेगा।" });
+    box.innerHTML = skipped
+      ? gfx.empty("think", "सब निपट गए — बस «अभी नहीं» वाले बचे हैं",
+          `${skipped} entries आपने «अभी नहीं» कही थीं।`,
+          `<button type="button" class="mini" onclick="todoUnskipAll()">↩️ वापस लाएँ</button>`)
+      : gfx.empty("party", "शाबाश — हर पेमेंट पर बिल लग गया",
+          "जैसे ही कोई नया पेमेंट बिना बिल का आएगा, वह यहीं दिखेगा।");
     return;
   }
 
@@ -2151,6 +2238,12 @@ function renderBills() {
 
   searchNote("fNote", "fSearch", sq, rows.length);
   $("billEmpty").hidden = rows.length > 0;
+  if (!rows.length) {
+    $("billEmpty").innerHTML = gfx.empty("hello", "इस अवधि में कोई बिल नहीं",
+      "ऊपर से दूसरी अवधि चुनिए, या नया बिल डाल दीजिए।",
+      `<button type="button" class="mini primary" onclick="goTab('add')">➕ नई एंट्री</button>
+       <button type="button" class="mini" onclick="setRange('all')">📅 पूरा हिसाब</button>`);
+  }
   $("billRows").innerHTML = billCards(rows);
 }
 ["fStatus", "fStaff", "fSearch", "fChallan"].forEach(id => $(id).addEventListener("input", renderBills));
@@ -2213,9 +2306,10 @@ function renderPricebook() {
 
   if (!PRICEBOOK.filter((x) => !x.mergedInto).length) {
     $("pbBrain").innerHTML = "";
-    list.innerHTML = `<div class="empty">अभी कोई सामान दर्ज नहीं।<br>
-      <span class="muted">जैसे ही किसी बिल में सामान और रेट लिखा जाएगा, वह
-      यहाँ अपने-आप आ जाएगा — और अगली बार भाव मिलाकर बताया जाएगा।</span></div>`;
+    list.innerHTML = gfx.empty("hello", "अभी कोई सामान दर्ज नहीं",
+      `किसी बिल में सामान और रेट लिख दीजिए — मैं याद रख लूँगा, और अगली बार
+       बता दूँगा कि पिछली बार कितने में लिया था।`,
+      `<button type="button" class="mini primary" onclick="goTab('add')">➕ पहला बिल डालें</button>`);
     return;
   }
 
@@ -2251,7 +2345,9 @@ function renderPricebook() {
       </div>
       ${arrow}
     </div>`;
-  }).join("") : `<div class="empty">इस छन्नी में कुछ नहीं</div>`;
+  }).join("") : gfx.empty("think", "इस छन्नी में कुछ नहीं",
+      "दूसरी चिप्पी चुनकर देखिए, या खोज का खाना ख़ाली कर दीजिए।",
+      `<button type="button" class="mini" onclick="setPbFilter('all')">सब दिखाएँ</button>`);
 }
 
 /** एक चीज़ का पूरा हाल — नीचे से उठती हुई sheet में। */
@@ -2469,16 +2565,22 @@ function renderFlags() {
   }));
 
   if (!left) {
-    box.innerHTML = gfx.insight({ icon: "🎉", tone: "down",
-      title: hidden ? "सब निपट गईं — बस «देख ली गईं» बची हैं" : "कोई चेतावनी नहीं",
-      body: hidden
-        ? `${hidden} चेतावनियाँ आपने «ठीक है» कही थीं।
-           <button type="button" class="mini" onclick="unseeAll()">↩️ वापस लाएँ</button>`
-        : "जैसे ही कुछ ध्यान देने लायक होगा, वह यहीं दिखेगा।" });
+    box.innerHTML = hidden
+      ? gfx.empty("sleep", "सब निपट गईं — बस «देख ली गईं» बची हैं",
+          `${hidden} चेतावनियाँ आपने «ठीक है» कही थीं।`,
+          `<button type="button" class="mini" onclick="unseeAll()">↩️ वापस लाएँ</button>`)
+      : gfx.empty("sleep", "आज कुछ टोकने लायक नहीं मिला",
+          "हिसाब साफ़ है। जैसे ही कुछ ध्यान देने लायक होगा, मैं यहीं बता दूँगा।");
     return;
   }
 
-  box.innerHTML = `
+  const red = G.red.filter((f) => !flagSeen(f.key)).length;
+  box.innerHTML = (red ? `<div class="toonBox warn">
+      <div class="toonArt">${gfx.toon("alert", 76)}</div>
+      <div class="toonSay"><b>विक्रम जी, यहाँ पैसा फँस सकता है</b>
+        <p>${plural(red, "बात", "बातें")} ऐसी हैं जिन पर आज ही नज़र डाल लेनी चाहिए —
+        नीचे लाल वाले हिस्से में हैं।</p></div>
+    </div>` : "") + `
     <div class="fgTop">
       <b>${left}</b> चीज़ें ध्यान माँगती हैं
       ${hidden ? `<button type="button" class="mini" onclick="unseeAll()">↩️ ${hidden} देख ली गईं</button>` : ""}
@@ -3612,7 +3714,8 @@ function renderRecon(total, allRows) {
   const rows = RECON.matched.map((m, i) => line(m, i, true))
     .concat(RECON.maybe.map((m, i) => line(m, i + RECON.matched.length, false)));
   $("rMaybe").innerHTML = rows.length ? rows.join("")
-    : '<div class="empty">कोई मिलान नहीं मिला</div>';
+    : gfx.empty("think", "कोई मिलान नहीं मिला",
+        "इस statement की entries किसी बिल से नहीं जुड़ीं — फिर भी सहेजी जा सकती हैं।");
 
   $("rDupes").innerHTML = (RECON.dupes || []).length
     ? '<div class="itemsHead" style="margin-top:0"><span>🔁 यह पहले से दर्ज हैं — दुबारा नहीं जुड़ेंगी</span></div>' +
@@ -3629,7 +3732,8 @@ function renderRecon(total, allRows) {
     <div class="mrow"><div class="amt">${INR(m.t.amount)}</div>
       <div class="mx"><b>${esc(m.t.date)}</b> ${esc((m.t.narration || "").slice(0, 60))}
       <br><span class="muted">इसका बिल अभी दर्ज नहीं है</span></div></div>`).join("")
-    : '<div class="empty">🎉 सबका बिल मिल गया</div>';
+    : gfx.empty("party", "सबका बिल मिल गया",
+        "इस statement की हर entry किसी न किसी बिल से जुड़ गई।");
 }
 
 /** One shape for every stored bank row, whatever source it came from. */
@@ -4748,9 +4852,17 @@ function renderVyapar() {
   gfx.fit($("vyTiles"));
   gfx.countUp($("vyTiles"));
 
+  if (!SALES.length && !PAYINS.length) {
+    $("vyBrain").innerHTML = gfx.empty("hello", "व्यापार का हिसाब यहाँ आएगा",
+      `व्यापार app से <b>Sale</b> और <b>Payment-In</b> की रिपोर्ट निकालकर नीचे
+       डाल दीजिए। फिर मैं बता दूँगा — किस यूनिट को कितना बेचा, कितना आया,
+       और कितना कितने दिन से बाकी है।`,
+      `<button type="button" class="mini primary" onclick="pickPhoto('vyFile')">📄 PDF चुनें</button>
+       <button type="button" class="mini" onclick="openSheet('vyHelpSheet')">❔ कैसे निकालें</button>`);
+  }
   const oldest = openOnes[0];
   const dup = vySameTwice();
-  $("vyBrain").innerHTML = !SALES.length && !PAYINS.length ? "" :
+  if (SALES.length || PAYINS.length) $("vyBrain").innerHTML =
     (dup.length ? gfx.insight({ icon: "⚠️", tone: "warn",
         title: plural(dup.length, "बिल", "बिल") + " दो बार लगता है",
         body: dup.slice(0, 2).map((g) =>
@@ -4790,8 +4902,11 @@ function vySameTwice() {
 
 function renderVySales(box) {
   if (!SALES.length) {
-    box.innerHTML = `<div class="empty">अभी कोई बिक्री का बिल नहीं।<br>
-      <span class="muted">ऊपर व्यापार की <b>Sale</b> रिपोर्ट डालिए।</span></div>`;
+    box.innerHTML = gfx.empty("hello", "अभी कोई बिक्री का बिल नहीं",
+      `व्यापार की <b>Sale</b> रिपोर्ट डाल दीजिए — फिर बता दूँगा कि किस यूनिट
+       का कितना बकाया है और कितने दिन से।`,
+      `<button type="button" class="mini primary" onclick="pickPhoto('vyFile')">📄 PDF चुनें</button>
+       <button type="button" class="mini" onclick="openSheet('vyHelpSheet')">❔ कैसे निकालें</button>`);
     return;
   }
   const rows = SALES.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
@@ -4816,8 +4931,10 @@ function renderVySales(box) {
 
 function renderVyPayins(box) {
   if (!PAYINS.length) {
-    box.innerHTML = `<div class="empty">अभी कोई पेमेंट-इन नहीं।<br>
-      <span class="muted">ऊपर व्यापार की <b>Payment-In</b> रिपोर्ट डालिए।</span></div>`;
+    box.innerHTML = gfx.empty("money", "अभी कोई पेमेंट-इन नहीं",
+      `व्यापार की <b>Payment-In</b> रिपोर्ट डालिए — जो पैसा आया वह अपने-आप
+       अपने बिल से और आपके बैंक खाते से जुड़ जाएगा।`,
+      `<button type="button" class="mini primary" onclick="pickPhoto('vyFile')">📄 PDF चुनें</button>`);
     return;
   }
   const rows = PAYINS.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
@@ -5145,7 +5262,9 @@ function renderLedger() {
         </div>
       </div>
     </div>`;
-  }).join("") : '<div class="empty">इस filter में कुछ नहीं</div>';
+  }).join("") : gfx.empty("think", "इस छन्नी में कुछ नहीं",
+      "अवधि या खाता बदलकर देखिए।",
+      `<button type="button" class="mini" onclick="setRange('all')">📅 पूरा हिसाब देखें</button>`);
 }
 
 function initLedger() {
@@ -5155,6 +5274,8 @@ function initLedger() {
   if (keep) $("lAccount").value = keep;
   renderLedger();
 }
+if ($("tpSearch")) $("tpSearch").addEventListener("input", renderPickTxn);
+
 ["lAccount", "lType", "lBill", "lSearch"].forEach((id) =>
   $(id).addEventListener("input", renderLedger));
 
@@ -5164,10 +5285,210 @@ function initLedger() {
 
 const pKey = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9\u0900-\u097F]/g, "");
 
+/* ══════════ 🪪 पार्टी का मिलान — app जोड़े नहीं, पूछे ═══════════════
+   एक ही यूनिट के नाम तीन जगह तीन तरह से आते हैं:
+
+     व्यापार में : CO, 177 Military Hospital
+     बैंक में    : 177 MIL HOSP BARMER
+     इस app में  : 177 Mh Wet canteen
+
+   इन्हें जोड़ना ज़रूरी है, पर **अपने-आप जोड़ना ख़तरनाक** — इसीलिए आज तक नहीं
+   किया गया। इसलिए app कभी ख़ुद नहीं जोड़ता: वह सिर्फ़ **पूछता** है, और जवाब
+   हमेशा के लिए याद रख लेता है।
+
+   सबसे बड़ी सुरक्षा: **अंक अलग तो कभी नहीं पूछा जाएगा** — 177 और 182 दो अलग
+   यूनिट हैं, चाहे बाक़ी नाम पूरा मिलता हो।                              */
+
+let PAIRS = {};      // "क↔ख" → true (एक ही) / false (अलग)
+try { PAIRS = JSON.parse(localStorage.getItem("vbePairs") || "{}"); } catch (e) {}
+
+const pairKey = (a, b) => [pKey(a), pKey(b)].sort().join("|");
+
+/** नाम में लिखे अंक — यूनिट की असली पहचान यही होती है। */
+function nameNums(s) {
+  return (String(s || "").match(/\d{1,5}/g) || []).filter((n) => Number(n) > 0);
+}
+
+/** नाम को टुकड़ों में — «MILITARY» और «MIL» भी आपस में मिल सकें। */
+function nameBits(s) {
+  return String(s || "").toUpperCase()
+    .replace(/[^A-Z0-9ऀ-ॿ]+/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 2 && !/^(THE|OF|AND|CO|OC|LTD|PVT|INDIA|BARMER|RAJASTHAN)$/.test(w));
+}
+
+/**
+ * दो नाम कितने मिलते हैं — 0 से 1 के बीच।
+ * एक टुकड़ा दूसरे की शुरुआत हो तो भी मेल माना जाता है (MIL ↔ MILITARY)।
+ */
+function nameScore(a, b) {
+  const A = nameBits(a), B = nameBits(b);
+  if (!A.length || !B.length) return 0;
+  let hit = 0;
+  A.forEach((x) => {
+    if (B.some((y) => x === y ||
+        (x.length >= 3 && y.startsWith(x)) || (y.length >= 3 && x.startsWith(y)))) hit++;
+  });
+  return hit / Math.min(A.length, B.length);
+}
+
+/**
+ * वे जोड़े जिन पर सवाल बनता है।
+ * अंक अलग = कभी नहीं। मेल 65% से कम = कभी नहीं। पहले का जवाब = फिर नहीं।
+ */
+function namePairs() {
+  const names = [];
+  const push = (n, side) => {
+    const k = pKey(n);
+    if (!k || names.some((x) => x.key === k)) return;
+    names.push({ key: k, name: String(n).trim(), side });
+  };
+  Object.values(PARTIES).forEach((p) => push(p.name, "buy"));
+  SALES.concat(PAYINS).forEach((x) => push(x.party, "sell"));
+
+  const out = [];
+  for (let i = 0; i < names.length; i++) {
+    for (let j = i + 1; j < names.length; j++) {
+      const a = names[i], b = names[j];
+      if (a.key === b.key) continue;
+      if (pairKey(a.name, b.name) in PAIRS) continue;      // जवाब आ चुका है
+
+      // 🛡️ अंक अलग तो कभी नहीं — यही सबसे बड़ी सुरक्षा है
+      const na = nameNums(a.name), nb = nameNums(b.name);
+      if (na.length && nb.length && !na.some((x) => nb.indexOf(x) >= 0)) continue;
+
+      const sc = nameScore(a.name, b.name);
+      if (sc < 0.65) continue;
+      // दोनों में अंक हों और मिलते हों तो भरोसा ज़्यादा
+      out.push({ a, b, score: sc + (na.length && nb.length ? 0.2 : 0) });
+    }
+  }
+  return out.sort((x, y) => y.score - x.score).slice(0, 25);
+}
+
+/** दो नामों में क्या मिलता है — विक्रम जी को यही देखकर तय करना है। */
+function pairWhy(a, b) {
+  const A = nameBits(a), B = nameBits(b);
+  const same = A.filter((x) => B.some((y) => x === y ||
+    (x.length >= 3 && y.startsWith(x)) || (y.length >= 3 && x.startsWith(y))));
+  const nums = nameNums(a).filter((n) => nameNums(b).indexOf(n) >= 0);
+  return [...new Set(nums.concat(same))].slice(0, 4);
+}
+
+/** एक नाम का हिसाब — किस तरफ़ का है, कितने सौदे, कितनी रकम। */
+function nameStat(key) {
+  const buy = PARTIES[key];
+  const sell = SALES.filter((x) => pKey(x.party) === key);
+  if (sell.length) {
+    return { side: "🏛️ व्यापार", n: sell.length,
+      sum: sell.reduce((a, x) => a + (x.total || 0), 0) };
+  }
+  const pin = PAYINS.filter((x) => pKey(x.party) === key);
+  if (pin.length && !buy) {
+    return { side: "📥 पेमेंट-इन", n: pin.length,
+      sum: pin.reduce((a, x) => a + (x.received || 0), 0) };
+  }
+  return { side: "🧾 ख़रीद", n: (buy && buy.count) || 0, sum: (buy && buy.total) || 0 };
+}
+
+let PAIR_LIST = [], PAIR_AT = 0;
+
+function openPairs() {
+  PAIR_LIST = namePairs();
+  PAIR_AT = 0;
+  renderPair();
+  openSheet("pairSheet");
+}
+
+function answerPair(yes) {
+  const q = PAIR_LIST[PAIR_AT];
+  if (q) {
+    PAIRS[pairKey(q.a.name, q.b.name)] = !!yes;
+    try { localStorage.setItem("vbePairs", JSON.stringify(PAIRS)); } catch (e) {}
+    auditLog("name_pair", null, { a: q.a.name, b: q.b.name, same: !!yes }).catch(() => {});
+  }
+  PAIR_AT++;
+  if (PAIR_AT >= PAIR_LIST.length) {
+    closeSheet("pairSheet");
+    toast(yes ? "🪪 एक ही पार्टी मान ली" : "🪪 अलग-अलग ही रहेंगी");
+    refreshAll();
+    return;
+  }
+  renderPair();
+}
+
+function forgetPairs() {
+  PAIRS = {};
+  try { localStorage.removeItem("vbePairs"); } catch (e) {}
+  closeSheet("pairSheet");
+  toast("↩️ सारे जवाब भुला दिए");
+  refreshAll();
+}
+
+function renderPair() {
+  const box = $("pairBody");
+  if (!box) return;
+  if (!PAIR_LIST.length) {
+    box.innerHTML = gfx.empty("sleep", "अभी कोई ऐसा नाम नहीं",
+      Object.keys(PAIRS).length
+        ? `${Object.keys(PAIRS).length} जोड़ों का जवाब आप पहले दे चुके हैं।`
+        : "जितने नाम हैं, सब अलग-अलग पार्टियाँ लगती हैं।",
+      Object.keys(PAIRS).length
+        ? `<button type="button" class="mini" onclick="forgetPairs()">↩️ जवाब भुला दें</button>` : "");
+    return;
+  }
+  const q = PAIR_LIST[PAIR_AT];
+  const sa = nameStat(q.a.key), sb = nameStat(q.b.key);
+  const why = pairWhy(q.a.name, q.b.name);
+  box.innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("think", 82)}</div>
+      <div class="toonSay"><b>यह एक ही पार्टी लगती है?</b>
+        <p>दो जगह दो नामों से लिखी है — पर हो सकता है एक ही हो।</p></div>
+    </div>
+    <div class="pairCard">
+      <div class="pairOne"><span class="pTag">🅰️</span>
+        <div><b>${esc(q.a.name)}</b>
+          <small>${sa.side} · ${plural(sa.n, "सौदा", "सौदे")} · ${INR(sa.sum)}</small></div>
+      </div>
+      <div class="pairVs">बनाम</div>
+      <div class="pairOne"><span class="pTag">🅱️</span>
+        <div><b>${esc(q.b.name)}</b>
+          <small>${sb.side} · ${plural(sb.n, "सौदा", "सौदे")} · ${INR(sb.sum)}</small></div>
+      </div>
+      ${why.length ? `<div class="pairWhy">मिलती हुई बात:
+        ${why.map((w) => `<span class="chip">${esc(w)}</span>`).join(" ")}</div>` : ""}
+    </div>
+    <div class="pairBtns">
+      <button type="button" class="primary" onclick="answerPair(true)">✅ हाँ, एक ही है</button>
+      <button type="button" onclick="answerPair(false)">❌ नहीं, अलग हैं</button>
+    </div>
+    <div class="muted" style="text-align:center;margin-top:10px">
+      ${PAIR_AT + 1} / ${PAIR_LIST.length} ·
+      <span style="opacity:.8">जवाब कभी भी बदला जा सकता है</span>
+    </div>`;
+}
+
 function buildParties() {
   const map = {};
+  // जिन नामों को विक्रम जी «एक ही» कह चुके हैं, उन्हें एक ही खाते में रखो।
+  // नाम मिटता नहीं — सबसे लंबा नाम आगे दिखता है, बाक़ी उसी के नीचे।
+  const alias = {};
+  Object.keys(PAIRS).forEach((k) => {
+    if (!PAIRS[k]) return;
+    const [x, y] = k.split("|");
+    const root = (t) => (alias[t] && alias[t] !== t ? root(alias[t]) : t);
+    const rx = root(x), ry = root(y);
+    if (rx !== ry) alias[ry] = rx;
+  });
+  const canon = (k) => {
+    let seen = 0;
+    while (alias[k] && alias[k] !== k && seen++ < 8) k = alias[k];
+    return k;
+  };
+
   const touch = (name) => {
-    const k = pKey(name);
+    const k = canon(pKey(name));
     if (!k) return null;
     if (!map[k]) map[k] = { key: k, name: String(name).trim(), total: 0, count: 0,
       inSum: 0, inCount: 0, accounts: {}, last: "", rows: [] };
@@ -5233,6 +5554,18 @@ function renderParties() {
     : sort === "last" ? String(b.last).localeCompare(String(a.last))
     : b.total - a.total);
 
+  // 🪪 जिन नामों पर सवाल बनता है, उनका सुझाव सबसे ऊपर
+  const pend = namePairs().length, done = Object.keys(PAIRS).length;
+  $("pMerge").innerHTML = pend
+    ? `<div class="mergeBar">
+        <span>🪪 <b>${plural(pend, "नाम", "नाम")}</b> ऐसे लगते हैं जो एक ही पार्टी के हों</span>
+        <button type="button" class="mini primary" onclick="openPairs()">देखकर बताएँ</button>
+      </div>`
+    : (done ? `<div class="mergeBar quiet">
+        <span>🪪 ${done} जोड़ों का जवाब दे चुके हैं</span>
+        <button type="button" class="mini" onclick="openPairs()">बदलें</button>
+      </div>` : "");
+
   const dir = $("pDir") ? $("pDir").value : "";
   if (dir === "out") list = list.filter((p) => p.total > 0);
   if (dir === "in") list = list.filter((p) => (p.inSum || 0) > 0);
@@ -5264,7 +5597,8 @@ function renderParties() {
         ${accs.length > 1 ? '<br><span class="badge lo">⚠️ ' + accs.length + ' अलग खातों से</span>' : ""}
       </div>
     </div>`;
-  }).join("") : '<div class="empty">कोई पार्टी नहीं मिली</div>';
+  }).join("") : gfx.empty("think", "कोई पार्टी नहीं मिली",
+      "ऊपर की अवधि बदलकर देखिए, या खोज का खाना ख़ाली कर दीजिए।");
 }
 
 function closeParty() { closeSheet("partySheet"); }
@@ -5706,7 +6040,9 @@ function renderAccounts() {
         <button type="button" class="mini" onclick="openAccount('${esc(id)}')">✏️ सुधारें</button>
       </div>
     </div>`;
-  }).join("") : '<div class="empty">अभी कोई खाता नहीं — ऊपर ➕ से जोड़ें</div>';
+  }).join("") : gfx.empty("hello", "अभी कोई खाता नहीं",
+      "जिस खाते से पैसा जाता है वह जोड़ दीजिए — फिर statement का मिलान हो सकेगा।",
+      `<button type="button" class="mini primary" onclick="openAccount('')">➕ खाता जोड़ें</button>`);
 }
 
 function openAccount(id) {
@@ -6446,7 +6782,8 @@ function renderMissing() {
           <button type="button" class="mini" onclick="showParty('${esc(pKey(t.party || t.narration))}')">🧑 पार्टी</button>
         </div>
       </div>
-    </div>`).join("") : '<div class="empty">इस अवधि में कोई बकाया नहीं ✅</div>';
+    </div>`).join("") : gfx.empty("party", "इस अवधि में हर पैसे का बिल लगा है",
+      "शाबाश! कुछ बाकी नहीं। ऊपर से दूसरी अवधि चुनकर भी देख सकते हैं।");
 }
 
 ["mAccount", "mSort", "mSearch"].forEach((id) => {
@@ -6556,6 +6893,186 @@ const gfx = {
         if (steps[i]) el.classList.add(steps[i]);
       }
     });
+  },
+
+  /* ══════════ 🎨 मुनीम जी — app का अपना किरदार ═══════════════════
+     बाड़मेर का मुनीम: साफ़ा बाँधे, मूँछों वाला, चश्मा लगाए, बही हाथ में —
+     वही जो दुकान पर हिसाब रखता है।
+
+     पूरा किरदार यहीं SVG में लिखा है — न कोई PNG, न CDN। इसलिए इंटरनेट
+     धीमा हो तो भी तुरंत दिखता है, कभी टूटा हुआ चित्र नहीं आता, हर नाप पर
+     साफ़ रहता है, और app पर बोझ भी नहीं पड़ता।
+
+     पूरे app में यही एक किरदार — सिर्फ़ मुद्रा बदलती है। दस अलग-अलग
+     तस्वीरें रखने पर app सर्कस लगने लगता है।
+
+     पक्का नियम: किरदार कभी अकेला न दिखे — साथ में हमेशा एक काम का बटन हो।
+     यह सजावट के लिए नहीं, रास्ता दिखाने के लिए है।                     */
+
+  /** मुद्रा के हिसाब से आँख, भौंह, मुँह और हाथ। */
+  MOODS: {
+    hello: { brow: "M36 40 q4-3 8-1 M52 39 q4-2 8 1", eye: "open",
+             mouth: "M41 60 q7 6 14 0", prop: "book" },
+    think: { brow: "M36 38 q4-4 8-1 M52 40 q4-1 8 2", eye: "open",
+             mouth: "M42 61 q6 2 12-1", prop: "hand" },
+    alert: { brow: "M35 36 q5-4 9-2 M51 34 q5-2 9 2", eye: "wide",
+             mouth: "M44.5 64 a3.5 3.5 0 1 0 7 0 a3.5 3.5 0 1 0 -7 0", prop: "point" },
+    party: { brow: "M35 37 q5-4 9-1 M51 36 q5-3 9 1", eye: "happy",
+             mouth: "M40 61 q8 9 16 0 z", prop: "cheer" },
+    sleep: { brow: "M36 41 q4-2 8 0 M52 41 q4-2 8 0", eye: "shut",
+             mouth: "M43 61 q5 3 10 0", prop: "zzz" },
+    money: { brow: "M36 39 q4-3 8-1 M52 38 q4-2 8 1", eye: "happy",
+             mouth: "M40 59 q8 8 16 0", prop: "coins" }
+  },
+
+  /**
+   * @param {string} mood hello · think · alert · party · sleep · money
+   * @param {number} size px (48–140 के बीच सबसे अच्छा लगता है)
+   */
+  toon(mood, size) {
+    const m = this.MOODS[mood] || this.MOODS.hello;
+    const S = size || 84;
+    const u = "t" + Math.random().toString(36).slice(2, 7);
+
+    const eyes = m.eye === "shut"
+      ? `<path d="M38 47 q4 4 8 0 M50 47 q4 4 8 0" stroke="#2a1c12" stroke-width="2"
+           fill="none" stroke-linecap="round"/>`
+      : m.eye === "happy"
+      ? `<path d="M38 49 q4-6 8 0 M50 49 q4-6 8 0" stroke="#2a1c12" stroke-width="2.4"
+           fill="none" stroke-linecap="round"/>`
+      : `<circle cx="42" cy="47" r="${m.eye === "wide" ? 4 : 3}" fill="#2a1c12"/>
+         <circle cx="54" cy="47" r="${m.eye === "wide" ? 4 : 3}" fill="#2a1c12"/>
+         <circle cx="43.2" cy="45.8" r="1.1" fill="#fff" opacity=".9"/>
+         <circle cx="55.2" cy="45.8" r="1.1" fill="#fff" opacity=".9"/>`;
+
+    // सब प्रॉप्स चेहरे की सीमा (x 27–69, y 28–68) से बाहर रहते हैं, वरना
+    // वे कान या मूँछों पर चढ़कर कुछ और ही दिखने लगते हैं
+    const props = {
+      // 📗 खुली बही — हाथों में पकड़ी हुई, छाती पर टिकी
+      book: `<g>
+        <ellipse cx="29" cy="78" rx="5.5" ry="4.5" fill="#e0aa7d"/>
+        <ellipse cx="67" cy="78" rx="5.5" ry="4.5" fill="#e0aa7d"/>
+        <path d="M31 76 h16 v13 h-16 z" fill="#2c6fbb"/>
+        <path d="M49 76 h16 v13 h-16 z" fill="#3987e5"/>
+        <path d="M47 75 q1 1.5 0 3 v13 q1-1.5 2-1.5 v-13 q-1 0-2-1.5z" fill="#e8eef7"/>
+        <path d="M34 80 h10 M34 84 h8 M52 80 h10 M52 84 h7" stroke="#cfe0f5"
+          stroke-width="1.3" stroke-linecap="round" opacity=".75"/></g>`,
+      // 🤔 ठोड़ी पर हाथ
+      hand: `<g>
+        <path d="M64 92 q4-14 -3-22" stroke="#e6e0d0" stroke-width="7"
+          fill="none" stroke-linecap="round"/>
+        <ellipse cx="57" cy="68" rx="7.5" ry="6.5" fill="#e0aa7d"/>
+        <path d="M51 66.5 q6-2.5 12 0 M51.5 70 q6-2 11 0" stroke="#c98f6a"
+          stroke-width="1.3" fill="none" stroke-linecap="round"/></g>`,
+      // ☝️ उठी हुई उँगली
+      point: `<g>
+        <path d="M72 92 q10-8 8-24" stroke="#e6e0d0" stroke-width="7"
+          fill="none" stroke-linecap="round"/>
+        <ellipse cx="80" cy="64" rx="6.5" ry="7" fill="#e0aa7d"/>
+        <rect x="77.5" y="46" width="5" height="16" rx="2.5" fill="#e0aa7d"/>
+        <circle cx="80" cy="40" r="4" fill="#fab219"/>
+        <circle cx="80" cy="40" r="7.5" fill="none" stroke="#fab219"
+          stroke-width="1.5" opacity=".5"/></g>`,
+      // 🎉 दोनों हाथ ऊपर
+      cheer: `<g>
+        <path d="M30 90 q-14-8 -14-30" stroke="#e6e0d0" stroke-width="7"
+          fill="none" stroke-linecap="round"/>
+        <path d="M66 90 q14-8 14-30" stroke="#e6e0d0" stroke-width="7"
+          fill="none" stroke-linecap="round"/>
+        <ellipse cx="16" cy="56" rx="6.5" ry="7" fill="#e0aa7d"/>
+        <ellipse cx="80" cy="56" rx="6.5" ry="7" fill="#e0aa7d"/>
+        <g fill="#fab219"><circle cx="10" cy="34" r="2.6"/><circle cx="86" cy="32" r="2.2"/>
+          <circle cx="48" cy="8" r="2.4"/></g>
+        <g fill="#d55181"><circle cx="24" cy="18" r="2"/><circle cx="72" cy="18" r="2.4"/></g>
+        <g fill="#199e70"><circle cx="6" cy="46" r="1.8"/><circle cx="90" cy="44" r="1.8"/></g></g>`,
+      // 💤 सो रहे हैं
+      zzz: `<g fill="#8ab4e8" opacity=".9" font-family="system-ui"
+          font-weight="700" text-anchor="middle">
+        <text x="76" y="32" font-size="13">z</text>
+        <text x="85" y="21" font-size="9.5">z</text>
+        <text x="91" y="12" font-size="7">z</text></g>`,
+      // 💰 सिक्कों की ढेरी — हाथों के बीच
+      coins: `<g>
+        <ellipse cx="26" cy="76" rx="5.5" ry="4.5" fill="#e0aa7d"/>
+        <ellipse cx="70" cy="76" rx="5.5" ry="4.5" fill="#e0aa7d"/>
+        <ellipse cx="48" cy="87" rx="16" ry="5" fill="#c98500"/>
+        <ellipse cx="48" cy="82" rx="14" ry="4.5" fill="#fab219"/>
+        <ellipse cx="48" cy="77.5" rx="11" ry="4" fill="#ffd166"/>
+        <circle cx="20" cy="64" r="4.5" fill="#fab219"/>
+        <circle cx="78" cy="61" r="3.6" fill="#ffd166"/>
+        <circle cx="88" cy="72" r="2.6" fill="#fab219" opacity=".8"/></g>`
+    };
+
+    return `<svg class="toon" viewBox="0 0 96 96" width="${S}" height="${S}"
+      role="img" aria-label="मुनीम जी">
+      <defs>
+        <linearGradient id="sf${u}" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#f2a93b"/><stop offset=".55" stop-color="#e0713f"/>
+          <stop offset="1" stop-color="#d55181"/>
+        </linearGradient>
+        <linearGradient id="kt${u}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f4f1e8"/><stop offset="1" stop-color="#d9d3c2"/>
+        </linearGradient>
+        <radialGradient id="gl${u}" cx=".5" cy=".5" r=".5">
+          <stop offset="0" stop-color="#3987e5" stop-opacity=".30"/>
+          <stop offset="1" stop-color="#3987e5" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <circle cx="48" cy="50" r="46" fill="url(#gl${u})"/>
+      <!-- बाँहें और सजावट कुर्ते से पहले, ताकि वे उसके पीछे से निकलती दिखें -->
+      ${mood === "party" || mood === "sleep" || mood === "alert" || mood === "think"
+        ? props[m.prop] : ""}
+
+      <!-- कुर्ता -->
+      <path d="M24 96 q1-20 24-22 t24 22 z" fill="url(#kt${u})"/>
+      <path d="M48 74 v22" stroke="#bdb6a4" stroke-width="1.6"/>
+      <!-- गला -->
+      <path d="M42 62 h12 v9 q-6 4-12 0z" fill="#c98f6a"/>
+      <!-- चेहरा -->
+      <ellipse cx="48" cy="48" rx="19" ry="20.5" fill="#e0aa7d"/>
+      <ellipse cx="27.5" cy="50" rx="3.4" ry="4.6" fill="#d99f72"/>
+      <ellipse cx="68.5" cy="50" rx="3.4" ry="4.6" fill="#d99f72"/>
+      <!-- साफ़ा -->
+      <path d="M27 42 q0-23 21-23 t21 23 q-6-11-21-11 t-21 11z" fill="url(#sf${u})"/>
+      <path d="M27 42 q8-7 21-7 t21 7 q-3-6-21-6 t-21 6z" fill="#000" opacity=".13"/>
+      <path d="M30 33 q9-8 18-6 M31 28 q10-7 20-4" stroke="#fff" stroke-width="1.5"
+        opacity=".3" fill="none" stroke-linecap="round"/>
+      <path d="M69 30 q9 3 8 12 q-4-7-10-8z" fill="url(#sf${u})"/>
+      <path d="M40 24 q8-7 16-2" stroke="#fff" stroke-width="2.2" opacity=".28"
+        fill="none" stroke-linecap="round"/>
+      <!-- भौंहें, आँखें -->
+      <path d="${m.brow}" stroke="#3a2a1c" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      ${eyes}
+      <!-- चश्मा -->
+      <g fill="none" stroke="#5b4a37" stroke-width="1.8" opacity=".85">
+        <circle cx="42" cy="47" r="7.5"/><circle cx="54" cy="47" r="7.5"/>
+        <path d="M49.5 47 h-3 M34.5 46 l-4-2 M61.5 46 l4-2"/>
+      </g>
+      <!-- नाक, मुँह, मूँछें -->
+      <path d="M48 50 q-2 5 1 6" stroke="#c98f6a" stroke-width="1.8"
+        fill="none" stroke-linecap="round"/>
+      <path d="${m.mouth}" stroke="#7a3b2e" stroke-width="2"
+        fill="${mood === "party" ? "#7a3b2e" : "none"}" stroke-linecap="round"/>
+      <path d="M48 57 q-9-4-13 1 q6 1 13 1 q7 0 13-1 q-4-5-13-1z" fill="#3a2a1c"/>
+
+      ${mood === "hello" || mood === "money" ? props[m.prop] : ""}
+    </svg>`;
+  },
+
+  /**
+   * ख़ाली पन्ना — किरदार, बात, और आगे का रास्ता।
+   * सूखा «कुछ नहीं मिला» कभी नहीं; हमेशा एक काम का बटन साथ।
+   */
+  empty(mood, title, body, action) {
+    return `<div class="toonBox">
+      <div class="toonArt">${this.toon(mood, 96)}</div>
+      <div class="toonSay">
+        <b>${title}</b>
+        ${body ? `<p>${body}</p>` : ""}
+        ${action ? `<div class="toonAct">${action}</div>` : ""}
+      </div>
+    </div>`;
   },
 
   countUp(root) {
@@ -7092,6 +7609,86 @@ function renderBillLink() {
     </div>`;
 }
 
+/* ── 🏦 बिल की तरफ़ से बैंक की entry चुनना ────────────────────────────
+   बाद वाला पेमेंट अब तक सिर्फ़ बैंक की तरफ़ से जोड़ा जा सकता था (हिसाब →
+   entry → 📎 बिल जोड़ें)। पर कभी-कभी बिल सामने खुला होता है और याद आता है
+   कि «इसका बाकी वाला पैसा उस दिन गया था» — तब उल्टी तरफ़ से भी जुड़ना चाहिए।
+
+   सिर्फ़ वही entries दिखती हैं जिन पर अभी कोई बिल नहीं लगा — एक पैसा दो
+   बिलों में गिना जाए तो पूरा ख़र्च झूठा हो जाता है।                      */
+
+function pickTxnRows() {
+  const q = parseQuery($("tpSearch") ? $("tpSearch").value : "");
+  const party = $("bsVendor").value.trim();
+  const used = {};
+  EXP.forEach((e) => (e.payments || []).forEach((x) => { if (x.bankTxnId) used[x.bankTxnId] = 1; }));
+  BILL_PAYS.forEach((x) => { if (x.bankTxnId) used[x.bankTxnId] = 1; });
+
+  return BANKTXNS
+    .filter((t) => t.type === "debit" && !used[t._id] &&
+      !t.matchedReceiptId && !t.billPhotoId && txnMatch(t, q))
+    .sort((a, b) => {
+      const pa = sameParty(a.party, party) ? 1 : 0, pb = sameParty(b.party, party) ? 1 : 0;
+      if (pa !== pb) return pb - pa;                       // इसी पार्टी वाली ऊपर
+      return String(b.date).localeCompare(String(a.date));
+    })
+    .slice(0, 60);
+}
+
+function openPickTxn() {
+  const total = Number($("bsTotal").value) || 0;
+  const paid = BILL_PAYS.filter((x) => x.status !== "failed")
+    .reduce((a, x) => a + (Number(x.amount) || 0), 0);
+  const due = Math.max(0, Math.round((total - paid - (Number($("bsDiscount").value) || 0)) * 100) / 100);
+  if ($("tpSearch")) $("tpSearch").value = "";
+  const exact = due > 0.5 && pickTxnRows().some((t) => Math.abs((t.amount || 0) - due) <= 1);
+  $("tpNote").innerHTML = due > 0.5
+    ? `इस बिल का बाकी <b>${INR(due)}</b>` +
+      (exact ? ` — उतनी ही रकम वाली entry पर ✅ लगा है।`
+             : ` — हूबहू उतनी रकम वाली कोई entry नहीं मिली, कोई और चुन सकते हैं।`)
+    : `इस बिल का पूरा पैसा दर्ज हो चुका है — फिर भी कोई entry जोड़नी हो तो नीचे से चुनिए।`;
+  renderPickTxn();
+  openSheet("txnPickSheet");
+}
+
+function renderPickTxn() {
+  const box = $("tpList");
+  if (!box) return;
+  const rows = pickTxnRows();
+  const total = Number($("bsTotal").value) || 0;
+  const paid = BILL_PAYS.filter((x) => x.status !== "failed")
+    .reduce((a, x) => a + (Number(x.amount) || 0), 0);
+  const due = Math.max(0, total - paid - (Number($("bsDiscount").value) || 0));
+  const party = $("bsVendor").value.trim();
+
+  box.innerHTML = rows.length ? rows.map((t) => {
+    const fits = due > 0.5 && Math.abs((t.amount || 0) - due) <= 1;
+    const mine = sameParty(t.party, party);
+    return `
+    <div class="tpRow${fits ? " fits" : ""}" onclick="usePickedTxn('${esc(t._id)}')">
+      <div class="tpAmt">${INR(t.amount)}</div>
+      <div class="tpMid">
+        <div class="tpName">${esc(t.party || t.narration || "—")}${
+          mine ? ' <span class="chip">इसी पार्टी</span>' : ""}</div>
+        <div class="tpSub">${esc(dayLabel(String(t.date).slice(0, 10)))} ·
+          ${esc(accLabel(t.accountId))}${t.utr ? " · UTR " + esc(t.utr) : ""}</div>
+      </div>
+      ${fits ? '<span class="tpFit">✅ ठीक बैठता है</span>' : ""}
+    </div>`;
+  }).join("") : gfx.empty("think", "ऐसी कोई entry नहीं",
+      `जिन entries पर पहले से बिल लगा है वे यहाँ नहीं दिखतीं — एक पैसा दो
+       बिलों में नहीं गिना जा सकता।`);
+}
+
+function usePickedTxn(id) {
+  const t = BANKTXNS.filter((x) => x._id === id)[0];
+  if (!t) return;
+  BILL_PAYS.push(payFromTxn(t));
+  closeSheet("txnPickSheet");
+  renderPays();
+  toast("🏦 " + INR(t.amount) + " जुड़ गया — सहेजना बाकी है");
+}
+
 /** 💵 नकद — बैंक में कहीं नहीं दिखता, पर बिल में पूरा गिना जाए। */
 function addPayCash() {
   const remaining = Math.max(0,
@@ -7440,7 +8037,8 @@ function renderUnitTab() {
           ? " · " + r.qty + " " + esc(r.unitName || "Nos") : ""}${r.rate != null ? " × ₹" + r.rate : ""}
           ${r.party ? " · " + esc(r.party) : ""}</span>
       </div>
-    </div>`).join("") : '<div class="empty">इस अवधि में इस यूनिट के लिए कुछ नहीं गया</div>';
+    </div>`).join("") : gfx.empty("sleep", "इस अवधि में इस यूनिट का कुछ नहीं",
+      "दूसरी यूनिट या दूसरी अवधि चुनकर देखिए।");
 }
 
 async function copyChallan() {
@@ -7509,7 +8107,9 @@ function renderStaff() {
         </div>
       </div>
     </div>`;
-  }).join("") : '<div class="empty">अभी कोई staff नहीं — ऊपर ➕ से जोड़ें</div>';
+  }).join("") : gfx.empty("hello", "अभी कोई staff नहीं",
+      "जो लोग सामान लाते और चालान पहुँचाते हैं, उन्हें जोड़ दीजिए।",
+      `<button type="button" class="mini primary" onclick="openStaff('')">➕ Staff जोड़ें</button>`);
 }
 
 let STAFF_EDIT = "";
@@ -7836,7 +8436,8 @@ function renderUdhaar() {
         <button type="button" class="mini primary" style="margin-top:9px"
           onclick="openPay('${esc(p.name)}', ${Math.round(p.due)})">💸 उधारी चुकाएँ</button>
       </div>
-    </div>`).join("") : '<div class="empty">कोई उधारी नहीं ✅</div>';
+    </div>`).join("") : gfx.empty("party", "कोई उधारी नहीं",
+      "हर बिल का पूरा पैसा चुक गया है — मंडी में कुछ बाकी नहीं।");
 }
 
 /**
@@ -8096,7 +8697,8 @@ function renderCheques() {
             ✍️ नाम लिखें</button>
         </div>
       </div>
-    </div>`).join("") : '<div class="empty">सब चेक के नाम लिखे जा चुके हैं ✅</div>';
+    </div>`).join("") : gfx.empty("party", "सब चेक के नाम लिखे जा चुके हैं",
+      "बैंक चेक पर नाम नहीं छापता — पर अब हर नंबर के सामने नाम बैठा हुआ है।");
 }
 
 
