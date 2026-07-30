@@ -120,6 +120,44 @@
     content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px;
     border-radius: 2px; background: linear-gradient(90deg, var(--s1), var(--s3));
   }
+  /* 🏛️ व्यापार — अलग संसार, इसलिए दिखने में भी अलग */
+  .vyWall { font-size: 12px; color: var(--ink-2); line-height: 1.5;
+    padding: 9px 12px; border-radius: 12px; margin-bottom: 12px;
+    border: 1px dashed rgba(201,133,0,.5);
+    background: linear-gradient(160deg, rgba(201,133,0,.12), transparent 70%); }
+  .vyWall b { color: var(--ink); }
+  .vyRow { display: flex; align-items: center; gap: 11px; padding: 12px 2px;
+    border-bottom: 1px solid var(--grid); cursor: pointer; min-height: 58px; }
+  .vyRow:last-child { border-bottom: 0; }
+  .vyRow:active { background: rgba(255,255,255,.03); }
+  .vyAmt { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700;
+    font-size: 14.5px; }
+  .vyAmt.in { color: #7de3b6; }
+  .vyRow.paid { border-left: 3px solid var(--good); padding-left: 9px; }
+  .vyRow.part { border-left: 3px solid var(--warning); padding-left: 9px; }
+  .vyRow.unpaid { border-left: 3px solid var(--critical); padding-left: 9px; }
+  .vyRow.got { border-left: 3px solid var(--s5); padding-left: 9px; }
+  .vyMid { flex: 1; min-width: 0; }
+  .vyName { font-size: 14px; font-weight: 600; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .vySub { font-size: 11.5px; color: var(--muted); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; }
+  .vyLinks { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .vyTag { flex: 0 0 auto; font-size: 11.5px; color: var(--ink-2); text-align: right; }
+  .vyTag small { display: block; color: var(--warning); font-size: 10.5px; }
+  .vyFull { font-size: 12px; color: var(--muted); line-height: 1.5;
+    padding: 9px 11px; border-radius: 11px; background: rgba(255,255,255,.04); }
+  .vyFull button { margin-top: 7px; }
+  .vyRows { margin: 10px 0; }
+  .vyPr { display: flex; align-items: baseline; gap: 9px; padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  .vyPr b { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+  .vyPr span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; }
+  .vyPr small { flex: 0 0 auto; color: var(--muted); font-size: 11px; }
+  .steps { padding-left: 22px; font-size: 13.5px; line-height: 1.9; color: var(--ink-2); }
+  .steps b { color: var(--ink); }
+
   /* ⚠️ Flags — तीन स्तर, और हर एक का इलाज साथ */
   .fgTop { display: flex; align-items: center; gap: 10px; font-size: 13.5px;
     color: var(--ink-2); padding: 2px 0 12px; }
@@ -754,6 +792,7 @@
       <button data-v="staff">🧑‍🤝‍🧑 Staff</button>
       <button data-v="udhaar">🏪 उधार</button>
       <button data-v="cheque">🧾 चेक</button>
+      <button data-v="vyapar">🏛️ व्यापार</button>
       <button data-v="missing">❓ बकाया</button>
     </nav>
 
@@ -1095,6 +1134,82 @@ placeholder="917568 माजीसा डिस्पोजल
       </div>
       <div id="mNote" hidden></div>
       <div class="card" id="missingList"></div>
+    </section>
+
+    <!-- ── 🏛️ व्यापार — बिक्री का अलग संसार ──────────────────────────
+         ख़रीद और बिक्री का सामान, भाव और पार्टी कभी आपस में नहीं मिलते।
+         अकेला पुल बैंक है: जो पैसा सचमुच खाते में आया, वही दोनों तरफ़ दिखे। -->
+    <section class="view" id="v-vyapar">
+      <div class="vyWall">🧱 यह हिस्सा <b>ख़रीद से बिल्कुल अलग</b> है — यहाँ का
+        सामान, भाव और पार्टी Pricebook या ख़रीद की सूची में कभी नहीं मिलते।</div>
+
+      <div class="chips" id="vyChips"></div>
+      <div class="tiles" id="vyTiles"></div>
+      <div id="vyBrain"></div>
+
+      <!-- 📥 रिपोर्ट डालना -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="itemsHead"><span>📥 व्यापार की रिपोर्ट डालें</span>
+          <span class="muted">Sale या Payment-In</span></div>
+        <input type="file" id="vyFile" accept="application/pdf" hidden>
+        <div class="pick">
+          <button type="button" class="primary" onclick="pickPhoto('vyFile')">📄 PDF चुनें</button>
+          <button type="button" onclick="openSheet('vyHelpSheet')">❔ कैसे निकालें</button>
+        </div>
+        <div id="vyMsg" class="muted" style="margin-top:8px"></div>
+        <div id="vyPreview"></div>
+      </div>
+
+      <div class="card"><div id="vyList"></div></div>
+
+      <!-- कैसे निकालें -->
+      <div id="vyHelpSheet" class="sheet" hidden>
+        <div class="sheetBox" style="max-width:460px">
+          <div class="grab"></div>
+          <div class="sheetHead"><h3>❔ व्यापार से रिपोर्ट कैसे निकालें</h3>
+            <button class="x" onclick="closeSheet('vyHelpSheet')">✕</button></div>
+          <ol class="steps">
+            <li>व्यापार app खोलिए</li>
+            <li>नीचे <b>ज़्यादा</b> (More) दबाइए</li>
+            <li><b>रिपोर्ट</b> → <b>Custom Report</b> चुनिए</li>
+            <li>ऊपर <b>Transaction type</b> में <b>Sale</b> चुनिए (बिक्री के बिल)
+                या <b>Payment-In</b> (जो पैसा आया)</li>
+            <li>तारीख़ें चुनकर <b>PDF</b> पर दबाइए — फ़ाइल फ़ोन में सहेज लीजिए</li>
+            <li>यहाँ वापस आकर <b>📄 PDF चुनें</b> दबाइए</li>
+          </ol>
+          <div class="badge lo" style="display:block;line-height:1.6;margin-top:10px">
+            🔒 यह रिपोर्ट <b>किसी AI को नहीं</b> भेजी जाती — पूरा पढ़ना आपके ही
+            फ़ोन में होता है। दोनों रिपोर्ट अलग-अलग डालिए, दुबारा डालने से कुछ
+            दुगुना नहीं होगा।
+          </div>
+        </div>
+      </div>
+
+      <!-- एक बिल का पूरा हाल -->
+      <div id="vySheet" class="sheet" hidden>
+        <div class="sheetBox">
+          <div class="grab"></div>
+          <div class="sheetHead"><h3 id="vyTitle">बिल</h3>
+            <button class="x" onclick="closeSheet('vySheet')">✕</button></div>
+          <div id="vyDetail"></div>
+        </div>
+      </div>
+
+      <!-- यूनिट का छोटा नाम -->
+      <div id="vyNameSheet" class="sheet" hidden>
+        <div class="sheetBox" style="max-width:420px">
+          <div class="grab"></div>
+          <div class="sheetHead"><h3>🎯 यूनिट का छोटा नाम</h3>
+            <button class="x" onclick="closeSheet('vyNameSheet')">✕</button></div>
+          <div id="vyNameFull" class="muted" style="margin-bottom:10px"></div>
+          <label>छोटा नाम<input id="vyNameShort" placeholder="जैसे 177 MH"></label>
+          <div class="muted" style="margin-top:6px;font-size:11.5px">
+            यह छोटा नाम पूरे app में दिखेगा — चालान, बिल, यूनिट और Telegram पर भी।
+            व्यापार के पन्ने पर पूरा नाम बना रहेगा।
+          </div>
+          <button class="primary wide" onclick="saveShortName()">💾 सहेजें</button>
+        </div>
+      </div>
     </section>
 
     <!-- 📅 अवधि — "📅 अवधि" दबाने पर खुलता है, हर tab के लिए एक ही -->
@@ -1569,6 +1684,7 @@ function cachePayload(slim) {
       return c;
     }),
     ACCOUNTS: tsClean(ACCOUNTS),
+    SALES: tsClean(SALES), PAYINS: tsClean(PAYINS), SHORTNAME, VY_LOADED,
     BANKTXNS: tsClean(BANKTXNS),
     VCARDS: tsClean(VCARDS),
     STAFF: tsClean(STAFF),
@@ -1606,6 +1722,8 @@ function loadCache() {
   VCARDS = c.VCARDS || {};
   STAFF = c.STAFF || {};
   CHEQUES = c.CHEQUES || {};
+  SALES = c.SALES || []; PAYINS = c.PAYINS || [];
+  SHORTNAME = c.SHORTNAME || {}; VY_LOADED = !!c.VY_LOADED;
   LAST_SYNC = c.at;
   recomputeMissing();
   return true;
@@ -1733,6 +1851,7 @@ const gridOpts = { grid: { color: "#2c2c2a" }, border: { color: "#383835" } };
 
 /* ── Renders ── */
 function renderAll() {
+  if (VY_LOADED) { try { renderVyapar(); } catch (e) {} }
   rebuildAccountPickers();   // हर select एक ही सूची से बने
   renderDateBars();          // तारीख़ की पट्टी हर tab पर
   renderTiles();
@@ -4109,6 +4228,710 @@ async function botCall(action, payload) {
 const driveUpload = (dataUrl, name) => botCall("upload", { dataUrl, name });
 const tgNotify = (text) => botCall("notify", { text });
 
+/* ══════════ 🏛️ व्यापार की रिपोर्ट पढ़ना ═══════════════════════════
+   व्यापार (Vyapar) से «Custom Report» दो तरह की निकलती है — «Sale» (बिक्री
+   के बिल) और «Payment-In» (जो पैसा आया)। दोनों का ढाँचा एक ही है: ऊपर वही
+   header, नीचे एक-एक सौदा।
+
+   मुश्किल यह है कि व्यापार हर खाने का लिखा हुआ **तोड़कर** छापता है — एक ही
+   तारीख़ "10/04/2" और "026" दो पंक्तियों में आती है, और पार्टी का नाम चार
+   पंक्तियों में। इसलिए पढ़ना **जगह से** होता है, शब्द से नहीं: हर टुकड़ा
+   अपने खाने की चौड़ाई से पहचाना जाता है और ऊपर से नीचे जोड़ दिया जाता है।
+
+   HARD RULE (VISION.md): यह रिपोर्ट कभी AI को नहीं भेजी जाती — इसमें पार्टी
+   के नाम और रकम दोनों हैं। सब कुछ यहीं, सादे code में।                 */
+
+/** व्यापार के खानों की चौड़ाई — header से नापी हुई, ऊपर वाले नमूने के अनुसार। */
+const VP_COLS = [
+  ["date", 0, 62],
+  ["party", 62, 135],
+  ["category", 135, 176],
+  ["txnType", 176, 228],
+  ["ref", 228, 295],
+  ["status", 295, 338],
+  ["total", 338, 388],
+  ["payType", 388, 430],
+  ["received", 430, 520],
+  ["balance", 520, 9999]
+];
+
+/** एक पन्ने के टुकड़ों को पंक्तियों में — पास-पास वाले अक्षर जोड़कर। */
+function vpLines(items) {
+  const byY = {};
+  items.forEach((it) => {
+    if (!it.str || !it.str.trim()) return;
+    const y = Math.round(it.transform[5] * 2) / 2;
+    (byY[y] = byY[y] || []).push(it);
+  });
+  return Object.keys(byY).map(Number).sort((a, b) => b - a).map((y) => {
+    const its = byY[y].sort((a, b) => a.transform[4] - b.transform[4]);
+    const segs = [];
+    let cur = null;
+    its.forEach((it) => {
+      const x = it.transform[4];
+      // 2.2pt से ज़्यादा दूरी = अलग टुकड़ा (व्यापार एक शब्द को भी तोड़ता है)
+      if (cur && x - cur.end < 2.2) { cur.t += it.str; cur.end = x + (it.width || 0); }
+      else { if (cur) segs.push(cur); cur = { x, end: x + (it.width || 0), t: it.str }; }
+    });
+    if (cur) segs.push(cur);
+    return { y, segs: segs.filter((s) => s.t.trim()) };
+  });
+}
+
+/** यह व्यापार की रिपोर्ट है या नहीं। */
+function isVyapar(pages) {
+  const head = vpLines(pages[0] || []).slice(0, 30)
+    .map((l) => l.segs.map((s) => s.t).join(" ")).join(" ").toLowerCase();
+  return /transaction type\s*:/.test(head) &&
+    /(party\s*name|partyname)/.test(head.replace(/\s+/g, " ")) &&
+    /(custom report|duration:\s*from)/.test(head);
+}
+
+/** «Sale» है या «Payment-In» — रिपोर्ट ख़ुद बताती है। */
+function vyaparKind(pages) {
+  const head = vpLines(pages[0] || []).slice(0, 30)
+    .map((l) => l.segs.map((s) => s.t).join("")).join(" ");
+  const m = head.match(/Transaction\s*type\s*:\s*([A-Za-z-]+)/i);
+  const k = (m ? m[1] : "").toLowerCase();
+  if (/payment/.test(k)) return "payin";
+  if (/sale/.test(k)) return "sale";
+  return null;
+}
+
+const vpNum = (s) => {
+  const t = String(s || "").replace(/[₹,\s]/g, "");
+  const m = t.match(/-?\d+(?:\.\d+)?/);
+  return m ? Number(m[0]) : null;
+};
+
+const vpDate = (s) => {
+  const m = String(s || "").match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+  if (!m) return null;
+  return `${m[3]}-${String(m[2]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`;
+};
+
+/**
+ * एक पन्ने की पंक्तियों को «खंड» में बाँटो।
+ * एक सौदे की अपनी पंक्तियाँ 13pt से पास होती हैं; दो सौदों के बीच 20pt+ की
+ * ख़ाली जगह रहती है — यही सीमा है।
+ */
+function vpBlocks(lines, gap) {
+  const G = gap || 18;
+  const out = [];
+  let cur = null;
+  lines.forEach((l) => {
+    if (!cur || cur.lastY - l.y > G) { cur = { lines: [], lastY: l.y }; out.push(cur); }
+    cur.lines.push(l);
+    cur.lastY = l.y;
+  });
+  return out;
+}
+
+/** एक खंड के टुकड़ों को खानों में बाँटकर जोड़ो — ऊपर से नीचे। */
+function vpCells(block) {
+  const cells = {};
+  VP_COLS.forEach(([k]) => { cells[k] = []; });
+  block.lines.forEach((l) => l.segs.forEach((sg) => {
+    const col = VP_COLS.filter(([, a, b]) => sg.x >= a && sg.x < b)[0];
+    if (col) cells[col[0]].push(sg.t.trim());
+  }));
+  const out = {};
+  Object.keys(cells).forEach((k) => { out[k] = cells[k].join("").replace(/\s+/g, " ").trim(); });
+  // नाम के टुकड़े जोड़ते समय शब्द चिपक जाते हैं — जहाँ छोटा-बड़ा अक्षर
+  // टकराए वहाँ जगह छोड़ दो ("CommandingOfficer" → "Commanding Officer")
+  out.partyRaw = out.party;
+  out.party = vpName(out.party);
+  return out;
+}
+
+/**
+ * व्यापार नाम को खाने की चौड़ाई पर तोड़ता है — "Command"/"ing"/"Officer, 5"/
+ * "MECHANI"/"SED" — और शब्द के बीच में भी। जोड़ने के बाद जहाँ छोटा-बड़ा अक्षर
+ * या अक्षर-अंक टकराते हैं वहीं जगह लौटाई जा सकती है; पूरे बड़े अक्षरों वाले
+ * टुकड़े नहीं तोड़े जा सकते, पर वे हर बार एक जैसे बनते हैं — इसलिए मिलान
+ * (और छोटा नाम) फिर भी ठीक काम करता है।
+ */
+function vpName(s) {
+  return String(s || "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")     // CommandingOfficer
+    .replace(/([A-Za-z])(\d)/g, "$1 $2")     // WKSP26
+    .replace(/(\d)([A-Za-z])/g, "$1 $2")     // 5MECHANISED
+    .replace(/,(?=\S)/g, ", ")               // CO,177
+    .replace(/\s+/g, " ").trim();
+}
+
+/** यह खंड एक सौदा है या नहीं — तारीख़ और कोई रकम, दोनों चाहिए। */
+function vpIsTxn(c) {
+  return !!vpDate(c.date) && (vpNum(c.total) != null || vpNum(c.received) != null);
+}
+
+/**
+ * बिक्री के बिल में लगे सामान — «# Item name» वाली पंक्ति के बाद, «Total»
+ * से पहले। नाम कई पंक्तियों में फैला होता है, इसलिए क्रम-संख्या वाली पंक्ति
+ * पर पूरा जोड़ा हुआ नाम और उसके आगे के अंक साथ लिए जाते हैं।
+ */
+function vpItems(block) {
+  const L = block.lines;
+  let start = -1;
+  for (let i = 0; i < L.length; i++) {
+    if (/#\s*Item\s*name/i.test(L[i].segs.map((s) => s.t).join(" "))) { start = i + 1; break; }
+  }
+  if (start < 0) return [];
+
+  // खाने: क्रम<95 · नाम 95–300 · (MRP, मात्रा, इकाई, भाव) 300–500 · रकम 500+
+  const pick = (segs, a, b) => segs.filter((s) => s.x >= a && s.x < b).map((s) => s.t.trim());
+  const out = [];
+  let cur = null, pre = [];      // क्रम-संख्या से *पहले* आई नाम की पंक्तियाँ
+  const close = () => { if (cur) out.push(cur); cur = null; };
+
+  for (let i = start; i < L.length; i++) {
+    const segs = L[i].segs;
+    const joined = segs.map((s) => s.t).join(" ");
+    if (/^\s*Total\b/i.test(joined.trim()) || /Sub\s*Total/i.test(joined)) break;
+    if (/^\s*(HSN|SAC|Price|Unit|MRP|Quantity|Amount)/i.test(joined.trim()) &&
+        !/\d{2,}/.test(joined)) continue;
+
+    const serial = segs.filter((s) => s.x < 95 && /^\d+$/.test(s.t.trim()))[0];
+    if (serial) {
+      close();
+      // नाम की पहली पंक्तियाँ क्रम-संख्या से ऊपर छपती हैं — उन्हें उसी सामान
+      // का हिस्सा मानो, वरना हर सामान का नाम आधा-आधा दो जगह बँट जाता है
+      cur = { no: Number(serial.t), name: pre.slice(), mid: [], amt: [] };
+      pre = [];
+    }
+    if (!cur) { pre.push(pick(segs, 95, 300).join(" ")); continue; }
+
+    cur.name.push(pick(segs, 95, 300).join(" "));
+    // टूटे हुए अंक एक ही खाने में लौटते हैं ("3,69,516.0" + "0"), इसलिए खाने
+    // का लिखा बिना जगह के जोड़ा जाता है — वरना रकम ₹0 पढ़ी जाती थी
+    cur.mid.push(pick(segs, 300, 500).join(" "));
+    cur.amt.push(pick(segs, 500, 9999).join(""));
+  }
+  close();
+
+  return out.map((it) => {
+    const mid = it.mid.join(" ").replace(/\s+/g, " ").trim();
+    const nums = (mid.match(/[\d,]+(?:\.\d+)?/g) || []).map((x) => Number(x.replace(/,/g, "")));
+    const amt = vpNum(it.amt.join(""));
+    return {
+      name: it.name.join(" ").replace(/\s+/g, " ").trim() || "—",
+      qty: nums.length >= 2 ? nums[1] : null,
+      unit: (mid.match(/\b(KM|Kg|Nos|Ltr|Pcs|Box|C\/S|Bag|Pkt)\b/i) || [])[0] || null,
+      rate: nums.length >= 2 ? nums[nums.length - (amt != null ? 1 : 2)] : null,
+      amount: amt != null ? amt : (nums.length ? nums[nums.length - 1] : null)
+    };
+  }).filter((x) => x.amount != null || x.name !== "—");
+}
+
+/**
+ * पूरी रिपोर्ट पढ़ो।
+ * @returns {{kind:string, firm:object, period:object, rows:Array}}
+ */
+function parseVyapar(pages) {
+  const kind = vyaparKind(pages) || "sale";
+  const head = vpLines(pages[0] || []).slice(0, 30)
+    .map((l) => l.segs.map((s) => s.t).join("")).join("\n");
+  const firmName = (head.split("\n")[0] || "").trim();
+  const gst = (head.match(/GSTIN\s*:\s*([0-9A-Z]{15})/i) || [])[1] || null;
+  const per = head.match(/From\s*(\d{1,2}\/\d{1,2}\/\d{4})\s*to\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+
+  // सारे पन्नों के खंड एक ही क्रम में — क्योंकि एक बिल का सामान अगले पन्ने
+  // पर भी जा सकता है (TX/…/1281 ऐसा ही है)
+  const blocks = [];
+  pages.forEach((items) => { vpBlocks(vpLines(items)).forEach((b) => blocks.push(b)); });
+  const cellsOf = blocks.map(vpCells);
+  const isTxn = cellsOf.map(vpIsTxn);
+
+  // हर सौदे के साथ उसके बाद के वे सब खंड जोड़ लो जो ख़ुद सौदा नहीं हैं —
+  // सामान की तालिका उन्हीं में होती है
+  const tail = blocks.map((b, i) => {
+    if (!isTxn[i]) return null;
+    const L = b.lines.slice();
+    for (let j = i + 1; j < blocks.length && !isTxn[j]; j++) L.push.apply(L, blocks[j].lines);
+    return { lines: L };
+  });
+
+  const rows = [];
+  {
+    blocks.forEach((b, i) => {
+      const c = cellsOf[i];
+      if (!isTxn[i]) return;
+      const total = vpNum(c.total);
+      const balance = vpNum(c.balance);
+      let received = vpNum(c.received);
+      // «Cash ₹ 0.00» जैसा टुकड़ा कभी-कभी पड़ोसी खाने में घुस जाता है,
+      // इसलिए भरोसा घटाव पर: आया = कुल − बाकी
+      if (total != null && balance != null) received = Math.round((total - balance) * 100) / 100;
+      else if (received == null) received = 0;
+
+      const row = {
+        date: vpDate(c.date),
+        party: c.party || null,
+        category: c.category || null,
+        ref: c.ref.replace(/\s+/g, "") || null,
+        payType: (c.payType.match(/Cheque|Cash|NEFT|UPI|RTGS|Card|Bank/i) || [])[0] || null,
+        status: (c.status.match(/Unpaid|Partial|Paid|Used|Open/i) || [])[0] || null,
+        total, received,
+        balance: balance != null ? balance
+          : (total != null ? Math.round((total - received) * 100) / 100 : null)
+      };
+      if (kind === "sale") row.items = vpItems(tail[i] || b);
+      rows.push(row);
+    });
+  }
+
+  return {
+    kind,
+    firm: { name: firmName || null, gstin: gst },
+    period: per ? { from: vpDate(per[1]), to: vpDate(per[2]) } : { from: null, to: null },
+    rows
+  };
+}
+
+/* ══════════ 🏛️ व्यापार — बिक्री का अलग संसार ═══════════════════════
+   ख़रीद (यह app) और बिक्री (व्यापार) का स्वभाव ही अलग है: यहाँ सामान का नाम
+   वैसा है जैसा दुकान पर बोला जाता है, वहाँ GeM का पूरा सरकारी नाम; यहाँ पैसा
+   जाता है, वहाँ आता है। अगर ये आपस में मिल गए तो Pricebook झूठा हो जाएगा और
+   भाव की चेतावनी बेकार। इसलिए दोनों के अपने-अपने संग्रह हैं:
+
+     ख़रीद : vbe_expenses · vbe_pricebook · vbe_parties
+     बिक्री: vbe_sales    · vbe_payins
+     पुल   : vbe_bank_txns  ← अकेला जोड़, वही पैसा जो सचमुच खाते में आया
+
+   HARD RULE: व्यापार का कोई सामान कभी pricebookAdd() से नहीं गुज़रता।       */
+
+let SALES = [], PAYINS = [], SHORTNAME = {}, VY_LOADED = false, VY_VIEW = "sales";
+let VY_PARSED = null;
+
+/** व्यापार के लंबे सरकारी नाम की जगह अपना छोटा नाम — जहाँ तय हो चुका हो। */
+function unitShort(name) {
+  const k = pKey(name);
+  if (SHORTNAME[k]) return SHORTNAME[k];
+  return suggestShort(name);
+}
+
+/* सेना की यूनिटों के जाने-पहचाने रूप — व्यापार में पूरा सरकारी नाम आता है,
+   यहाँ वही चाहिए जो विक्रम जी बोलते हैं। पहला मिलान ही चुना जाता है, इसलिए
+   ज़्यादा ख़ास वाला ऊपर रहे। */
+const UNIT_WORDS = [
+  [/MILITARYHOSP|MILHOSP|\bMH\b/, "MH"],
+  [/MECHANISEDINF|MECHINF/, "Mech Inf"],
+  [/MECHWKSP|MECHWORKSHOP/, "Mech Wksp"],
+  [/ARMDBDE|ARMOUREDBDE/, "Armd Bde"],
+  [/TPTPL|TPTPLASC|TPTASC/, "TPT PL"],
+  [/STNHQ/, "Stn HQ"],
+  [/FDAMB|FIELDAMB/, "Fd Amb"],
+  [/SIGREGT|SIGNALREGT/, "Sig Regt"],
+  [/ENGRREGT|ENGINEER/, "Engr"],
+  [/WETCANTEEN/, "Wet Canteen"],
+  [/SUPPLYDEPOT|ASCBN/, "ASC"]
+];
+
+/**
+ * छोटे नाम का सुझाव — अंक + यूनिट की पहचान।
+ * «CO, 177 Military Hospital» → «177 MH» · «CO, 6340(I)MECHWKSP» → «6340 Mech Wksp»
+ * यह सिर्फ़ सुझाव है; पक्का नाम विक्रम जी ख़ुद रखते हैं।
+ */
+function suggestShort(name) {
+  const raw = String(name || "");
+  const squash = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const num = (raw.match(/(?:^|[^0-9])(\d{1,4})(?:[^0-9]|$)/) || [])[1] || "";
+  const hit = UNIT_WORDS.filter(([re]) => re.test(squash))[0];
+  if (hit) return (num + " " + hit[1]).trim();
+
+  const drop = /^(CO|OC|OFFICER|COMMANDING|ADM|COMMANDANT|CDR|THE|OF|VILL|TEH|DITT|DIST|INDIA|RAJASTHAN|BARMER|PIN|STATE)$/;
+  const words = raw.toUpperCase().replace(/[^A-Z0-9\s]/g, " ").split(/\s+/)
+    .filter((w) => w && !drop.test(w) && !/^\d+$/.test(w))
+    .slice(0, 2)
+    .map((w) => w.charAt(0) + w.slice(1).toLowerCase());
+  return (num + " " + words.join(" ")).trim() || raw.slice(0, 18);
+}
+
+let SHORT_FOR = "";
+function openShortName(name) {
+  SHORT_FOR = name;
+  $("vyNameFull").textContent = name;
+  $("vyNameShort").value = SHORTNAME[pKey(name)] || suggestShort(name);
+  openSheet("vyNameSheet");
+}
+async function saveShortName() {
+  const v = $("vyNameShort").value.trim();
+  if (!v || !SHORT_FOR) return;
+  SHORTNAME[pKey(SHORT_FOR)] = v;
+  try {
+    await db.collection("vbe_meta").doc("unit_names").set({ map: SHORTNAME }, { merge: true });
+    await auditLog("short_name", null, { full: SHORT_FOR, short: v });
+  } catch (e) {}
+  saveCache();
+  closeSheet("vyNameSheet");
+  renderVyapar();
+  toast("🎯 अब हर जगह «" + v + "» दिखेगा");
+}
+
+/** व्यापार का डेटा — तभी पढ़ा जाता है जब यह पन्ना पहली बार खोला जाए। */
+async function loadVyapar(force) {
+  if (VY_LOADED && !force) return;
+  try {
+    const [sa, pi, nm] = await Promise.all([
+      db.collection("vbe_sales").limit(600).get(),
+      db.collection("vbe_payins").limit(600).get(),
+      db.collection("vbe_meta").doc("unit_names").get()
+    ]);
+    SALES = sa.docs.map((d) => Object.assign({ _id: d.id }, d.data()));
+    PAYINS = pi.docs.map((d) => Object.assign({ _id: d.id }, d.data()));
+    SHORTNAME = (nm.exists && nm.data().map) || {};
+    readCount(sa.size + pi.size + 1);
+    VY_LOADED = true;
+    saveCache();
+  } catch (e) { /* कैश से जो है वही चले */ }
+}
+
+const vyRef = (r) => String(r || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+/** बिक्री का बिल कितना चुका — पेमेंट-इन जोड़कर, रिपोर्ट के आँकड़े के साथ। */
+function saleGot(sale) {
+  const own = PAYINS.filter((x) => x.saleRef && vyRef(x.saleRef) === vyRef(sale.ref))
+    .reduce((a, x) => a + (x.received || 0), 0);
+  const got = Math.max(own, sale.received || 0);
+  return { got, due: Math.max(0, Math.round(((sale.total || 0) - got) * 100) / 100) };
+}
+
+/** कितने दिन से बकाया। */
+function vyAge(d) {
+  const t = new Date(String(d || "").slice(0, 10) + "T12:00:00");
+  return isNaN(t) ? null : Math.round((Date.now() - t) / 86400000);
+}
+
+/** पेमेंट-इन बैंक में कहाँ दिखा — रकम + तारीख़ (±3 दिन) मिलाकर। */
+function payinInBank(pi) {
+  const day = new Date(String(pi.date || "").slice(0, 10) + "T12:00:00");
+  return BANKTXNS.filter((t) => {
+    if (t.type !== "credit") return false;
+    if (Math.abs((t.amount || 0) - (pi.received || 0)) > 1) return false;
+    const d = new Date(String(t.date || "").slice(0, 10) + "T12:00:00");
+    return !isNaN(d) && !isNaN(day) && Math.abs(d - day) <= 3 * 86400000;
+  })[0] || null;
+}
+
+/** एक पेमेंट-इन किस बिक्री-बिल का था — पार्टी + रकम + बकाया मिलाकर। */
+function guessSaleFor(pi) {
+  const cand = SALES.filter((sa) => sameParty(sa.party, pi.party));
+  const exact = cand.filter((sa) => Math.abs((sa.total || 0) - (pi.received || 0)) <= 1);
+  if (exact.length === 1) return exact[0];
+  const openOnes = cand.filter((sa) => saleGot(sa).due > 0.5)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  return exact[0] || openOnes[0] || null;
+}
+
+/* ── रिपोर्ट डालना ─────────────────────────────────────────────────── */
+
+$("vyFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (f) await handleVyaparFile(f);
+});
+
+async function handleVyaparFile(file) {
+  const msg = $("vyMsg"), box = $("vyPreview");
+  box.innerHTML = "";
+  msg.className = "muted";
+  msg.innerHTML = '<span class="thinking"></span> रिपोर्ट पढ़ रहा हूँ…';
+  try {
+    if (!window.pdfjsLib) throw new Error("PDF reader लोड नहीं हुआ — internet देखें");
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const pages = [];
+    for (let i = 1; i <= Math.min(doc.numPages, 200); i++) {
+      const pg = await doc.getPage(i);
+      pages.push((await pg.getTextContent()).items);
+      pg.cleanup();
+    }
+    if (!isVyapar(pages)) throw new Error("यह व्यापार की Custom Report नहीं लगती");
+    const r = parseVyapar(pages);
+    if (!r.rows.length) throw new Error("कोई सौदा नहीं मिला — दूसरी अवधि की रिपोर्ट देखें");
+    VY_PARSED = r;
+
+    const sum = r.rows.reduce((a, x) => a + (x.total || 0), 0);
+    const kindName = r.kind === "payin" ? "📥 पेमेंट-इन" : "🧾 बिक्री के बिल";
+    const known = r.rows.filter((x) => (r.kind === "payin" ? PAYINS : SALES)
+      .some((y) => vyRef(y.ref) === vyRef(x.ref))).length;
+
+    msg.className = "ok";
+    msg.innerHTML = `${kindName} पढ़ ली — <b>${r.rows.length}</b> सौदे, कुल <b>${INR(sum)}</b>`;
+    box.innerHTML = gfx.insight({ icon: "🛡️", tone: known ? "ai" : "down",
+      title: `${r.rows.length} सौदे · ${INR(sum)}`,
+      body: `${esc(r.period.from || "—")} से ${esc(r.period.to || "—")} तक · ` +
+        `<b>${r.rows.length - known}</b> नए, <b>${known}</b> पहले से` +
+        `<br><span class="muted">पहले से भरी कोई चीज़ मिटाई नहीं जाएगी।</span>` }) + `
+      <div class="vyRows">${r.rows.slice(0, 8).map((x) => `
+        <div class="vyPr"><b>${INR(x.total)}</b>
+          <span>${esc(unitShort(x.party))}</span>
+          <small>${esc(dayLabel(x.date).replace(/\s\d{4}$/, ""))} · ${esc(x.ref || "")}</small></div>`).join("")}
+        ${r.rows.length > 8 ? `<div class="muted">…और ${r.rows.length - 8}</div>` : ""}</div>
+      <button class="primary wide" id="vySave" onclick="saveVyapar(this)">💾 जोड़ दें</button>`;
+  } catch (err) {
+    msg.className = "bad";
+    msg.textContent = "नहीं पढ़ पाया: " + err.message;
+  }
+}
+
+async function saveVyapar(btn) {
+  const r = VY_PARSED;
+  if (!r) return;
+  const msg = $("vyMsg");
+  btn.disabled = true; btn.textContent = "सहेज रहा हूँ…";
+  const col = r.kind === "payin" ? "vbe_payins" : "vbe_sales";
+  let added = 0, kept = 0, linked = 0;
+  try {
+    for (const x of r.rows) {
+      const id = vyRef(x.ref) || ("v" + hash36(JSON.stringify(x)));
+      const mine = (r.kind === "payin" ? PAYINS : SALES).filter((y) => y._id === id)[0];
+      const doc = Object.assign({}, x, { firm: r.firm.name || null, at: new Date().toISOString() });
+      // पेमेंट-इन को उसके बिक्री-बिल से जोड़ो — सिर्फ़ सुझाव, बदला जा सकता है
+      if (r.kind === "payin" && !(mine && mine.saleRef)) {
+        const sa = guessSaleFor(x);
+        if (sa) { doc.saleRef = sa.ref; doc.saleGuess = true; linked++; }
+      }
+      // पहले से भरी चीज़ मिटती नहीं — merge, और ख़ाली खाने नहीं लिखे जाते
+      Object.keys(doc).forEach((k) => { if (doc[k] == null) delete doc[k]; });
+      await db.collection(col).doc(id).set(doc, { merge: true });
+      if (mine) { Object.assign(mine, doc); kept++; }
+      else { (r.kind === "payin" ? PAYINS : SALES).push(Object.assign({ _id: id }, doc)); added++; }
+    }
+    await auditLog("vyapar_import", null,
+      { kind: r.kind, rows: r.rows.length, added, kept, linked, firm: r.firm.name });
+    saveCache();
+    VY_PARSED = null;
+    $("vyPreview").innerHTML = "";
+    msg.className = "ok";
+    msg.innerHTML = `✅ <b>${added}</b> नए जुड़े · <b>${kept}</b> पहले से थे` +
+      (linked ? ` · 🔗 <b>${linked}</b> बिल से जुड़े` : "");
+    renderVyapar();
+    toast("🏛️ व्यापार का हिसाब जुड़ गया");
+  } catch (err) {
+    msg.className = "bad";
+    msg.textContent = "नहीं सहेजा: " + err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = "💾 जोड़ दें";
+  }
+}
+
+/* ── व्यापार का अपना डैशबोर्ड ───────────────────────────────────────── */
+
+function setVyView(v) { VY_VIEW = v; renderVyapar(); }
+
+function renderVyapar() {
+  const chips = [["sales", "🧾 बिक्री के बिल"], ["payins", "📥 पेमेंट-इन"],
+    ["parties", "🧑 पार्टी-वार"], ["units", "🎯 छोटे नाम"]];
+  $("vyChips").innerHTML = chips.map(([k, t]) =>
+    `<button type="button" class="chipBtn${VY_VIEW === k ? " on" : ""}"
+      onclick="setVyView('${k}')">${t}</button>`).join("");
+
+  const total = SALES.reduce((a, x) => a + (x.total || 0), 0);
+  const got = SALES.reduce((a, x) => a + saleGot(x).got, 0);
+  const due = SALES.reduce((a, x) => a + saleGot(x).due, 0);
+  const openOnes = SALES.filter((x) => saleGot(x).due > 0.5)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+  $("vyTiles").innerHTML = [
+    gfx.tile({ k: "🧾 बेचा", v: INR(total), n: total,
+      s: SALES.length + " बिल", color: gfx.C.bill, pct: 100 }),
+    gfx.tile({ k: "🟢 आया", v: INR(got), n: got,
+      s: PAYINS.length + " पेमेंट-इन", color: gfx.C.in,
+      pct: total ? (got / total) * 100 : 0 }),
+    gfx.tile({ k: "🔴 बाकी", v: INR(due), n: due,
+      s: openOnes.length + " बिलों का", color: gfx.C.out,
+      pct: total ? (due / total) * 100 : 0 })
+  ].join("");
+  attachTilt();
+  gfx.fit($("vyTiles"));
+  gfx.countUp($("vyTiles"));
+
+  const oldest = openOnes[0];
+  const dup = vySameTwice();
+  $("vyBrain").innerHTML = !SALES.length && !PAYINS.length ? "" :
+    (dup.length ? gfx.insight({ icon: "⚠️", tone: "warn",
+        title: plural(dup.length, "बिल", "बिल") + " दो बार लगता है",
+        body: dup.slice(0, 2).map((g) =>
+          `<b>${esc(unitShort(g[0].party))}</b> · ${INR(g[0].total)} — ` +
+          `${esc(g[0].ref)} और ${esc(g[1].ref)}`).join("<br>") +
+          `<br><span class="muted">दोनों के Ref अलग हैं — व्यापार में देख लीजिए।</span>` }) : "") +
+    (oldest ? gfx.insight({ icon: "⏳", tone: "warn",
+        title: `सबसे पुराना बकाया — ${INR(saleGot(oldest).due)}`,
+        body: `<b>${esc(unitShort(oldest.party))}</b> · ${esc(dayLabel(oldest.date))} · ` +
+          `<b>${vyAge(oldest.date)} दिन</b> हो गए · ${esc(oldest.ref || "")}` }) : "");
+
+  const box = $("vyList");
+  if (VY_VIEW === "payins") return renderVyPayins(box);
+  if (VY_VIEW === "parties") return renderVyParties(box);
+  if (VY_VIEW === "units") return renderVyUnits(box);
+  renderVySales(box);
+}
+
+/** वही पार्टी, वही रकम, 7 दिन के अंदर — दो बार बना बिल। */
+function vySameTwice() {
+  const seen = {}, out = [];
+  SALES.forEach((x) => {
+    const k = pKey(x.party) + "|" + Math.round(x.total || 0);
+    (seen[k] = seen[k] || []).push(x);
+  });
+  Object.values(seen).forEach((g) => {
+    if (g.length < 2) return;
+    g.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    for (let i = 1; i < g.length; i++) {
+      const d1 = new Date(String(g[i - 1].date) + "T12:00:00");
+      const d2 = new Date(String(g[i].date) + "T12:00:00");
+      if (Math.abs(d2 - d1) <= 7 * 86400000) out.push([g[i - 1], g[i]]);
+    }
+  });
+  return out;
+}
+
+function renderVySales(box) {
+  if (!SALES.length) {
+    box.innerHTML = `<div class="empty">अभी कोई बिक्री का बिल नहीं।<br>
+      <span class="muted">ऊपर व्यापार की <b>Sale</b> रिपोर्ट डालिए।</span></div>`;
+    return;
+  }
+  const rows = SALES.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  box.innerHTML = rows.map((x) => {
+    const g = saleGot(x);
+    const cls = g.due <= 0.5 ? "paid" : g.got > 0.5 ? "part" : "unpaid";
+    const age = vyAge(x.date);
+    return `
+    <div class="vyRow ${cls}" onclick="openSale('${esc(x._id)}')">
+      <div class="vyAmt">${INR(x.total)}</div>
+      <div class="vyMid">
+        <div class="vyName">${esc(unitShort(x.party))}</div>
+        <div class="vySub">${esc(dayLabel(x.date))} · ${esc(x.ref || "")}${
+          (x.items || []).length ? " · " + (x.items || []).length + " चीज़ें" : ""}</div>
+      </div>
+      <div class="vyTag">${g.due <= 0.5 ? "✅ आ गया"
+        : g.got > 0.5 ? "🟡 " + INR(g.due) + " बाकी"
+        : "🔴 " + INR(g.due)}${age > 30 && g.due > 0.5 ? `<small>${age} दिन</small>` : ""}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderVyPayins(box) {
+  if (!PAYINS.length) {
+    box.innerHTML = `<div class="empty">अभी कोई पेमेंट-इन नहीं।<br>
+      <span class="muted">ऊपर व्यापार की <b>Payment-In</b> रिपोर्ट डालिए।</span></div>`;
+    return;
+  }
+  const rows = PAYINS.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  box.innerHTML = rows.map((x) => {
+    const bank = payinInBank(x);
+    const sale = x.saleRef ? SALES.filter((y) => vyRef(y.ref) === vyRef(x.saleRef))[0] : null;
+    return `
+    <div class="vyRow got">
+      <div class="vyAmt in">+${INR(x.received || x.total)}</div>
+      <div class="vyMid">
+        <div class="vyName">${esc(unitShort(x.party))}</div>
+        <div class="vySub">${esc(dayLabel(x.date))}${
+          x.payType ? " · " + esc(x.payType) : ""} · ${esc(x.ref || "")}</div>
+        <div class="vyLinks">
+          ${sale ? `<span class="badge hi">🧾 ${esc(sale.ref)}</span>` :
+            `<span class="badge lo">🧾 किस बिल का, पता नहीं</span>`}
+          ${bank ? `<span class="badge hi">🏦 ${esc(accLabel(bank.accountId))} · ${
+            esc(dayLabel(String(bank.date).slice(0, 10)).replace(/\s\d{4}$/, ""))}</span>`
+            : `<span class="badge lo">🏦 खाते में नहीं मिला</span>`}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderVyParties(box) {
+  const map = {};
+  SALES.forEach((x) => {
+    const k = pKey(x.party);
+    if (!k) return;
+    const g = saleGot(x);
+    map[k] = map[k] || { party: x.party, total: 0, got: 0, due: 0, n: 0, oldest: "" };
+    map[k].total += x.total || 0; map[k].got += g.got; map[k].due += g.due; map[k].n++;
+    if (g.due > 0.5 && (!map[k].oldest || String(x.date) < map[k].oldest)) map[k].oldest = x.date;
+  });
+  const rows = Object.values(map).sort((a, b) => b.due - a.due);
+  if (!rows.length) { box.innerHTML = `<div class="empty">अभी कुछ नहीं</div>`; return; }
+  box.innerHTML = rows.map((r) => `
+    <div class="vyRow ${r.due > 0.5 ? "unpaid" : "paid"}">
+      <div class="vyAmt">${INR(r.due)}</div>
+      <div class="vyMid">
+        <div class="vyName">${esc(unitShort(r.party))}</div>
+        <div class="vySub">${plural(r.n, "बिल", "बिल")} · बेचा ${INR(r.total)} ·
+          आया ${INR(r.got)}${r.oldest ? " · सबसे पुराना " + vyAge(r.oldest) + " दिन" : ""}</div>
+      </div>
+      <div class="vyTag">${r.due > 0.5 ? "🔴 बाकी" : "✅ पूरा"}</div>
+    </div>`).join("");
+}
+
+function renderVyUnits(box) {
+  const names = [...new Set(SALES.concat(PAYINS).map((x) => x.party).filter(Boolean))];
+  if (!names.length) { box.innerHTML = `<div class="empty">अभी कोई पार्टी नहीं</div>`; return; }
+  box.innerHTML = `<div class="muted" style="padding:2px 0 10px">
+    व्यापार में यूनिट का पूरा सरकारी नाम होता है। यहाँ छोटा नाम रखिए — पूरे app
+    में वही दिखेगा, और खोजने पर दोनों मिलेंगे।</div>` +
+    names.map((n) => `
+    <div class="vyRow" onclick="openShortName('${esc(n).replace(/'/g, "&#39;")}')">
+      <div class="vyMid">
+        <div class="vyName">${esc(SHORTNAME[pKey(n)] || suggestShort(n))}${
+          SHORTNAME[pKey(n)] ? "" : ' <span class="badge lo">सुझाव</span>'}</div>
+        <div class="vySub">${esc(n)}</div>
+      </div>
+      <div class="vyTag">✏️</div>
+    </div>`).join("");
+}
+
+function openSale(id) {
+  const x = SALES.filter((y) => y._id === id)[0];
+  if (!x) return;
+  const g = saleGot(x);
+  const pays = PAYINS.filter((y) => y.saleRef && vyRef(y.saleRef) === vyRef(x.ref));
+  $("vyTitle").textContent = "🧾 " + unitShort(x.party);
+  $("vyDetail").innerHTML = `
+    <div class="paySum">
+      <div><span>बिल</span><b>${INR(x.total)}</b></div>
+      <div><span>आया</span><b class="ok2t">${INR(g.got)}</b></div>
+      <div><span>${g.due > 0.5 ? "बाकी" : "हालत"}</span>
+        <b class="${g.due > 0.5 ? "duet" : "ok2t"}">${g.due > 0.5 ? INR(g.due) : "✅ पूरा"}</b></div>
+    </div>
+    <div class="muted" style="margin:10px 0">${esc(dayLabel(x.date))} ·
+      ${esc(x.ref || "")}${x.payType ? " · " + esc(x.payType) : ""} ·
+      ${esc(x.status || "")}${vyAge(x.date) != null && g.due > 0.5
+        ? " · <b>" + vyAge(x.date) + " दिन</b> हो गए" : ""}</div>
+    <div class="vyFull">${esc(x.party || "")}
+      <button type="button" class="mini" onclick="closeSheet('vySheet');openShortName('${
+        esc(x.party || "").replace(/'/g, "&#39;")}')">🎯 छोटा नाम</button></div>
+    ${(x.items || []).length ? `
+      <div class="itemsHead" style="margin-top:14px"><span>📦 सामान</span>
+        <span class="muted">${(x.items || []).length}</span></div>
+      <div class="card tableWrap"><table>
+        <thead><tr><th>सामान</th><th class="num">मात्रा</th><th class="num">भाव ₹</th><th class="num">रकम ₹</th></tr></thead>
+        <tbody>${x.items.map((i) => `<tr>
+          <td>${esc(i.name)}</td>
+          <td class="num">${i.qty != null ? i.qty + " " + esc(i.unit || "") : "—"}</td>
+          <td class="num">${i.rate != null ? INR(i.rate) : "—"}</td>
+          <td class="num">${i.amount != null ? INR(i.amount) : "—"}</td></tr>`).join("")}</tbody>
+      </table></div>` : ""}
+    ${pays.length ? `
+      <div class="itemsHead" style="margin-top:14px"><span>📥 जो पैसा आया</span></div>
+      ${pays.map((pi) => {
+        const bank = payinInBank(pi);
+        return `<div class="pay"><div class="payTop">
+          <span class="payAmt">+${INR(pi.received || pi.total)}</span>
+          <div class="payWho"><b>${esc(pi.payType || "पेमेंट-इन")}</b>
+            <small>${esc(dayLabel(pi.date))} · ${esc(pi.ref || "")}${
+              bank ? " · 🏦 " + esc(accLabel(bank.accountId)) : ""}</small></div>
+        </div></div>`;
+      }).join("")}` :
+      `<div class="badge lo" style="display:block;margin-top:14px;line-height:1.6">
+        📥 इस बिल के सामने कोई पेमेंट-इन दर्ज नहीं। व्यापार की
+        <b>Payment-In</b> रिपोर्ट डालने पर अपने-आप जुड़ जाएगा।</div>`}`;
+  openSheet("vySheet");
+}
+
 /* ══════════ 🔍 खोज — जो माँगा, वही मिले ══════════════════════════
    पहले खोज सब कुछ (नाम, विवरण, UTR, रकम, तारीख़) एक लंबी लकीर में जोड़कर
    उसमें अक्षर ढूँढती थी। इसलिए «11000» लिखने पर वह किसी और entry के UTR के
@@ -5918,6 +6741,12 @@ function goTab(v) {
   // छिपे हुए tab की चौड़ाई शून्य होती है, इसलिए वहाँ अंक नापे ही नहीं जा
   // सकते और "₹-3.46 …" कटा हुआ रह जाता था। दिखते ही दुबारा नापो।
   gfx.fit(document.getElementById("v-" + v));
+  // व्यापार का डेटा तभी पढ़ा जाता है जब वह पन्ना पहली बार खोला जाए —
+  // मुफ़्त सीमा में हर बार सब कुछ पढ़ना महँगा पड़ता है
+  if (v === "vyapar") {
+    renderVyapar();
+    loadVyapar().then(renderVyapar).catch(() => {});
+  }
   window.scrollTo({ top: 0, behavior: REDUCED ? "auto" : "smooth" });
 }
 
