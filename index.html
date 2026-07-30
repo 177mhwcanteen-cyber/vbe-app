@@ -2038,7 +2038,7 @@ async function loadData(force) {
 function renderSync(err) {
   const box = $("syncBar");
   if (!box) return;
-  const used = readsToday();
+  const used = readsToday(), ai = aiToday();
   const pct = Math.min(100, (used / 50000) * 100);
   const when = LAST_SYNC
     ? new Date(LAST_SYNC).toLocaleString("hi-IN",
@@ -2051,7 +2051,9 @@ function renderSync(err) {
       '<span>डेटा <b>' + esc(when) + '</b> का' +
         (err ? ' · ⚠️ नया नहीं मिल पाया' : '') + '<br>' +
         '<small>आज ' + used.toLocaleString("en-IN") + ' / 50,000 पढ़ाई' +
-        (hot ? ' — अब सँभालकर' : '') + '</small></span>' +
+        (hot ? ' — अब सँभालकर' : '') +
+        ' · 🧠 ' + ai.n + ' AI' + (ai.bg ? ' (' + ai.bg + ' अपने-आप)' : '') +
+        '</small></span>' +
       '<i style="width:' + pct.toFixed(1) + '%"></i>' +
     '</div>';
 }
@@ -4260,6 +4262,7 @@ function todayISO() {
 }
 
 async function geminiDiscoverModel() {
+  aiCount({ calls: 1 });
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${GEMINI_KEY}`);
   if (!res.ok) throw new Error(geminiWhy(res.status, "मॉडल की सूची नहीं मिली"));
@@ -4298,6 +4301,29 @@ function geminiWhy(status, detail) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* ══════════ 🧮 AI कितनी बार बुलाया गया ═══════════════════════════
+   Gemini की मुफ़्त सीमा **प्रति मिनट** और **प्रति दिन**, दोनों है। इसलिए हर
+   कॉल गिनी जाती है — विक्रम जी की भेजी हुई फोटो भी, और app का अपना
+   पर्दे-के-पीछे वाला काम भी। बिना गिनती के यह पता ही नहीं चलता कि सीमा
+   किसने ख़र्च की।                                                     */
+
+function aiCount(n) {
+  const today = todayISO();
+  let log = null;
+  try { log = JSON.parse(localStorage.getItem("vbeAiCalls") || "null"); } catch (e) {}
+  if (!log || log.d !== today) log = { d: today, n: 0, bg: 0 };
+  log.n += (n && n.calls) || 1;
+  log.bg += (n && n.bg) || 0;
+  try { localStorage.setItem("vbeAiCalls", JSON.stringify(log)); } catch (e) {}
+  return log;
+}
+function aiToday() {
+  try {
+    const log = JSON.parse(localStorage.getItem("vbeAiCalls") || "null");
+    return log && log.d === todayISO() ? log : { n: 0, bg: 0 };
+  } catch (e) { return { n: 0, bg: 0 }; }
+}
+
 async function geminiPost(model, parts) {
   return fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
@@ -4308,13 +4334,19 @@ async function geminiPost(model, parts) {
       }) });
 }
 
-async function askGemini(prompt, dataUrl, extraText, onWait) {
+/**
+ * @param {object} [opts] {bg:true} = app का अपना पर्दे-के-पीछे वाला काम —
+ *   उस पर न बार-बार कोशिश होती है, न वह विक्रम जी के काम से आगे बढ़ता है।
+ */
+async function askGemini(prompt, dataUrl, extraText, onWait, opts) {
   if (!GEMINI_KEY) throw new Error("AI की चाबी नहीं मिली — Firestore में vbe_meta › app_config › geminiKey डालें");
   const parts = [{ text: prompt + "\n\nToday's date is " + todayISO() + "." +
     (extraText ? "\n\n" + extraText : "") }];
   if (dataUrl) parts.push({ inline_data: { mime_type: "image/jpeg", data: dataUrl.split(",")[1] } });
 
+  const bg = !!(opts && opts.bg);
   let model = GEMINI_MODEL || await geminiDiscoverModel();
+  aiCount({ calls: 1, bg: bg ? 1 : 0 });
   let res = await geminiPost(model, parts);
   if (res.status === 404 || res.status === 400) {
     // Either the cached name is gone or it never existed for this key: re-ask.
@@ -4326,10 +4358,11 @@ async function askGemini(prompt, dataUrl, extraText, onWait) {
      की नहीं। ⚡ फास्ट एंट्री में 3-4 फोटो एक साथ जाती हैं, इसलिए यही सबसे
      पहले टकराती है। ऐसे में हार मान लेना ग़लत होगा: रुककर फिर कोशिश करो।
      503 (Google व्यस्त) पर भी यही। हर बार इंतज़ार दुगुना — 4s, 8s, 16s। */
-  for (let wait = 4000, tries = 0; !res.ok && tries < 3 &&
+  for (let wait = 4000, tries = 0; !bg && !res.ok && tries < 3 &&
        (res.status === 429 || res.status >= 500); tries++, wait *= 2) {
     if (typeof onWait === "function") onWait(Math.round(wait / 1000));
     await sleep(wait);
+    aiCount({ calls: 1 });
     res = await geminiPost(model, parts);
   }
   if (!res.ok) throw new Error(geminiWhy(res.status));
@@ -9547,9 +9580,35 @@ const MERGE_PROMPT =
   'that have 2 or more names; leave a name out entirely if it stands alone. ' +
   'Return only the JSON object.';
 
+/* ⚠️ यहाँ एक बड़ी ग़लती हो चुकी है, इसलिए यह टिप्पणी लंबी है।
+
+   पहले यह हर 3 मिनट पर चलता था, और «फ़ुरसत» की शर्त सिर्फ़ 2 मिनट की थी।
+   विक्रम जी के फ़ोन में app का tab पीछे खुला रहता है — यानी वह हमेशा
+   «फ़ुरसत» में होता है। नतीजा: दिन भर, हर 3 मिनट पर, बिना कुछ किए एक
+   AI-कॉल। और फ़ेल होने पर नाम «हो गया» में दर्ज ही नहीं होते थे, इसलिए
+   वही 40 नाम अनंत काल तक दुबारा-दुबारा भेजे जाते रहते।
+
+   इसी से Gemini की मुफ़्त सीमा चुपचाप ख़त्म हो जाती थी — और जब विक्रम जी
+   सचमुच कोई फोटो भेजते, तब सीमा पहले ही भरी मिलती।
+
+   अब चार ताले:
+     1. tab सामने न हो तो कभी नहीं (यही सबसे बड़ा ताला है)
+     2. हर 3 मिनट नहीं — हर 30 मिनट
+     3. दिन में ज़्यादा से ज़्यादा 4 बार
+     4. फ़ेल हो या पास — नाम «देख लिए» में दर्ज, ताकि वही बैच दुबारा न जाए  */
+
+const BG_MAX_DAY = 4;
+
+function bgAllowed() {
+  if (!GEMINI_KEY) return false;
+  if (typeof document !== "undefined" && document.hidden) return false;  // 1
+  if (Date.now() - IDLE_AT < 120000) return false;
+  if (Date.now() - PAGE_AT < 300000) return false;   // खुलते ही नहीं
+  return aiToday().bg < BG_MAX_DAY;                                       // 3
+}
+
 async function idleMergePricebook() {
-  if (!GEMINI_KEY) return;
-  if (Date.now() - IDLE_AT < 120000) return;         // अभी काम चल रहा है
+  if (!bgAllowed()) return;
   if (!PRICEBOOK.length) return;
   let done = {};
   try { done = JSON.parse(localStorage.getItem("vbeMerged") || "{}"); } catch (e) {}
@@ -9558,8 +9617,13 @@ async function idleMergePricebook() {
     .filter((n) => !done[pKey(n)]).slice(0, 40);      // एक बार में थोड़े ही
   if (names.length < 2) return;
 
+  // 4. भेजने से *पहले* ही «देख लिए» में दर्ज — फ़ेल हो तो भी वही बैच
+  //    दुबारा नहीं जाएगा। यही अनंत लूप की जड़ थी।
+  names.forEach((n) => { done[pKey(n)] = 1; });
+  try { localStorage.setItem("vbeMerged", JSON.stringify(done)); } catch (e) {}
+
   let r;
-  try { r = await askGemini(MERGE_PROMPT, null, JSON.stringify(names)); }
+  try { r = await askGemini(MERGE_PROMPT, null, JSON.stringify(names), null, { bg: true }); }
   catch (e) { return; }
   const groups = (r && r.groups) || [];
   let merged = 0;
@@ -9617,7 +9681,8 @@ async function idleMergePricebook() {
     toast("🧠 " + merged + " चीज़ों के अलग-अलग नाम एक साथ जोड़ दिए");
   }
 }
-setInterval(() => { idleMergePricebook().catch(() => {}); }, 180000);
+let PAGE_AT = Date.now();
+setInterval(() => { idleMergePricebook().catch(() => {}); }, 1800000);   // 2
 
 /* ── 🧾 चेक रजिस्टर ──────────────────────────────────────────────────
    चालू खाते की statement में «REMT THRU CHQ» वाली पंक्ति पर पार्टी का नाम
