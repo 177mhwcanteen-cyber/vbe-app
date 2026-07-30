@@ -4284,11 +4284,19 @@ async function geminiDiscoverModel() {
 /** HTTP status → something विक्रम जी can act on, not a bare number. */
 function geminiWhy(status, detail) {
   if (status === 400) return "AI की चाबी ग़लत है — Firestore में geminiKey जाँचें";
-  if (status === 403) return "इस चाबी को इजाज़त नहीं है — नई Gemini key बनाकर लगाएँ";
-  if (status === 429) return "AI की आज की मुफ़्त सीमा पूरी — थोड़ी देर बाद फिर करें";
+  // 403 अक्सर Firebase की अपनी «Browser key» लगा देने से आता है: वह चाबी
+  // सिर्फ़ Firebase के लिए बनी होती है, Gemini के लिए नहीं
+  if (status === 403) return "इस चाबी को Gemini की इजाज़त नहीं है — " +
+    "aistudio.google.com/apikey से नई चाबी बनाकर /setprop से लगाएँ " +
+    "(Firebase वाली «Browser key» यहाँ नहीं चलती)";
+  if (status === 404) return "यह AI मॉडल इस चाबी पर नहीं है — दोबारा कोशिश करें";
+  if (status === 429) return "एक मिनट में बहुत सारी फोटो चली गईं — " +
+    "थोड़ा रुककर अपने-आप फिर कोशिश होगी";
   if (status >= 500) return "Google का AI अभी व्यस्त है — दोबारा कोशिश करें";
   return (detail || "AI नहीं चला") + " (" + status + ")";
 }
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function geminiPost(model, parts) {
   return fetch(
@@ -4300,7 +4308,7 @@ async function geminiPost(model, parts) {
       }) });
 }
 
-async function askGemini(prompt, dataUrl, extraText) {
+async function askGemini(prompt, dataUrl, extraText, onWait) {
   if (!GEMINI_KEY) throw new Error("AI की चाबी नहीं मिली — Firestore में vbe_meta › app_config › geminiKey डालें");
   const parts = [{ text: prompt + "\n\nToday's date is " + todayISO() + "." +
     (extraText ? "\n\n" + extraText : "") }];
@@ -4311,7 +4319,18 @@ async function askGemini(prompt, dataUrl, extraText) {
   if (res.status === 404 || res.status === 400) {
     // Either the cached name is gone or it never existed for this key: re-ask.
     const fresh = await geminiDiscoverModel();
-    if (fresh !== model) res = await geminiPost(fresh, parts);
+    if (fresh !== model) { model = fresh; res = await geminiPost(fresh, parts); }
+  }
+
+  /* 429 = «एक मिनट में बहुत सारी» — यह मुफ़्त सीमा *प्रति मिनट* की है, दिन
+     की नहीं। ⚡ फास्ट एंट्री में 3-4 फोटो एक साथ जाती हैं, इसलिए यही सबसे
+     पहले टकराती है। ऐसे में हार मान लेना ग़लत होगा: रुककर फिर कोशिश करो।
+     503 (Google व्यस्त) पर भी यही। हर बार इंतज़ार दुगुना — 4s, 8s, 16s। */
+  for (let wait = 4000, tries = 0; !res.ok && tries < 3 &&
+       (res.status === 429 || res.status >= 500); tries++, wait *= 2) {
+    if (typeof onWait === "function") onWait(Math.round(wait / 1000));
+    await sleep(wait);
+    res = await geminiPost(model, parts);
   }
   if (!res.ok) throw new Error(geminiWhy(res.status));
 
@@ -7777,11 +7796,19 @@ async function readFastShots(files) {
     FAST.shots.push(shot);
     renderFast();
     try {
-      shot.r = GEMINI_KEY ? await askGemini(FAST_PROMPT, dataUrl) : null;
+      shot.r = GEMINI_KEY
+        ? await askGemini(FAST_PROMPT, dataUrl, null, (sec) => {
+            shot.wait = sec; renderFast();
+          })
+        : null;
       if (!shot.r) shot.err = "AI बंद है — नीचे हाथ से भर दीजिए";
     } catch (err) { shot.err = err.message; }
+    shot.wait = 0;
     FAST.done++;
     renderFast();
+    // मुफ़्त सीमा प्रति मिनट की है — फोटो के बीच ज़रा साँस लेने से वह
+    // टकराती ही नहीं, और सब फोटो एक ही बार में पढ़ी जाती हैं
+    if (FAST.done < FAST.total) await sleep(1200);
   }
 }
 
@@ -7858,7 +7885,8 @@ function renderFast() {
     <div class="shotCard${busy ? " busy" : ""}">
       <img src="${sh.dataUrl}" alt="" onclick="lightbox('${sh.dataUrl}')">
       <div class="shotTxt">
-        <b>${busy ? '<span class="thinking"></span> पढ़ रहा हूँ…'
+        <b>${sh.wait ? `<span class="thinking"></span> AI व्यस्त है — ${sh.wait} सेकंड में फिर`
+              : busy ? '<span class="thinking"></span> पढ़ रहा हूँ…'
               : sh.err ? "⚠️ " + esc(sh.err) : k.icon + " " + k.name}</b>
         ${r ? `<small>${esc(r.summary || "")}</small>
           ${r.askedBy ? `<small>🙋 ${esc(r.askedBy)}${
