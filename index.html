@@ -120,6 +120,34 @@
     content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px;
     border-radius: 2px; background: linear-gradient(90deg, var(--s1), var(--s3));
   }
+  /* 📇 संपर्क — नंबर ही पहचान */
+  .ctRow { display: flex; align-items: center; gap: 11px; padding: 11px 2px;
+    border-bottom: 1px solid var(--grid); cursor: pointer; min-height: 58px; }
+  .ctRow:last-child { border-bottom: 0; }
+  .ctRow:active { background: rgba(255,255,255,.03); }
+  .ctAv { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 13.5px; font-weight: 700;
+    color: #fff; background: linear-gradient(160deg, rgba(213,81,129,.55), rgba(57,135,229,.45));
+    border: 1px solid rgba(255,255,255,.14); }
+  .ctAv.big { width: 52px; height: 52px; font-size: 18px; }
+  .ctMid { flex: 1; min-width: 0; }
+  .ctName { font-size: 14px; font-weight: 600; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .ctSub { font-size: 11.5px; color: var(--muted); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ctPh { flex: 0 0 auto; font-size: 12px; color: var(--ink-2);
+    font-variant-numeric: tabular-nums; }
+  .ctHead { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .ctHead b { display: block; font-size: 16px; }
+  .ctHead small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .ctBtns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ctBtns a.mini { text-decoration: none; display: inline-flex; align-items: center;
+    padding: 8px 13px; border-radius: 9px; font-size: 12.5px; color: var(--ink);
+    border: 1px solid var(--border); background: rgba(255,255,255,.06); }
+  .whatChips { display: flex; gap: 6px; flex-wrap: wrap; padding: 9px 0 2px;
+    font-size: 11.5px; color: var(--muted); align-items: center; }
+  .whatChips .chipBtn { padding: 5px 10px; font-size: 11.5px; min-height: 32px; }
+
   /* ⚡ फास्ट एंट्री */
   .fab { position: fixed; right: 16px; bottom: 20px; z-index: 60;
     width: 58px; height: 58px; border-radius: 50%; padding: 0;
@@ -913,6 +941,7 @@
       <button data-v="staff">🧑‍🤝‍🧑 Staff</button>
       <button data-v="udhaar">🏪 उधार</button>
       <button data-v="cheque">🧾 चेक</button>
+      <button data-v="contacts">📇 संपर्क</button>
       <button data-v="vyapar">🏛️ व्यापार</button>
       <button data-v="missing">❓ बकाया</button>
     </nav>
@@ -1265,6 +1294,45 @@ placeholder="917568 माजीसा डिस्पोजल
       </div>
       <div id="mNote" hidden></div>
       <div class="card" id="missingList"></div>
+    </section>
+
+    <!-- ── 📇 संपर्क — नंबर ही पहचान ──────────────────────────────────
+         एक नंबर दो बार दर्ज हो ही नहीं सकता: दस्तावेज़ का नाम ही नंबर है। -->
+    <section class="view" id="v-contacts">
+      <div class="filters">
+        <input id="cSearch" type="search" placeholder="🔍 नाम या नंबर…">
+        <select id="cSort">
+          <option value="sum">सबसे ज़्यादा रकम</option>
+          <option value="last">सबसे हाल का</option>
+          <option value="name">नाम से</option>
+        </select>
+        <button type="button" class="primary" onclick="openContact('')">➕ जोड़ें</button>
+      </div>
+      <div id="cBrain"></div>
+      <div class="card"><div id="contactList"></div></div>
+
+      <div id="ctSheet" class="sheet" hidden>
+        <div class="sheetBox" style="max-width:420px">
+          <div class="grab"></div>
+          <div class="sheetHead"><h3 id="ctTitle">📇 संपर्क</h3>
+            <button class="x" onclick="closeSheet('ctSheet')">✕</button></div>
+          <label>📞 मोबाइल नंबर
+            <input id="ctPhone" inputmode="numeric" placeholder="10 अंक"></label>
+          <label>नाम<input id="ctName" placeholder="जैसे: दिनेश जी"></label>
+          <label>टिप्पणी<input id="ctNote" placeholder="जैसे: बजरी वाला"></label>
+          <div id="ctMsg" class="muted" style="margin-top:8px"></div>
+          <button class="primary wide" onclick="saveContact()">💾 सहेजें</button>
+        </div>
+      </div>
+
+      <div id="ctView" class="sheet" hidden>
+        <div class="sheetBox">
+          <div class="grab"></div>
+          <div class="sheetHead"><h3 id="cvTitle">संपर्क</h3>
+            <button class="x" onclick="closeSheet('ctView')">✕</button></div>
+          <div id="cvBody"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ── 🏛️ व्यापार — बिक्री का अलग संसार ──────────────────────────
@@ -1842,6 +1910,7 @@ function cachePayload(slim) {
     }),
     ACCOUNTS: tsClean(ACCOUNTS),
     SALES: tsClean(SALES), PAYINS: tsClean(PAYINS), SHORTNAME, VY_LOADED,
+    CONTACTS: tsClean(CONTACTS),
     BANKTXNS: tsClean(BANKTXNS),
     VCARDS: tsClean(VCARDS),
     STAFF: tsClean(STAFF),
@@ -1881,6 +1950,7 @@ function loadCache() {
   CHEQUES = c.CHEQUES || {};
   SALES = c.SALES || []; PAYINS = c.PAYINS || [];
   SHORTNAME = c.SHORTNAME || {}; VY_LOADED = !!c.VY_LOADED;
+  CONTACTS = c.CONTACTS || {};
   LAST_SYNC = c.at;
   recomputeMissing();
   return true;
@@ -1925,6 +1995,12 @@ async function fetchAll() {
     vs.docs.forEach(d => { VCARDS[d.id] = d.data(); });
     n += vs.size;
   } catch (e) { VCARDS = {}; }
+  try {
+    const ct = await db.collection("vbe_contacts").limit(500).get();
+    CONTACTS = {};
+    ct.docs.forEach((d) => { CONTACTS[d.id] = d.data(); });
+    n += ct.size;
+  } catch (e) { CONTACTS = {}; }
   try {
     const st = await db.collection("vbe_staff").limit(100).get();
     STAFF = {};
@@ -2029,6 +2105,7 @@ function renderAll() {
   renderChallanWatch();
   renderUdhaar();
   renderCheques();
+  renderContacts();
   renderStaff();
 }
 
@@ -5221,9 +5298,12 @@ function parseQuery(raw) {
     return { kind: "date", date: d, label: "📅 " + dayLabel(d) };
 
   // सिर्फ़ अंक (₹, कॉमा, + के साथ भी)
-  const numish = q.replace(/[₹,\s]/g, "");
+  const numish = q.replace(/[₹,\s()+-]/g, "").replace(/^(?:0|91)(?=[6-9]\d{9}$)/, "");
   if (/^\d+\+?$/.test(numish)) {
     const digits = numish.replace(/\+$/, "");
+    // ठीक 10 अंक और 6–9 से शुरू = मोबाइल नंबर (UTR 12 अंकों का होता है)
+    if (/^[6-9]\d{9}$/.test(digits))
+      return { kind: "phone", text: digits, label: "📞 " + phoneShow(digits) };
     // 10+ अंक = UTR / reference, रकम नहीं — कोई बिल इतने का नहीं होता
     if (digits.length >= 10)
       return { kind: "ref", text: digits, label: "🔗 UTR " + digits };
@@ -5255,7 +5335,9 @@ function txnMatch(t, sq) {
   if (!sq) return true;
   switch (sq.kind) {
     case "amount":
-      return amountHit(t.amount, sq);
+      // 917598 जैसा अंक रकम भी हो सकता है और चेक नंबर भी — दोनों दिखाओ
+      return amountHit(t.amount, sq) ||
+             String(t.chequeNo || "").replace(/\D/g, "") === String(sq.amount);
     case "ref":
       return [t.utr, t.chequeNo, t.appTxnId, t._id]
         .some((v) => String(v || "").toUpperCase().includes(sq.text));
@@ -5264,6 +5346,12 @@ function txnMatch(t, sq) {
              (t.matchedReceiptIds || []).some((r) => refKey(r) === sq.text);
     case "date":
       return String(t.date || "").slice(0, 10) === sq.date;
+    case "phone": {
+      const c = CONTACTS[sq.text];
+      if (!c) return false;
+      const names = [c.name].concat(c.aliases || []).filter(Boolean).map(pKey);
+      return names.some((n) => n && pKey(t.party).includes(n));
+    }
     default:
       return [t.party, t.narration, t.aiSummary, t.billVendor]
         .some((v) => String(v || "").toLowerCase().includes(sq.text));
@@ -5275,7 +5363,10 @@ function expMatch(e, sq) {
   if (!sq) return true;
   switch (sq.kind) {
     case "amount":
-      return amountHit(e.billTotal, sq) ||
+      return String(e.chequeNo || "").replace(/\D/g, "") === String(sq.amount) ||
+             (e.payments || []).some((p) =>
+               String(p.chequeNo || "").replace(/\D/g, "") === String(sq.amount)) ||
+             amountHit(e.billTotal, sq) ||
              (e.payments || []).some((p) => amountHit(p.amount, sq)) ||
              (e.items || []).some((i) => amountHit(i.amount, sq));
     case "ref":
@@ -5287,6 +5378,14 @@ function expMatch(e, sq) {
     case "date":
       return String(e.billDate || "").slice(0, 10) === sq.date ||
              (e._date && e._date.toISOString().slice(0, 10) === sq.date);
+    case "phone": {
+      if (phoneKey(e.requestedPhone) === sq.text) return true;
+      const c = CONTACTS[sq.text];
+      if (!c) return false;
+      const names = [c.name].concat(c.aliases || []).filter(Boolean).map(pKey);
+      return names.some((n) => n &&
+        (pKey(e.requestedBy) === n || pKey(e.vendor && e.vendor.name) === n));
+    }
     default:
       return [e.vendor && e.vendor.name, e.unit, e.extractedText, e.note,
               e.challanNo, e.receiptId]
@@ -7594,12 +7693,13 @@ const FAST_PROMPT =
   'phone. First decide WHICH KIND of photo it is, then extract that kind\'s ' +
   'fields. Photos of phone screens have glare, tilt and moiré — read through them.\n' +
   'Return STRICT JSON only:\n' +
-  '{"kind":"payment"|"request"|"bill"|"qr"|"other",\n' +
+  '{"kind":"payment"|"cheque"|"request"|"bill"|"qr"|"other",\n' +
   ' "amount":number|null,"date":"YYYY-MM-DD"|null,"time":"HH:MM"|null,\n' +
   ' "utr":string|null,"appTxnId":string|null,"app":string|null,\n' +
   ' "fromBank":string|null,"fromLast4":string|null,"fromName":string|null,\n' +
   ' "toName":string|null,"toVpa":string|null,\n' +
-  ' "askedBy":string|null,"askedNote":string|null,\n' +
+  ' "askedBy":string|null,"askedPhone":string|null,"askedNote":string|null,\n' +
+  ' "chequeNo":string|null,"bank":string|null,"payeeName":string|null,\n' +
   ' "vendor":string|null,"invoiceNo":string|null,\n' +
   ' "items":[{"name":string,"qty":number|null,"unit":string|null,' +
   '"rate":number|null,"amount":number|null}],\n' +
@@ -7610,6 +7710,8 @@ const FAST_PROMPT =
   '- "request": a WhatsApp/SMS CHAT screenshot where someone ASKED for money. ' +
   'Shows a contact name at the top, chat bubbles, and usually a bare number ' +
   'like "1300" plus a QR photo. This is NOT proof of payment.\n' +
+  '- "cheque": a photo of a BANK CHEQUE leaf — has "PAY", "RUPEES", a bank ' +
+  'name, an account number, and a printed MICR strip along the bottom.\n' +
   '- "bill": a shop bill / invoice / kaccha parcha on paper.\n' +
   '- "qr": a photo of a payment QR standee with a UPI ID printed on it.\n' +
   '- "other": anything else.\n' +
@@ -7625,12 +7727,24 @@ const FAST_PROMPT =
   '- askedNote: any short instruction in the chat, e.g. "जल्दी करना".\n' +
   '- toVpa: the UPI id (…@ybl, …@okicici). On a QR standee it is printed ' +
   'under the code as "UPI ID". Copy it exactly, lowercase.\n' +
-  '- items: only for a bill; [] otherwise.\n' +
+  '- chequeNo: ONLY for a cheque. Read it from the printed MICR strip at the ' +
+  'BOTTOM of the leaf — the first group of 6 digits, e.g. "917598" in ' +
+  '"917598 344002003 000013 29". That strip is machine-printed and always ' +
+  'legible; never take the number from anywhere else.\n' +
+  '- For a cheque: payeeName = the name written after "PAY"; amount = the ' +
+  'figure written in the ₹ box (cross-check it against the words on the ' +
+  'RUPEES line); date = the boxed DD MM YYYY at the top right; bank = the ' +
+  'bank name printed on the leaf; fromName = the account holder printed ' +
+  'above "Please sign above".\n' +
+  '- askedPhone: a 10-digit Indian mobile number visible in a chat header or ' +
+  'printed on a bill. Digits only, no +91.\n' +
+  '- items: for a bill; [] otherwise.\n' +
   '- summary: ONE short Hindi line.\n' +
   'null for anything you cannot actually read. Return only the JSON object.';
 
 const FAST_KINDS = {
   payment: { icon: "💳", name: "रसीद" },
+  cheque:  { icon: "🧾", name: "चेक" },
   request: { icon: "💬", name: "WhatsApp" },
   bill:    { icon: "🧾", name: "बिल" },
   qr:      { icon: "🏷️", name: "QR" },
@@ -7675,13 +7789,15 @@ async function readFastShots(files) {
 function fastMerge() {
   const get = (kind) => FAST.shots.map((x) => x.r).filter((r) => r && r.kind === kind);
   const pay = get("payment")[0] || null;
+  const chq = get("cheque")[0] || null;
   const req = get("request")[0] || null;
   const bill = get("bill")[0] || null;
   const qr = get("qr")[0] || null;
 
-  const party = (pay && pay.toName) || (bill && bill.vendor) ||
-                (req && req.askedBy) || null;
+  const party = (pay && pay.toName) || (chq && chq.payeeName) ||
+                (bill && bill.vendor) || (req && req.askedBy) || null;
   const amount = (pay && pay.amount) != null ? pay.amount
+    : (chq && chq.amount) != null ? chq.amount
     : (bill && bill.amount) != null ? bill.amount
     : (req && req.amount) != null ? req.amount : null;
   const vpa = (pay && pay.toVpa) || (qr && qr.toVpa) || null;
@@ -7690,8 +7806,14 @@ function fastMerge() {
     String(pay.toVpa).toLowerCase() === String(qr.toVpa).toLowerCase());
 
   return {
-    party, amount, vpa, vpaMatch, pay, req, bill, qr,
-    date: (pay && pay.date) || (bill && bill.date) || (req && req.date) || todayISO(),
+    party, amount, vpa, vpaMatch, pay, req, bill, qr, chq,
+    // चेक में UTR होता ही नहीं — उसकी जगह चेक नंबर, जो statement में हूबहू
+    // वही छपता है और इसीलिए सबसे पक्का जोड़ है
+    mode: chq && !pay ? "cheque" : "bank",
+    chequeNo: (chq && String(chq.chequeNo || "").replace(/\D/g, "")) || null,
+    phone: (req && req.askedPhone) || (bill && bill.askedPhone) || null,
+    date: (pay && pay.date) || (chq && chq.date) ||
+          (bill && bill.date) || (req && req.date) || todayISO(),
     // रसीद न हो तो WhatsApp वाला समय ही लो — «2:20 का पेट्रोल, 2:50 का पवन
     // कुमार» — बैंक की पंक्ति पर भी समय होता है, और यही मिलान पक्का करता है
     time: (pay && pay.time) || (req && req.time) || null,
@@ -7699,6 +7821,27 @@ function fastMerge() {
     accountId: pay ? matchAccount(pay.fromBank, pay.fromLast4) : "",
     items: (bill && bill.items) || []
   };
+}
+
+/** पिछली बार जो-जो चीज़ें लिखी थीं — एक टैप में भर जाएँ। */
+function whatChips() {
+  const seen = {}, out = [];
+  EXP.forEach((e) => {
+    (e.spentOn ? [e.spentOn] : (e.items || []).map((i) => i.name)).forEach((n) => {
+      const k = String(n || "").trim();
+      if (!k || seen[k]) return;
+      seen[k] = 1; out.push(k);
+    });
+  });
+  if (!out.length) return "";
+  return `<div class="whatChips">🔁 ${out.slice(0, 8).map((n) =>
+    `<button type="button" class="chipBtn" onclick="setWhat('${esc(n).replace(/'/g, "&#39;")}')"
+      >${esc(n)}</button>`).join("")}</div>`;
+}
+function setWhat(v) {
+  const el = $("fsWhat");
+  if (!el) return;
+  el.value = el.value.trim() ? el.value.trim() + ", " + v : v;
 }
 
 function renderFast() {
@@ -7736,15 +7879,29 @@ function renderFast() {
           value="${m.amount != null ? m.amount : ""}" placeholder="₹"></div>
       <div class="fsRow"><span>📅 तारीख़</span>
         <input id="fsDate" type="date" value="${esc(m.date)}"></div>
-      <div class="fsRow"><span>🔗 UTR</span>
+      ${m.mode === "cheque" ? `
+      <div class="fsRow"><span>🧾 चेक नं.</span>
+        <input id="fsChq" inputmode="numeric" value="${esc(m.chequeNo || "")}"
+          placeholder="चेक के नीचे छपा नंबर"></div>`
+      : `<div class="fsRow"><span>🔗 UTR</span>
         <input id="fsUtr" value="${esc(m.utr || "")}"
-          placeholder="बाद में statement से अपने-आप भर जाएगा"></div>
+          placeholder="बाद में statement से अपने-आप भर जाएगा"></div>`}
+      <div class="fsRow"><span>📦 किस चीज़ का</span>
+        <input id="fsWhat" value="${esc((m.items || []).map((i) => i.name).join(", "))}"
+          placeholder="जैसे: बजरी 2 ट्रॉली"></div>
+      ${whatChips()}
+      <div class="fsRow"><span>📞 नंबर</span>
+        <input id="fsPhone" inputmode="numeric" value="${esc(m.phone || "")}"
+          placeholder="किसके कहने पर — 10 अंक"></div>
       ${m.req ? `<div class="fsNote">🙋 <b>${esc(m.req.askedBy || "किसी")}</b> ने
         ${m.req.time ? `<b>${esc(m.req.time)}</b> पर ` : ""}कहा था${
         m.req.askedNote ? ` — «${esc(m.req.askedNote)}»` : ""}${
         m.time && m.req.time ? ` · पैसा <b>${esc(m.time)}</b> पर गया` : ""}</div>` : ""}
       ${m.vpaMatch ? `<div class="fsOk">✅ QR और रसीद का UPI id एक ही है — पक्का यही पेमेंट है</div>` : ""}
-      ${!m.utr ? `<div class="fsWarn">🟡 UTR नहीं मिला — entry पीली रहेगी, और बैंक की
+      ${m.mode === "cheque" ? `<div class="fsWarn">🧾 चेक से पेमेंट — जब तक बैंक में
+        भुनाया नहीं जाता, entry पीली रहेगी। statement आते ही <b>चेक नंबर से</b>
+        अपने-आप जुड़ जाएगी।</div>`
+        : !m.utr ? `<div class="fsWarn">🟡 UTR नहीं मिला — entry पीली रहेगी, और बैंक की
         statement आते ही अपने-आप भर जाएगी।</div>` : ""}
     </div>
     <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
@@ -7759,7 +7916,10 @@ async function saveFast(btn) {
   const m = fastMerge();
   const party = $("fsParty").value.trim();
   const amount = $("fsAmt").value === "" ? null : Number($("fsAmt").value);
-  const utr = $("fsUtr").value.trim().toUpperCase();
+  const utr = $("fsUtr") ? $("fsUtr").value.trim().toUpperCase() : "";
+  const chq = $("fsChq") ? $("fsChq").value.replace(/\D/g, "") : "";
+  const what = $("fsWhat") ? $("fsWhat").value.trim() : "";
+  const phone = $("fsPhone") ? phoneKey($("fsPhone").value) : "";
   const msg = $("fsMsg");
   if (!party && amount == null) {
     msg.className = "bad"; msg.textContent = "पार्टी या रकम तो भरें"; return;
@@ -7782,7 +7942,7 @@ async function saveFast(btn) {
     }
 
     const pay = {
-      id: newPayId(), mode: "bank", amount,
+      id: newPayId(), mode: m.mode || "bank", amount, chequeNo: chq || null,
       paidAt: $("fsDate").value || todayISO(),
       time: m.time || null, app: (m.pay && m.pay.app) || null, status: "success",
       utr: utr || null, appTxnId: (m.pay && m.pay.appTxnId) || null,
@@ -7809,8 +7969,12 @@ async function saveFast(btn) {
       paidFromAccountId: m.accountId || null,
       payment: { mode: "upi", paidToName: party || null, amount, upiRef: utr || null,
                  paidAt: $("fsDate").value || null },
+      // 📦 «किस चीज़ का पेमेंट था» — दो महीने बाद यही पूछा जाएगा
+      spentOn: what || null,
+      chequeNo: chq || null,
       // 🙋 किसने कहा था — दो महीने बाद यही सबसे काम आएगा
       requestedBy: (m.req && m.req.askedBy) || null,
+      requestedPhone: phone || null,
       requestedAt: (m.req && m.req.time) || null,
       requestedNote: (m.req && m.req.askedNote) || null,
       payeeVpa: m.vpa || null,
@@ -7818,7 +7982,7 @@ async function saveFast(btn) {
       billPhotoDriveUrl: (photos.filter((x) => x.kind === "bill")[0] || {}).url || null,
       paymentPhotoDriveUrl: (photos.filter((x) => x.kind === "payment")[0] || {}).url || null,
       // 🟡 UTR बाकी — statement आते ही भर जाएगा
-      needsUtr: !utr,
+      needsUtr: !utr,          // चेक में UTR होता ही नहीं — वह भुनने तक अधूरा
       status: "reimbursed", reconciled: false, matchedBankTxnId: null,
       flags: [], priceAlerts: [],
       statusHistory: [{ status: "reimbursed",
@@ -7837,6 +8001,8 @@ async function saveFast(btn) {
         askedBy: rec.requestedBy });
 
     EXP.unshift(Object.assign({ _id: docId, _date: when }, rec));
+    // 📇 जिसने कहा था वह संपर्क सूची में — नंबर हो तो नंबर से, वरना कुछ नहीं
+    if (phone) await touchContact(phone, rec.requestedBy, {}).catch(() => {});
     saveCache();
     closeSheet("fastSheet");
     toast(utr ? `⚡ ${receiptId} दर्ज — पूरा हिसाब मिल गया`
@@ -7854,6 +8020,234 @@ async function saveFast(btn) {
     btn.disabled = false; btn.textContent = "⚡ दर्ज करें";
   }
 }
+
+/* ══════════ 📇 संपर्क — एक नंबर, एक बार ══════════════════════════
+   WhatsApp से नाम तो मिल जाता है — «JJ 1549 74 ge…» — पर वही आदमी कल दूसरे
+   नाम से लिखा जाएगा, और नंबर कहीं दर्ज ही नहीं होता।
+
+   इसलिए पहचान **नाम नहीं, नंबर** है: हर संपर्क का दस्तावेज़-नंबर ही उसका
+   10 अंकों का मोबाइल नंबर है। इससे एक नंबर दो बार दर्ज हो ही नहीं सकता —
+   यह बनावट से पक्का है, किसी जाँच के भरोसे नहीं। नाम बदलते रहें, नंबर वही
+   रहेगा; पुराने नाम «और नाम» में जुड़ते जाएँगे।                          */
+
+let CONTACTS = {};
+
+/** नंबर की पहचान — +91, जगह, डैश सब हटाकर आख़िरी 10 अंक। */
+function phoneKey(v) {
+  const d = String(v || "").replace(/\D/g, "");
+  const t = d.length > 10 ? d.slice(-10) : d;
+  return /^[6-9]\d{9}$/.test(t) ? t : "";
+}
+
+const phoneShow = (p) => String(p || "").replace(/^(\d{5})(\d{5})$/, "$1 $2");
+
+/**
+ * संपर्क जोड़ो या सुधारो — नंबर वही रहता है, नाम जुड़ते जाते हैं।
+ * नंबर न हो तो कुछ नहीं होता: बिना नंबर का संपर्क सूची में नहीं जाता,
+ * वरना वही आदमी दस बार अलग-अलग नामों से बन जाएगा।
+ */
+async function touchContact(phone, name, extra) {
+  const k = phoneKey(phone);
+  if (!k) return null;
+  const had = CONTACTS[k] || { phone: k, name: null, aliases: [], count: 0 };
+  const nm = String(name || "").trim();
+  const doc = Object.assign({}, had, extra || {});
+  doc.phone = k;
+  if (nm) {
+    if (!doc.name) doc.name = nm;
+    else if (pKey(doc.name) !== pKey(nm) &&
+             !(doc.aliases || []).some((a) => pKey(a) === pKey(nm))) {
+      doc.aliases = (doc.aliases || []).concat([nm]);
+    }
+    // सबसे पूरा नाम आगे रहे
+    if (nm.length > String(doc.name).length) {
+      doc.aliases = (doc.aliases || []).concat([doc.name])
+        .filter((a) => a && pKey(a) !== pKey(nm));
+      doc.name = nm;
+    }
+  }
+  doc.lastSeen = todayISO();
+  if (!doc.firstSeen) doc.firstSeen = todayISO();
+  CONTACTS[k] = doc;
+  try { await db.collection("vbe_contacts").doc(k).set(doc, { merge: true }); } catch (e) {}
+  return doc;
+}
+
+/** इस संपर्क के कहने पर हुए सारे पेमेंट। */
+function contactSpend(k) {
+  const c = CONTACTS[k] || {};
+  const names = [c.name].concat(c.aliases || []).filter(Boolean).map(pKey);
+  const rows = EXP.filter((e) =>
+    phoneKey(e.requestedPhone) === k ||
+    (e.requestedBy && names.indexOf(pKey(e.requestedBy)) >= 0));
+  return { rows, sum: rows.reduce((a, e) => a + (Number(e.billTotal) || 0), 0) };
+}
+
+/** जिन नामों का नंबर अभी नहीं मिला — इन्हें भरना बाकी है। */
+function contactsNoPhone() {
+  const map = {};
+  EXP.forEach((e) => {
+    if (!e.requestedBy || phoneKey(e.requestedPhone)) return;
+    const k = pKey(e.requestedBy);
+    if (!k || Object.values(CONTACTS).some((c) =>
+      pKey(c.name) === k || (c.aliases || []).some((a) => pKey(a) === k))) return;
+    map[k] = map[k] || { name: e.requestedBy, n: 0, sum: 0 };
+    map[k].n++; map[k].sum += Number(e.billTotal) || 0;
+  });
+  return Object.values(map).sort((a, b) => b.sum - a.sum);
+}
+
+const initials = (n) => String(n || "?").trim().split(/\s+/)
+  .slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+
+function contactRows() {
+  const sq = String($("cSearch") ? $("cSearch").value : "").trim();
+  const pk = phoneKey(sq), q = pKey(sq);
+  const sort = $("cSort") ? $("cSort").value : "sum";
+  return Object.values(CONTACTS)
+    .map((c) => Object.assign({}, c, contactSpend(c.phone)))
+    .filter((c) => {
+      if (!sq) return true;
+      if (pk) return c.phone === pk;
+      if (/^\d+$/.test(sq)) return c.phone.indexOf(sq) >= 0;
+      return [c.name].concat(c.aliases || []).some((a) => pKey(a).includes(q));
+    })
+    .sort((a, b) => sort === "name" ? String(a.name || "").localeCompare(String(b.name || ""), "hi")
+      : sort === "last" ? String(b.lastSeen || "").localeCompare(String(a.lastSeen || ""))
+      : b.sum - a.sum);
+}
+
+function renderContacts() {
+  const box = $("contactList");
+  if (!box) return;
+  const rows = contactRows();
+  const noPh = contactsNoPhone();
+
+  $("cBrain").innerHTML = noPh.length
+    ? gfx.insight({ icon: "📞", tone: "warn",
+        title: plural(noPh.length, "नाम", "नाम") + " का नंबर नहीं मिला",
+        body: noPh.slice(0, 3).map((x) =>
+          `<b>${esc(x.name)}</b> ${INR(x.sum)}`).join(" · ") +
+          `<br><span class="muted">नंबर डाल दीजिए तो आगे उसी नंबर से सारा हिसाब
+           खुल जाएगा — और वही आदमी दुबारा नए नाम से नहीं बनेगा।</span>` +
+          `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">` +
+          noPh.slice(0, 3).map((x) =>
+            `<button type="button" class="mini" onclick="openContact('','${
+              esc(x.name).replace(/'/g, "&#39;")}')">📞 ${esc(x.name)}</button>`).join("") +
+          `</div>` })
+    : "";
+
+  if (!Object.keys(CONTACTS).length) {
+    box.innerHTML = gfx.empty("hello", "अभी कोई संपर्क नहीं",
+      `⚡ फास्ट एंट्री में WhatsApp का स्क्रीनशॉट डालिए — नाम और नंबर वहीं से
+       यहाँ आ जाएँगे। या ख़ुद जोड़ दीजिए।`,
+      `<button type="button" class="mini primary" onclick="openContact('')">➕ संपर्क जोड़ें</button>`);
+    return;
+  }
+  if (!rows.length) {
+    box.innerHTML = gfx.empty("think", "कोई संपर्क नहीं मिला",
+      "नाम या पूरा 10 अंकों का नंबर डालकर देखिए।");
+    return;
+  }
+
+  box.innerHTML = rows.map((c) => `
+    <div class="ctRow" onclick="showContact('${esc(c.phone)}')">
+      <div class="ctAv">${esc(initials(c.name))}</div>
+      <div class="ctMid">
+        <div class="ctName">${esc(c.name || "—")}</div>
+        <div class="ctSub">${plural(c.rows.length, "बार कहा", "बार कहा")}${
+          c.sum ? " · " + INR(c.sum) : ""}${
+          c.lastSeen ? " · आख़िरी " + esc(dayLabel(c.lastSeen).replace(/\s\d{4}$/, "")) : ""}</div>
+        ${(c.aliases || []).length ? `<div class="ctSub">और नाम: ${
+          esc((c.aliases || []).slice(0, 2).join(" · "))}</div>` : ""}
+      </div>
+      <div class="ctPh">${esc(phoneShow(c.phone))}</div>
+    </div>`).join("");
+}
+
+let CT_EDIT = "";
+function openContact(phone, presetName) {
+  CT_EDIT = phone || "";
+  const c = CONTACTS[phone] || {};
+  $("ctTitle").textContent = phone ? "✏️ संपर्क सुधारें" : "➕ नया संपर्क";
+  $("ctPhone").value = phone || "";
+  $("ctPhone").disabled = !!phone;      // नंबर ही पहचान है — बदला नहीं जाता
+  $("ctName").value = c.name || presetName || "";
+  $("ctNote").value = c.note || "";
+  $("ctMsg").textContent = "";
+  openSheet("ctSheet");
+}
+
+async function saveContact() {
+  const k = phoneKey($("ctPhone").value);
+  const msg = $("ctMsg");
+  if (!k) {
+    msg.className = "bad";
+    msg.textContent = "10 अंकों का सही मोबाइल नंबर डालें (6–9 से शुरू)";
+    return;
+  }
+  const had = CONTACTS[k];
+  if (!CT_EDIT && had) {
+    msg.className = "bad";
+    msg.innerHTML = `यह नंबर पहले से <b>${esc(had.name || "किसी")}</b> का दर्ज है —
+      दुबारा नहीं जुड़ेगा। नाम जोड़ना हो तो उसी संपर्क को खोलिए।`;
+    return;
+  }
+  msg.className = "muted"; msg.textContent = "सहेज रहा हूँ…";
+  try {
+    await touchContact(k, $("ctName").value.trim(), { note: $("ctNote").value.trim() || null });
+    await auditLog(CT_EDIT ? "edit_contact" : "add_contact", had || null, CONTACTS[k]);
+    saveCache();
+    closeSheet("ctSheet");
+    renderContacts();
+    toast("📇 संपर्क सहेजा");
+  } catch (err) { msg.className = "bad"; msg.textContent = "नहीं हुआ: " + err.message; }
+}
+
+function showContact(k) {
+  const c = CONTACTS[k];
+  if (!c) return;
+  const sp = contactSpend(k);
+  $("cvTitle").textContent = "📇 " + (c.name || phoneShow(k));
+  $("cvBody").innerHTML = `
+    <div class="ctHead">
+      <div class="ctAv big">${esc(initials(c.name))}</div>
+      <div>
+        <b>${esc(c.name || "—")}</b>
+        <small>📞 ${esc(phoneShow(k))}${c.note ? " · " + esc(c.note) : ""}</small>
+        ${(c.aliases || []).length ? `<small>और नाम: ${esc((c.aliases || []).join(" · "))}</small>` : ""}
+      </div>
+    </div>
+    <div class="ctBtns">
+      <a class="mini" href="tel:${esc(k)}">📞 कॉल</a>
+      <a class="mini" href="https://wa.me/91${esc(k)}" target="_blank" rel="noopener">💬 WhatsApp</a>
+      <button type="button" class="mini" onclick="copyText('${esc(k)}');toast('📋 नंबर कॉपी')">📋</button>
+      <button type="button" class="mini" onclick="closeSheet('ctView');openContact('${esc(k)}')">✏️ सुधारें</button>
+    </div>
+    <div class="paySum" style="margin-top:12px">
+      <div><span>इनके कहने पर</span><b>${INR(sp.sum)}</b></div>
+      <div><span>पेमेंट</span><b>${sp.rows.length}</b></div>
+    </div>
+    ${sp.rows.length ? sp.rows.slice(0, 40).map((e) => `
+      <div class="mrow txn out" onclick="closeSheet('ctView');editExpense('${esc(e._id)}')">
+        <div class="amt out">−${INR(e.billTotal)}</div>
+        <div class="mx">
+          <div class="pname">${esc((e.vendor && e.vendor.name) || "—")}</div>
+          <span class="muted">${esc(dayLabel(String(e.billDate || "").slice(0, 10)))}${
+            e.requestedAt ? " · कहा " + esc(e.requestedAt) : ""}${
+            e.spentOn ? " · 📦 " + esc(e.spentOn) : ""}</span>
+          ${utrPending(e) ? '<br><span class="utrTag">🟡 UTR बाकी</span>' : ""}
+        </div>
+      </div>`).join("")
+    : gfx.empty("sleep", "इनके कहने पर अभी कोई पेमेंट नहीं",
+        "जैसे ही इनके नाम से कोई entry बनेगी, वह यहीं दिखेगी।")}`;
+  openSheet("ctView");
+}
+
+["cSearch", "cSort"].forEach((id) => {
+  const el = $(id);
+  if (el) el.addEventListener("input", renderContacts);
+});
 
 /** जिन entries का UTR अभी नहीं आया — यही पीली दिखती हैं। */
 function pendingUtr() {
@@ -7887,6 +8281,15 @@ function utrCandidate(t) {
   if (!t || t.type !== "debit") return null;
   const day = String(t.date || "").slice(0, 10);
   let best = null;
+
+  // 🧾 चेक नंबर दोनों तरफ़ हूबहू एक ही छपता है — इससे पक्का जोड़ कोई नहीं
+  const cn = String(t.chequeNo || "").replace(/\D/g, "");
+  if (cn) {
+    const byChq = pendingUtr().filter((e) =>
+      String(e.chequeNo || "").replace(/\D/g, "") === cn)[0];
+    if (byChq) return { exp: byChq, sure: true, why: "चेक नं. " + cn, rank: 999 };
+  }
+
   pendingUtr().forEach((e) => {
     const s = paySummary(e);
     if (Math.abs((s.paid || e.billTotal || 0) - (t.amount || 0)) > 1) return;
@@ -7926,7 +8329,9 @@ async function fillUtr(expId, txnId) {
   });
   if (i >= 0) pays[i] = patch; else pays.push(patch);
 
-  const up = { payments: pays, needsUtr: !t.utr, reconciled: true,
+  // बैंक की पंक्ति से जुड़ गया = पैसा सचमुच खाते से गया, यही असली सबूत है।
+  // चेक में UTR होता ही नहीं, इसलिए UTR के भरोसे पीला रखना ग़लत होगा।
+  const up = { payments: pays, needsUtr: false, reconciled: true,
     matchedBankTxnId: t._id,
     paidFromAccountId: t.accountId || e.paidFromAccountId || null };
   await db.collection("vbe_expenses").doc(e._id).update(up);
