@@ -62,39 +62,124 @@
   @media (prefers-reduced-motion: reduce) { .tilt { transition: none !important; transform: none !important; } }
 
   /* ── Layout ────────────────────────────────────────────────────────── */
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 18px 14px 60px; }
-  header.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
-  .brand { display: flex; align-items: center; gap: 12px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 10px 14px 60px; }
+
+  /* ऊपर की पट्टी — 44px, एक ही लाइन, और ऊपर खींचने पर चिपकी रहे */
+  header.top { position: sticky; top: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 6px 0 8px; margin-bottom: 8px;
+    background: linear-gradient(180deg, var(--page) 62%, transparent);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
   .logo {
-    width: 44px; height: 44px; border-radius: 13px; flex: 0 0 auto;
+    width: 32px; height: 32px; border-radius: 10px; flex: 0 0 auto;
     background: conic-gradient(from 210deg, #3987e5, #d55181, #c98500, #3987e5);
-    box-shadow: 0 6px 18px rgba(57,135,229,0.45), 0 0 0 1px rgba(255,255,255,0.12) inset;
-    display: grid; place-items: center; font-size: 21px;
+    box-shadow: 0 4px 12px rgba(57,135,229,0.4), 0 0 0 1px rgba(255,255,255,0.12) inset;
+    display: grid; place-items: center; font-size: 16px;
   }
-  .brand h1 { font-size: 18px; letter-spacing: .2px; }
-  .brand small { color: var(--muted); font-size: 12px; display: block; font-weight: 400; }
-  #userBox { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; }
-  #userBox button { font-size: 12px; }
+  .brand h1 { font-size: 15.5px; letter-spacing: .2px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  .who { width: 34px; height: 34px; flex: 0 0 auto; padding: 0; border-radius: 50%;
+    display: grid; place-items: center; font-size: 14px; font-weight: 700;
+    background: linear-gradient(160deg, rgba(57,135,229,.34), rgba(57,135,229,.12));
+    border-color: rgba(57,135,229,.45); }
+  .meWho { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+  .meWho b { display: block; font-size: 15px; }
+  .meWho small { color: var(--muted); font-size: 12px; }
+  .meWho .logo { width: 40px; height: 40px; font-size: 19px; }
+  button.wide { width: 100%; margin-top: 12px; padding: 12px; border-radius: 12px; }
 
   button {
     font: inherit; color: var(--ink); cursor: pointer;
-    background: var(--surface-2); border: 1px solid var(--border);
-    padding: 8px 14px; border-radius: 10px;
+    background: linear-gradient(160deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
+    border: 1px solid var(--border);
+    padding: 9px 14px; border-radius: 11px;
+    transition: transform .12s ease, border-color .12s ease, background .12s ease;
   }
+  button:active { transform: scale(.97); }
+  button:disabled { opacity: .5; }
   button.primary {
     background: linear-gradient(160deg, #3987e5, #256abf);
     border-color: rgba(255,255,255,0.18);
-    box-shadow: 0 8px 20px rgba(57,135,229,0.35);
+    box-shadow: 0 6px 16px rgba(57,135,229,0.32);
     font-weight: 600;
   }
+  button.danger { border-color: rgba(208,59,59,.5); color: #ff9c9c; }
+  @media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
 
-  /* Tabs */
-  nav.tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px; -webkit-overflow-scrolling: touch; }
-  nav.tabs button { white-space: nowrap; border-radius: 999px; padding: 8px 16px; color: var(--ink-2); }
-  nav.tabs button.active {
-    color: #fff; background: linear-gradient(160deg, rgba(57,135,229,.35), rgba(57,135,229,.12));
-    border-color: rgba(57,135,229,.5); font-weight: 600;
+  /* टैब — बड़े गोल डिब्बों की जगह पतली पट्टी: एक बार में दुगुने टैब दिखें */
+  nav.tabs { display: flex; gap: 2px; overflow-x: auto; margin-bottom: 10px;
+    padding: 0; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    border-bottom: 1px solid var(--border); }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  nav.tabs button { white-space: nowrap; border: 0; background: transparent;
+    border-radius: 0; padding: 9px 10px 8px; font-size: 12.5px; color: var(--muted);
+    position: relative; min-height: 44px; letter-spacing: .1px; }
+  nav.tabs button.active { color: #fff; font-weight: 700; }
+  nav.tabs button.active::after {
+    content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px;
+    border-radius: 2px; background: linear-gradient(90deg, var(--s1), var(--s3));
   }
+  /* 📎 «10 सबसे बड़े» — देखने की नहीं, निपटाने की सूची */
+  .todo { border: 1px solid rgba(250,178,25,.4); border-radius: 16px;
+    padding: 13px 13px 10px; margin-bottom: 14px; overflow: hidden;
+    background: linear-gradient(160deg, rgba(250,178,25,.13), rgba(250,178,25,.03)); }
+  .tdHead { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .tdHead > div { flex: 1; min-width: 0; }
+  .tdHead b { font-size: 14.5px; }
+  .tdHead small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .tdBar { height: 3px; border-radius: 3px; background: rgba(255,255,255,.08);
+    overflow: hidden; margin-bottom: 4px; }
+  .tdBar i { display: block; height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--warning), var(--serious)); transition: width .4s ease; }
+  .tdRow { display: flex; align-items: stretch; gap: 6px;
+    border-bottom: 1px solid rgba(255,255,255,.06); }
+  .tdRow:last-of-type { border-bottom: 0; }
+  .tdGo { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+    background: transparent; border: 0; border-radius: 0; padding: 11px 2px;
+    text-align: left; min-height: 46px; }
+  .tdAmt { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700;
+    font-size: 14.5px; color: #ff9c9c; }
+  .tdName { flex: 1; min-width: 0; font-size: 13.5px; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 400px) { .tdAmt { font-size: 13.5px; } .tdName { font-size: 12.5px; } }
+  .tdWhen { flex: 0 0 auto; font-size: 11px; color: var(--muted); }
+  .tdX { flex: 0 0 auto; width: 40px; padding: 0; border: 0; background: transparent;
+    color: var(--muted); font-size: 15px; }
+  .tdX:hover { color: var(--ink); }
+  .tdFoot { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+
+  /* 🔗 «इसी पार्टी के अधूरे बिल» — बाद वाला पेमेंट यहीं बैठता है */
+  .linkBox { border: 1px solid rgba(25,158,112,.45); border-radius: 14px;
+    padding: 11px 12px; margin-bottom: 12px;
+    background: linear-gradient(160deg, rgba(25,158,112,.16), rgba(25,158,112,.04)); }
+  .lkHead { font-size: 13px; color: var(--ink-2); margin-bottom: 9px; }
+  .lkHead b { color: var(--ink); }
+  .lkRow { display: flex; align-items: center; gap: 10px; padding: 9px 0;
+    border-top: 1px solid rgba(255,255,255,.07); }
+  .lkRow:first-of-type { border-top: 0; }
+  .lkTxt { flex: 1; min-width: 0; font-size: 13.5px; }
+  .lkTxt small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .lkTxt small b { color: var(--ink-2); }
+  .lkRow.fits .lkTxt b { color: #7de3b6; }
+  .lkTag { font-size: 11px; padding: 2px 7px; border-radius: 999px; margin-left: 6px;
+    background: rgba(25,158,112,.3); border: 1px solid rgba(25,158,112,.5); }
+  .lkFoot { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+  .pay.cash .payAmt { color: #ffd88a; }
+
+  /* 🔍 खोज ने क्या समझा — भ्रम की जड़ यही थी कि वह चुपचाप ढूँढती थी */
+  .snote { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px;
+    padding: 7px 12px; border-radius: 11px; font-size: 12.5px; color: var(--ink-2);
+    border: 1px solid rgba(57,135,229,.35);
+    background: linear-gradient(160deg, rgba(57,135,229,.16), rgba(57,135,229,.05)); }
+  .snote span { flex: 1; min-width: 0; }
+  .snote b { color: var(--ink); }
+  .snote.none { border-color: rgba(250,178,25,.4);
+    background: linear-gradient(160deg, rgba(250,178,25,.14), rgba(250,178,25,.04)); }
+  .snote .sx { padding: 4px 9px; font-size: 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.06); }
+  .snote .sx.go { border-color: rgba(57,135,229,.5); color: #cfe3ff; }
+
   /* डेटा की पट्टी — कब का डेटा है और आज कितनी पढ़ाई बची */
   .sync {
     position: relative; overflow: hidden;
@@ -137,12 +222,18 @@
   .chartCard { margin-bottom: 12px; }
 
   /* Filters + table */
-  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  /* छन्नियाँ एक ही लाइन में बहती हुई — पहले तीन लाइनें खा जाती थीं */
+  .filters { display: flex; gap: 7px; margin-bottom: 10px; overflow-x: auto;
+    padding-bottom: 2px; scrollbar-width: none; }
+  .filters::-webkit-scrollbar { display: none; }
   .filters select, .filters input {
-    font: inherit; color: var(--ink); background: var(--surface-2);
-    border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; min-width: 120px;
+    font: inherit; font-size: 13px; color: var(--ink); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 8px 12px;
+    min-width: 0; flex: 0 0 auto; height: 38px;
   }
-  .filters input { flex: 1; min-width: 150px; }
+  .filters select { padding-right: 26px; }
+  .filters input { flex: 1 0 46%; min-width: 130px; }
+  @media (min-width: 760px) { .filters { flex-wrap: wrap; overflow: visible; } }
   .tableWrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; }
@@ -250,15 +341,17 @@
   [hidden] { display: none !important; }
 
   /* ══ v4 ══ तारीख़ की पट्टी — हर tab पर एक ही रूप ══ */
-  .dbar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
-    margin-bottom: 8px; scrollbar-width: none; }
+  .dbar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;
+    margin-bottom: 6px; scrollbar-width: none; }
   .dbar::-webkit-scrollbar { display: none; }
-  .dbar button { white-space: nowrap; padding: 7px 13px; border-radius: 999px;
-    font-size: 12.5px; color: var(--ink-2); }
+  .dbar button { white-space: nowrap; padding: 6px 12px; border-radius: 999px;
+    font-size: 12.5px; color: var(--ink-2); min-height: 34px; }
   .dbar button.on { color: #fff; font-weight: 600;
     background: linear-gradient(160deg, rgba(57,135,229,.38), rgba(57,135,229,.14));
     border-color: rgba(57,135,229,.55); }
-  .dsum { font-size: 12.5px; color: var(--ink-2); margin-bottom: 10px; }
+  .dsum { font-size: 12px; color: var(--ink-2); margin-bottom: 8px;
+    white-space: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .dsum::-webkit-scrollbar { display: none; }
   .dsum b { color: var(--ink); }
   .dpick { display: flex; gap: 8px; align-items: end; margin-bottom: 10px; flex-wrap: wrap; }
   .dpick label { font-size: 11px; color: var(--muted); }
@@ -539,18 +632,39 @@
 <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <div class="wrap">
+  <!-- ऊपर की पट्टी एक ही लाइन में — नाम, फ़र्म, खाता और Logout मिलकर पहले
+       आधी स्क्रीन खा जाते थे और हिसाब देखने के लिए हर बार नीचे खींचना पड़ता
+       था। अब बाक़ी सब 👤 के अंदर। -->
   <header class="top">
     <div class="brand">
       <div class="logo">🧾</div>
-      <div>
-        <h1>VBE खरीद-हिसाब<small>Vande Bharat Enterprises · Barmer</small></h1>
-      </div>
+      <h1>VBE खरीद-हिसाब</h1>
     </div>
-    <div id="userBox" hidden>
-      <span id="userName"></span>
-      <button onclick="signOut()">Logout</button>
-    </div>
+    <button id="userBox" class="who" hidden onclick="renderSync();openSheet('meSheet')"
+            aria-label="मेरा खाता और डेटा">
+      <span id="userDot">👤</span>
+    </button>
   </header>
+
+  <!-- 👤 — जो रोज़ नहीं चाहिए वह यहाँ, स्क्रीन पर नहीं -->
+  <div id="meSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:420px">
+      <div class="grab"></div>
+      <div class="sheetHead">
+        <h3>👤 मेरा खाता</h3>
+        <button class="x" onclick="closeSheet('meSheet')">✕</button>
+      </div>
+      <div class="meWho">
+        <div class="logo">🧾</div>
+        <div>
+          <b id="userName">—</b>
+          <small>Vande Bharat Enterprises · Barmer</small>
+        </div>
+      </div>
+      <div id="syncBar"></div>
+      <button class="wide danger" onclick="closeSheet('meSheet');signOut()">🚪 Logout</button>
+    </div>
+  </div>
 
   <div id="gateLoading" class="card gate"><div class="spin"></div><p style="margin-top:14px">लोड हो रहा है…</p></div>
 
@@ -587,13 +701,12 @@
       <button data-v="missing">❓ बकाया</button>
     </nav>
 
-    <!-- डेटा कब का है + आज कितनी पढ़ाई ख़र्च हुई -->
-    <div id="syncBar"></div>
-
     <!-- ── Overview ── -->
     <section class="view active" id="v-overview">
       <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
       <div class="tiles" id="tiles"></div>
+      <!-- 📎 काम करने की जगह — 10 सबसे बड़े बिना-बिल पेमेंट, एक-एक करके -->
+      <div id="ovTodo"></div>
       <div id="ovBrain"></div>
       <div class="card chartCard tilt">
         <h3>🟢 आया · 🔴 गया — दिन-दर-दिन</h3>
@@ -689,8 +802,9 @@
           <option value="yes">✅ चालान बन गया</option>
           <option value="due">⚖️ पैसा बाकी</option>
         </select>
-        <input id="fSearch" type="search" placeholder="खोजें: दुकान, आइटम, receipt…">
+        <input id="fSearch" type="search" placeholder="दुकान · सामान · ₹रकम · बिल नं.">
       </div>
+      <div id="fNote" hidden></div>
       <div class="card">
         <div id="billRows"></div>
         <div id="billEmpty" class="empty" hidden>इस अवधि में कोई बिल नहीं</div>
@@ -734,8 +848,9 @@
           <option value="no">📎 बिल बाकी</option>
           <option value="yes">✅ बिल लगा</option>
         </select>
-        <input id="lSearch" type="search" placeholder="पार्टी, रकम या UTR से खोजें…">
+        <input id="lSearch" type="search" placeholder="नाम · ₹रकम · UTR · तारीख़">
       </div>
+      <div id="lNote" hidden></div>
       <div class="tiles" id="lTiles"></div>
       <div class="card"><div id="ledgerRows"></div></div>
     </section>
@@ -903,8 +1018,9 @@ placeholder="917568 माजीसा डिस्पोजल
           <option value="amount">सबसे बड़ी रकम पहले</option>
           <option value="party">पार्टी के नाम से</option>
         </select>
-        <input id="mSearch" type="search" placeholder="पार्टी, रकम या UTR से खोजें…">
+        <input id="mSearch" type="search" placeholder="नाम · ₹रकम · UTR · तारीख़">
       </div>
+      <div id="mNote" hidden></div>
       <div class="card" id="missingList"></div>
     </section>
 
@@ -943,6 +1059,8 @@ placeholder="917568 माजीसा डिस्पोजल
           <button type="button" class="x" onclick="closeSheet('billSheet')">✕</button>
         </div>
         <div id="bsTxn" class="muted" style="margin-bottom:6px"></div>
+        <!-- 🔗 यही वह जगह है जहाँ बाद वाला पेमेंट पुराने बिल में बैठता है -->
+        <div id="bsLink" hidden></div>
 
         <div class="seg" id="bsSeg">
           <button type="button" data-m="photo" class="on" onclick="billMode('photo')">📷 फोटो से</button>
@@ -1016,8 +1134,9 @@ placeholder="917568 माजीसा डिस्पोजल
             <span class="muted">कई हो सकते हैं</span></div>
           <input type="file" id="bsPayShot" accept="image/*" hidden>
           <div class="pick" style="margin-bottom:8px">
-            <button type="button" onclick="pickPhoto('bsPayShot')">🖼️ रसीद की फोटो</button>
-            <button type="button" onclick="addPayManual()">✍️ हाथ से जोड़ें</button>
+            <button type="button" onclick="pickPhoto('bsPayShot')">🖼️ रसीद</button>
+            <button type="button" onclick="addPayManual()">✍️ हाथ से</button>
+            <button type="button" onclick="addPayCash()">💵 नकद</button>
           </div>
           <div id="bsPayMsg" class="muted" style="margin-bottom:8px"></div>
           <div id="bsPays"></div>
@@ -1292,7 +1411,10 @@ auth.onAuthStateChanged(async user => {
     show("gateDenied");
     return;
   }
-  $("userName").textContent = user.displayName || user.email;
+  const nm = user.displayName || user.email || "";
+  $("userName").textContent = nm;
+  // 👤 की जगह नाम का पहला अक्षर — पहचान भी, और जगह भी न जाए
+  $("userDot").textContent = (nm.trim()[0] || "👤").toUpperCase();
   $("userBox").hidden = false;
   show("gateLoading");
   try {
@@ -1584,6 +1706,7 @@ function renderTiles() {
   // sparkline पिछले 14 दिन की चाल दिखाती है — अंक बताता है "कितना",
   // लकीर बताती है "किस तरफ़ जा रहा है"। दोनों साथ चाहिए।
   const inSpark = dailySeries(14, "credit"), outSpark = dailySeries(14, "debit");
+  const cash = cashOut();
   const billPct = outAll.length ? 100 - (noBill.length / outAll.length) * 100 : 100;
 
   $("tiles").innerHTML = [
@@ -1601,11 +1724,99 @@ function renderTiles() {
       pct: bills.length ? 100 - (pend.length / bills.length) * 100 : 0 }),
     gfx.tile({ k: "🧑 पार्टियाँ", v: String(partySet.size), s: "जिनसे लेन-देन हुआ",
       color: gfx.C.ai, pct: 70 })
-  ].join("");
+  ].concat(cash.n ? [
+    // नकद बैंक में कहीं नहीं दिखता — इसलिए उसका अपना अलग अंक, वरना बिल
+    // हमेशा अधूरा दिखता रहता और नकद का हिसाब कहीं बैठता ही नहीं
+    gfx.tile({ k: "🪙 नकद दिया", v: INR(cash.sum), n: cash.sum,
+      s: cash.n + " बार · बैंक से अलग", color: "#c98500",
+      pct: outSum ? Math.min(100, (cash.sum / (outSum + cash.sum)) * 100) : 0 })
+  ] : []).join("");
   attachTilt();
   gfx.fit($("tiles"));
   gfx.countUp($("tiles"));
+  renderTodo();
   renderBrain();
+}
+
+/* ══════════ 📎 «10 सबसे बड़े — बिल लगाना बाकी» ═════════════════════
+   1,664 बिना बिल के पेमेंट देखकर कुछ करने का मन ही नहीं होता। इसलिए एक
+   बार में सिर्फ़ 10 — सबसे बड़ी रकम वाले। एक निपटा, अगला अपने-आप ऊपर।
+   ✕ = «अभी नहीं» — मिटता कुछ नहीं, बस पीछे चला जाता है।              */
+
+let TODO_SKIP = {};
+try { TODO_SKIP = JSON.parse(localStorage.getItem("vbeSkip") || "{}"); } catch (e) {}
+
+function todoSkip(id) {
+  TODO_SKIP[id] = Date.now();
+  try { localStorage.setItem("vbeSkip", JSON.stringify(TODO_SKIP)); } catch (e) {}
+  renderTodo();
+  toast("↩️ अभी नहीं — अगला आ गया");
+}
+function todoUnskipAll() {
+  TODO_SKIP = {};
+  try { localStorage.removeItem("vbeSkip"); } catch (e) {}
+  renderTodo();
+  toast("↩️ सब वापस आ गए");
+}
+
+/** आज कितने निपटाए — घटता हुआ अंक ही आगे बढ़ाता है। */
+function todoDoneToday() {
+  const t = todayISO();
+  return BANKTXNS.filter((x) => x.type === "debit" && x.matchedReceiptId &&
+    String(x.billedOn || "").slice(0, 10) === t).length;
+}
+
+function todoRows() {
+  return BANKTXNS
+    .filter((t) => t.type === "debit" && !t.matched && !t.matchedReceiptId &&
+      !t.billPhotoId && !TODO_SKIP[t._id])
+    .sort((a, b) => (b.amount || 0) - (a.amount || 0));
+}
+
+function renderTodo() {
+  const box = $("ovTodo");
+  if (!box) return;
+  const all = todoRows();
+  const rows = all.slice(0, 10);
+  const skipped = Object.keys(TODO_SKIP).length;
+
+  if (!rows.length) {
+    box.innerHTML = gfx.insight({ icon: "✅", tone: "down",
+      title: skipped ? "सब निपट गए — बस «अभी नहीं» वाले बचे हैं"
+                     : "शाबाश — हर पेमेंट पर बिल लग गया",
+      body: skipped
+        ? `${skipped} entries आपने «अभी नहीं» कही थीं।
+           <button type="button" class="mini" onclick="todoUnskipAll()">↩️ वापस लाएँ</button>`
+        : "जैसे ही कोई नया पेमेंट बिना बिल का आएगा, वह यहीं दिखेगा।" });
+    return;
+  }
+
+  const total = all.reduce((a, t) => a + (t.amount || 0), 0);
+  const pct = Math.min(100, (rows.length / 10) * 100);
+  box.innerHTML = `
+    <div class="todo">
+      <div class="tdHead">
+        <div>
+          <b>📎 बिल लगाना बाकी</b>
+          <small>${all.length} में से सबसे बड़े ${rows.length} · कुल ${INR(total)}</small>
+        </div>
+        ${skipped ? `<button type="button" class="mini" onclick="todoUnskipAll()"
+          title="«अभी नहीं» वाले वापस">↩️ ${skipped}</button>` : ""}
+      </div>
+      <div class="tdBar"><i style="width:${pct}%"></i></div>
+      ${rows.map((t) => `
+        <div class="tdRow">
+          <button type="button" class="tdGo" onclick="openBillFor('${esc(t._id)}')">
+            <span class="tdAmt">${INR(t.amount)}</span>
+            <span class="tdName">${esc(t.party || t.narration || "—")}</span>
+            <span class="tdWhen">${esc(dayLabel(String(t.date).slice(0, 10))
+              .replace(/\s\d{4}$/, ""))}</span>
+          </button>
+          <button type="button" class="tdX" title="अभी नहीं"
+            onclick="todoSkip('${esc(t._id)}')">✕</button>
+        </div>`).join("")}
+      <div class="tdFoot">इन 10 के निपटते ही अगले 10 अपने-आप आ जाएँगे।</div>
+    </div>`;
 }
 
 function sumBy(rows, keyFn, valFn) {
@@ -1731,24 +1942,22 @@ const FLAG_ICONS = {
 };
 
 function renderBills() {
-  const st = $("fStatus").value, sf = $("fStaff").value,
-    q = $("fSearch").value.trim().toLowerCase();
+  const st = $("fStatus").value, sf = $("fStaff").value;
+  const sq = parseQuery($("fSearch").value);
   const rows = EXP.filter(e => {
-    if (!inRange(e.billDate || e.submittedAt)) return false;
+    // तारीख़ या बिल नंबर से खोजा है तो ऊपर की अवधि आड़े न आए
+    const skipRange = sq && (sq.kind === "date" || sq.kind === "receipt");
+    if (!skipRange && !inRange(e.billDate || e.submittedAt)) return false;
     if (st && e.status !== st) return false;
     if (sf && !(e.submittedBy && e.submittedBy.name === sf)) return false;
     const ch = $("fChallan") ? $("fChallan").value : "";
     if (ch === "no" && !needsChallan(e)) return false;
     if (ch === "yes" && !e.challanNo) return false;
     if (ch === "due" && paySummary(e).due <= 0.5) return false;
-    if (q) {
-      const hay = [e.receiptId, e.vendor && e.vendor.name, e.extractedText, e.unit,
-        (e.items || []).map(i => i.name).join(" ")].join(" ").toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
+    return expMatch(e, sq);
   }).slice(0, 200);
 
+  searchNote("fNote", "fSearch", sq, rows.length);
   $("billEmpty").hidden = rows.length > 0;
   $("billRows").innerHTML = billCards(rows);
 }
@@ -3559,29 +3768,182 @@ async function botCall(action, payload) {
 const driveUpload = (dataUrl, name) => botCall("upload", { dataUrl, name });
 const tgNotify = (text) => botCall("notify", { text });
 
+/* ══════════ 🔍 खोज — जो माँगा, वही मिले ══════════════════════════
+   पहले खोज सब कुछ (नाम, विवरण, UTR, रकम, तारीख़) एक लंबी लकीर में जोड़कर
+   उसमें अक्षर ढूँढती थी। इसलिए «11000» लिखने पर वह किसी और entry के UTR के
+   *बीच* भी मिल जाता था और ₹900 वाली entry भी सामने आ जाती — यही भ्रम था।
+
+   अब खोज पहले यह तय करती है कि माँगा क्या गया है, फिर सिर्फ़ उसी खाने में
+   ढूँढती है। रकम खोजने पर UTR के बीच के अंक कभी नहीं गिने जाते।         */
+
+/**
+ * लिखी हुई बात को समझो।
+ * @returns {null|{kind:string, ...}} kind: amount | ref | receipt | date | text
+ */
+/** बिल नंबर की तुलना — «WEB/26-27/975296» और «WEB-26-27-975296» एक ही हैं। */
+const refKey = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+function parseQuery(raw) {
+  const q = String(raw == null ? "" : raw).trim();
+  if (!q) return null;
+
+  // बिल नंबर — WEB/26-27/975296 या EXP/26-27/0007
+  if (/^[A-Z]{2,4}[\/-]\d{2}-\d{2}[\/-]\d+$/i.test(q))
+    return { kind: "receipt", text: refKey(q), label: "🧾 बिल " + q };
+
+  // पूरी तारीख़ — 2026-07-27 / 27-07-2026 / 27/07/2026
+  const d = parseDay(q);
+  if (d && /\d{1,4}[-/.]\d{1,2}[-/.]\d{2,4}/.test(q))
+    return { kind: "date", date: d, label: "📅 " + dayLabel(d) };
+
+  // सिर्फ़ अंक (₹, कॉमा, + के साथ भी)
+  const numish = q.replace(/[₹,\s]/g, "");
+  if (/^\d+\+?$/.test(numish)) {
+    const digits = numish.replace(/\+$/, "");
+    // 10+ अंक = UTR / reference, रकम नहीं — कोई बिल इतने का नहीं होता
+    if (digits.length >= 10)
+      return { kind: "ref", text: digits, label: "🔗 UTR " + digits };
+    const n = Number(digits);
+    const min = numish.endsWith("+");
+    return { kind: "amount", amount: n, min,
+      label: "💰 " + INR(n) + (min ? " या उससे ऊपर" : "") };
+  }
+
+  // अक्षर-अंक मिला हुआ लंबा टुकड़ा = reference (SBIN426092856383 जैसा)
+  if (/^[A-Z0-9]{8,}$/i.test(q) && /\d/.test(q) && /[A-Z]/i.test(q))
+    return { kind: "ref", text: q.toUpperCase(), label: "🔗 " + q.toUpperCase() };
+
+  return { kind: "text", text: q.toLowerCase(), label: "🧑 " + q };
+}
+
+/** एक रकम खोज से मिलती है या नहीं — रकम सिर्फ़ रकम से मिलेगी। */
+function amountHit(value, sq) {
+  const n = Number(value);
+  if (!isFinite(n)) return false;
+  return sq.min ? n >= sq.amount : Math.round(n) === Math.round(sq.amount);
+}
+
+/**
+ * बैंक की एक पंक्ति खोज पर खरी उतरती है या नहीं।
+ * हर kind अपने ही खाने देखता है — यही सटीकता की जड़ है।
+ */
+function txnMatch(t, sq) {
+  if (!sq) return true;
+  switch (sq.kind) {
+    case "amount":
+      return amountHit(t.amount, sq);
+    case "ref":
+      return [t.utr, t.chequeNo, t.appTxnId, t._id]
+        .some((v) => String(v || "").toUpperCase().includes(sq.text));
+    case "receipt":
+      return refKey(t.matchedReceiptId) === sq.text ||
+             (t.matchedReceiptIds || []).some((r) => refKey(r) === sq.text);
+    case "date":
+      return String(t.date || "").slice(0, 10) === sq.date;
+    default:
+      return [t.party, t.narration, t.aiSummary, t.billVendor]
+        .some((v) => String(v || "").toLowerCase().includes(sq.text));
+  }
+}
+
+/** बिल की एक पंक्ति खोज पर खरी उतरती है या नहीं। */
+function expMatch(e, sq) {
+  if (!sq) return true;
+  switch (sq.kind) {
+    case "amount":
+      return amountHit(e.billTotal, sq) ||
+             (e.payments || []).some((p) => amountHit(p.amount, sq)) ||
+             (e.items || []).some((i) => amountHit(i.amount, sq));
+    case "ref":
+      return (e.payments || []).some((p) =>
+               String(p.utr || "").toUpperCase().includes(sq.text)) ||
+             String((e.payment && e.payment.upiRef) || "").toUpperCase().includes(sq.text);
+    case "receipt":
+      return refKey(e.receiptId) === sq.text;
+    case "date":
+      return String(e.billDate || "").slice(0, 10) === sq.date ||
+             (e._date && e._date.toISOString().slice(0, 10) === sq.date);
+    default:
+      return [e.vendor && e.vendor.name, e.unit, e.extractedText, e.note,
+              e.challanNo, e.receiptId]
+        .some((v) => String(v || "").toLowerCase().includes(sq.text)) ||
+        (e.items || []).some((i) => String(i.name || "").toLowerCase().includes(sq.text));
+  }
+}
+
+/**
+ * खोज के नीचे की पट्टी — app बताए कि उसने क्या समझा और क्या मिला।
+ * बिना बताए ढूँढना ही भ्रम की जड़ थी।
+ */
+function searchNote(boxId, inputId, sq, found, redo) {
+  const box = $(boxId);
+  if (!box) return;
+  if (!sq) { box.innerHTML = ""; box.hidden = true; return; }
+  box.hidden = false;
+  const clear = `<button type="button" class="sx" onclick="clearSearch('${inputId}')">✕</button>`;
+  if (found) {
+    box.innerHTML = `<div class="snote"><span>${esc(sq.label)} · <b>${found}</b> मिलीं</span>${clear}</div>`;
+    return;
+  }
+  // कुछ न मिले तो सूखा "कुछ नहीं" नहीं — आगे का रास्ता
+  let more = "";
+  if (sq.kind === "amount" && !sq.min) {
+    more = ` <button type="button" class="sx go" onclick="reSearch('${inputId}','${sq.amount}+')">₹${
+      sq.amount.toLocaleString("en-IN")} से ऊपर देखें</button>`;
+  } else if (sq.kind === "ref" || sq.kind === "amount") {
+    more = ` <button type="button" class="sx go" onclick="document.getElementById('${inputId}').select()">नाम से खोजें</button>`;
+  }
+  box.innerHTML = `<div class="snote none"><span>${esc(sq.label)} · कुछ नहीं मिला${more}</span>${clear}</div>`;
+}
+
+function clearSearch(id) {
+  const el = $(id);
+  if (!el) return;
+  el.value = "";
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function reSearch(id, v) {
+  const el = $(id);
+  if (!el) return;
+  el.value = v;
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 /* ══════════ 📜 हिसाब — हर पैसा, समय के हिसाब से ══════════ */
 
 function ledgerRows() {
   const acc = $("lAccount").value, type = $("lType").value;
   const bill = $("lBill").value;
-  const q = $("lSearch").value.trim().toLowerCase();
+  const sq = parseQuery($("lSearch").value);
 
   return BANKTXNS.filter((t) => {
     if (acc && t.accountId !== acc) return false;
     if (type && t.type !== type) return false;
-    if (!inRange(t.date)) return false;
+    // तारीख़ से खोजा है तो ऊपर की अवधि आड़े न आए — माँगा हुआ दिन ही दिखे
+    if (!(sq && sq.kind === "date") && !inRange(t.date)) return false;
     if (bill === "no" && (t.matchedReceiptId || t.billPhotoId)) return false;
     if (bill === "yes" && !(t.matchedReceiptId || t.billPhotoId)) return false;
-    if (q) {
-      const hay = [t.party, t.narration, t.utr, t.amount, t.date].join(" ").toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
+    return txnMatch(t, sq);
   }).sort((a, b) => String(b.date + (b.time || "")).localeCompare(String(a.date + (a.time || ""))));
+}
+
+/**
+ * «यह पैसा किस बिल का कौन-सा हिस्सा है» — पहले सिर्फ़ बिल नंबर दिखता था,
+ * इसलिए यह कभी पता नहीं चलता था कि उस बिल का कितना अभी बाकी है।
+ */
+function txnBillBadge(t) {
+  const link = billOfTxn(t._id, t.matchedReceiptId);
+  if (!link) return `<span class="badge hi">✅ ${esc(t.matchedReceiptId || "बिल लगा")}</span>`;
+  const s = paySummary(link.exp);
+  const nth = link.index >= 0 ? `${link.index + 1}/${link.of} पेमेंट` : "बिल लगा";
+  return `<span class="badge hi plink" onclick="editExpense('${esc(link.exp._id)}')">✅ ${
+    esc(link.exp.receiptId || "")} · ${nth}</span>` +
+    (s.due > 0.5 ? `<span class="badge lo">⚖️ इस बिल का बाकी ${INR(s.due)}</span>` : "");
 }
 
 function renderLedger() {
   const rows = ledgerRows();
+  searchNote("lNote", "lSearch", parseQuery($("lSearch").value), rows.length);
   const inSum = rows.filter((t) => t.type === "credit").reduce((a, t) => a + (t.amount || 0), 0);
   const outSum = rows.filter((t) => t.type === "debit").reduce((a, t) => a + (t.amount || 0), 0);
   const noBill = rows.filter((t) => t.type === "debit" && !t.matchedReceiptId && !t.billPhotoId).length;
@@ -3614,8 +3976,7 @@ function renderLedger() {
         ${t.utr ? `<br><span class="muted">UTR ${esc(t.utr)}</span>` : ""}
         ${t.aiSummary ? `<br><span class="badge">🧠 ${esc(t.aiSummary)}</span>` : ""}
         <div style="margin-top:7px">
-          ${hasBill
-            ? `<span class="badge hi">✅ ${esc(t.matchedReceiptId || "बिल लगा")}</span>`
+          ${hasBill ? txnBillBadge(t)
             : `<button type="button" class="mini" onclick="openBillFor('${esc(t._id)}')">📎 बिल जोड़ें</button>`}
         </div>
       </div>
@@ -4461,11 +4822,7 @@ function openBillSheet(opts) {
     $("bsUtr").value = BILL_TXN.utr || "";
     // बैंक की entry ख़ुद एक पेमेंट है — उसे पेमेंट की सूची में दिखाओ,
     // ताकि "बिल कितना, दिया कितना" का हिसाब पहले ही सही बैठे।
-    BILL_PAYS = [BILL_TXN.paymentDetail || {
-      id: "bank", amount: BILL_TXN.amount, paidAt: String(BILL_TXN.date).slice(0, 10),
-      time: BILL_TXN.time || null, app: "बैंक statement", status: "success",
-      utr: BILL_TXN.utr || null, accountId: BILL_TXN.accountId || "", at: new Date().toISOString()
-    }];
+    BILL_PAYS = [Object.assign(payFromTxn(BILL_TXN), BILL_TXN.paymentDetail || {})];
   } else if (BILL_EXP) {
     $("bsTxn").innerHTML = `<span class="muted">${esc(BILL_EXP.receiptId || "")}</span>`;
     $("bsVendor").value = (BILL_EXP.vendor && BILL_EXP.vendor.name) || "";
@@ -4493,6 +4850,7 @@ function openBillSheet(opts) {
   if (!document.querySelectorAll("#bsItems .irow").length) addBsItem();
   $("bsPayMsg").textContent = "";
   renderPays();
+  renderBillLink();
   openSheet("billSheet");
 }
 
@@ -4692,8 +5050,19 @@ async function saveBillSheet() {
       patch.priceAlerts = alerts;
       patch.flags = computeFlags(Object.assign({}, BILL_EXP, patch), alerts);
       await db.collection("vbe_expenses").doc(BILL_EXP._id).update(patch);
+      // जो पेमेंट हटाया गया, उसकी बैंक-पंक्ति फिर से «बिल बाकी» में लौटे —
+      // वरना वह पैसा न बिल में रहता, न बकाया में; बीच में ग़ायब हो जाता।
+      const gone = (BILL_EXP.payments || [])
+        .map((x) => x.bankTxnId).filter(Boolean)
+        .filter((id) => !BILL_PAYS.some((x) => x.bankTxnId === id));
+      for (const id of gone) {
+        const back = { matched: false, matchedReceiptId: null, aiSummary: null };
+        await db.collection("vbe_bank_txns").doc(id).update(back).catch(() => {});
+        memTxn(id, back);
+      }
       await auditLog("edit_bill", before, Object.assign({ id: BILL_EXP._id }, payload));
       Object.assign(BILL_EXP, patch);
+      if (gone.length) recomputeMissing();
       if (alerts.length) toast("📈 " + alerts[0]);
       toast("✏️ बिल सुधर गया");
     } else if (BILL_TXN) {
@@ -4732,6 +5101,7 @@ async function saveBillSheet() {
         billPhotoId: BILL_TXN._id,
         matched: true, matchedReceiptId: receiptId,
         aiSummary: vendor ? vendor + " · " + items.length + " चीज़ें" : null,
+        billedOn: todayISO(),
         billVendor: vendor || null, billTotal: total, billItems: items,
         billUnit: $("bsUnit").value || null, billNote: $("bsNote").value.trim() || null,
         billPhotos: urls
@@ -4863,13 +5233,12 @@ async function finishPay() {
 
 function missingRows() {
   const acc = $("mAccount").value;
-  const q = $("mSearch").value.trim().toLowerCase();
+  const sq = parseQuery($("mSearch").value);
   const sort = $("mSort").value;
   let rows = BANKTXNS.filter((t) =>
     t.type === "debit" && !t.matched && !t.matchedReceiptId && !t.billPhotoId &&
-    inRange(t.date) && (!acc || t.accountId === acc));
-  if (q) rows = rows.filter((t) =>
-    [t.party, t.narration, t.utr, t.amount].join(" ").toLowerCase().includes(q));
+    ((sq && sq.kind === "date") || inRange(t.date)) && (!acc || t.accountId === acc));
+  rows = rows.filter((t) => txnMatch(t, sq));
   rows.sort((a, b) => sort === "amount" ? (b.amount || 0) - (a.amount || 0)
     : sort === "party" ? String(a.party || "").localeCompare(String(b.party || ""))
     : String(b.date).localeCompare(String(a.date)));
@@ -4878,6 +5247,7 @@ function missingRows() {
 
 function renderMissing() {
   const rows = missingRows();
+  searchNote("mNote", "mSearch", parseQuery($("mSearch").value), rows.length);
   const total = rows.reduce((a, t) => a + (t.amount || 0), 0);
 
   // 🧠 ऊपर की समझ — गिनती नहीं, बात।
@@ -5204,8 +5574,26 @@ function goTab(v) {
     b.classList.toggle("active", b.dataset.v === v));
   document.querySelectorAll(".view").forEach((s) =>
     s.classList.toggle("active", s.id === "v-" + v));
+  // छिपे हुए tab की चौड़ाई शून्य होती है, इसलिए वहाँ अंक नापे ही नहीं जा
+  // सकते और "₹-3.46 …" कटा हुआ रह जाता था। दिखते ही दुबारा नापो।
+  gfx.fit(document.getElementById("v-" + v));
   window.scrollTo({ top: 0, behavior: REDUCED ? "auto" : "smooth" });
 }
+
+// फ़ोन घुमाने या खिड़की बदलने पर भी अंक फिर से बैठें
+addEventListener("resize", () => {
+  clearTimeout(window.__fitT);
+  window.__fitT = setTimeout(() => {
+    document.querySelectorAll(".tile .v").forEach((el) => {
+      ["xs", "sm", "md"].forEach((c) => el.classList.remove(c));
+      const n = String(el.textContent).length;
+      if (n > 13) el.classList.add("xs");
+      else if (n > 10) el.classList.add("sm");
+      else if (n > 8) el.classList.add("md");
+    });
+    gfx.fit(document.querySelector(".view.active"));
+  }, 180);
+});
 
 /* ── 💹 Pricebook — विक्रम जी वाली सलाह ─────────────────────────────── */
 
@@ -5358,7 +5746,7 @@ function matchAccount(bank, last4) {
 function paymentFromReceipt(r, photoUrl) {
   const accountId = matchAccount(r.fromBank, r.fromLast4);
   return {
-    id: "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    id: newPayId(), mode: "bank",
     amount: r.amount != null ? Number(r.amount) : null,
     paidAt: r.paidAt || todayISO(),
     time: r.time || null,
@@ -5378,6 +5766,190 @@ function paymentFromReceipt(r, photoUrl) {
   };
 }
 
+/* ══════════ 🔗 एक बिल, कई पेमेंट ═══════════════════════════════════
+   ₹16,410 का बिल — ₹11,000 उसी दिन ऑनलाइन, ₹4,000 चार दिन बाद, और कभी
+   ₹1,000 नकद। अब तक एक बैंक entry एक बिल से बँधती थी, बस; इसलिए बाद वाला
+   पेमेंट या तो अलग बिल बन जाता या बिना बिल के पड़ा रहता — यही "अटका हुआ" था।
+
+   अब हर पेमेंट अपनी बैंक-पंक्ति से बँधा रहता है (`bankTxnId`), और एक बिल
+   के नीचे कितने भी पेमेंट लग सकते हैं। नकद का अपना रास्ता है — बिल में पूरा
+   गिना जाता है, पर बैंक के आया/गया में नहीं जुड़ता।                     */
+
+const PAY_MODES = {
+  bank:   { icon: "💳", name: "ऑनलाइन" },
+  cash:   { icon: "💵", name: "नकद" },
+  cheque: { icon: "🧾", name: "चेक" },
+  adjust: { icon: "⚖️", name: "सामंजस्य" }
+};
+const payMode = (p) => PAY_MODES[(p && p.mode) || (p && p.bankTxnId ? "bank" : "bank")]
+  || PAY_MODES.bank;
+
+const newPayId = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+/** दो नामों को एक ही पार्टी मानें या नहीं — छोटे टुकड़े पर कभी नहीं। */
+function sameParty(a, b) {
+  const x = pKey(a), y = pKey(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const short = x.length < y.length ? x : y, long = x.length < y.length ? y : x;
+  return short.length >= 5 && long.includes(short);
+}
+
+/** इस बिल का बचा हुआ — छूट घटाकर। */
+const billDue = (e) => paySummary(e).due;
+
+/**
+ * इसी पार्टी के अधूरे बिल — जिनमें यह पेमेंट बैठ सकता है।
+ * पहले वह जिसका बाकी इस रकम से ठीक मेल खाता है, फिर बड़े से छोटे।
+ */
+function openBillsFor(partyName, amount, days) {
+  const cut = Date.now() - (days || 60) * 86400000;
+  return EXP.filter((e) => {
+    if (!sameParty(e.vendor && e.vendor.name, partyName)) return false;
+    if (billDue(e) <= 0.5) return false;
+    const d = new Date(String(e.billDate || "").slice(0, 10) + "T12:00:00");
+    return !isFinite(d) || isNaN(d) ? true : d.getTime() >= cut;
+  }).sort((a, b) => {
+    const ea = Math.abs(billDue(a) - (amount || 0)), eb = Math.abs(billDue(b) - (amount || 0));
+    if (ea <= 1 !== (eb <= 1)) return ea <= 1 ? -1 : 1;   // हूबहू बैठने वाला सबसे ऊपर
+    return billDue(b) - billDue(a);
+  });
+}
+
+/** बैंक की एक पंक्ति किस बिल का कौन-सा पेमेंट है — दोनों तरफ़ से जुड़ाव। */
+function billOfTxn(txnId, receiptId) {
+  for (const e of EXP) {
+    const pays = e.payments || [];
+    const i = pays.findIndex((p) => p.bankTxnId === txnId);
+    if (i >= 0) return { exp: e, index: i, of: pays.length };
+    if (receiptId && refKey(e.receiptId) === refKey(receiptId))
+      return { exp: e, index: -1, of: pays.length };
+  }
+  return null;
+}
+
+/** बैंक की पंक्ति से एक पेमेंट का ढाँचा। */
+function payFromTxn(t) {
+  return {
+    id: newPayId(), mode: "bank",
+    amount: t.amount != null ? Number(t.amount) : null,
+    paidAt: String(t.date || todayISO()).slice(0, 10),
+    time: t.time || null,
+    app: t.app || "बैंक statement",
+    status: "success",
+    utr: t.utr || null,
+    accountId: t.accountId || "",
+    bankTxnId: t._id,
+    at: new Date().toISOString()
+  };
+}
+
+/**
+ * बैंक की entry को *पुराने* बिल में जोड़ो — यही ₹4,000 वाला हल है।
+ * नया बिल नहीं बनता; उसी बिल का दूसरा पेमेंट बन जाता है।
+ */
+async function attachTxnToBill(expId) {
+  const e = EXP.filter((x) => x._id === expId)[0];
+  const t = BILL_TXN;
+  const msg = $("bsMsg");
+  if (!e || !t) return;
+  if ((e.payments || []).some((p) => p.bankTxnId === t._id)) {
+    toast("यह पेमेंट इस बिल में पहले से है"); return;
+  }
+  msg.className = "muted"; msg.textContent = "जोड़ रहा हूँ…";
+  try {
+    const pays = (e.payments || []).concat([payFromTxn(t)]);
+    const after = paySummary(Object.assign({}, e, { payments: pays }));
+    const patch = {
+      payments: pays,
+      status: after.due <= 0.5 ? "reimbursed" : (e.status || "pending"),
+      reconciled: true
+    };
+    await db.collection("vbe_expenses").doc(e._id).update(patch);
+
+    const tp = {
+      matched: true, matchedReceiptId: e.receiptId, billedOn: todayISO(),
+      billVendor: (e.vendor && e.vendor.name) || null
+      // aiSummary यहाँ नहीं लिखते — पंक्ति पर «2/2 पेमेंट · बाकी ₹1,410»
+      // पहले से लिखा आता है, वही बात दो बार दिखना अच्छा नहीं लगता
+    };
+    await db.collection("vbe_bank_txns").doc(t._id).update(tp);
+    await auditLog("attach_payment", null,
+      { receiptId: e.receiptId, txnId: t._id, amount: t.amount, बाकी: after.due });
+
+    Object.assign(e, patch);
+    memTxn(t._id, tp);
+    recomputeMissing();
+    saveCache();
+    closeSheet("billSheet");
+    toast(after.due <= 0.5
+      ? `✅ ${e.receiptId} पूरा हो गया — कुछ बाकी नहीं`
+      : `🔗 जुड़ गया — अब ${INR(after.due)} बाकी है`);
+    refreshAll();
+  } catch (err) {
+    msg.className = "bad"; msg.textContent = "नहीं जुड़ा: " + err.message;
+  }
+}
+
+/** बिल sheet के ऊपर की पट्टी — «इसी पार्टी के अधूरे बिल»। */
+function renderBillLink() {
+  const box = $("bsLink");
+  if (!box) return;
+  box.innerHTML = ""; box.hidden = true;
+  if (!BILL_TXN || BILL_EXP) return;
+  const open = openBillsFor(BILL_TXN.party, BILL_TXN.amount).slice(0, 4);
+  if (!open.length) return;
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="linkBox">
+      <div class="lkHead">🔗 इसी पार्टी के <b>अधूरे बिल</b> — इनमें से किसी में जोड़ दूँ?</div>
+      ${open.map((e) => {
+        const s = paySummary(e);
+        const fits = Math.abs(s.due - (BILL_TXN.amount || 0)) <= 1;
+        return `<div class="lkRow${fits ? " fits" : ""}">
+          <div class="lkTxt">
+            <b>${esc((e.vendor && e.vendor.name) || "—")}</b> — ${INR(s.total)}
+            ${fits ? '<span class="lkTag">✅ ठीक बैठता है</span>' : ""}
+            <small>दिया ${INR(s.paid)} · <b>बाकी ${INR(s.due)}</b> ·
+              ${esc(dayLabel(String(e.billDate || "").slice(0, 10)))} ·
+              ${esc(e.receiptId || "")}</small>
+          </div>
+          <button type="button" class="mini primary"
+            onclick="attachTxnToBill('${esc(e._id)}')">इसी में जोड़ें</button>
+        </div>`;
+      }).join("")}
+      <div class="lkFoot">…या नीचे नया बिल भर दीजिए।</div>
+    </div>`;
+}
+
+/** 💵 नकद — बैंक में कहीं नहीं दिखता, पर बिल में पूरा गिना जाए। */
+function addPayCash() {
+  const remaining = Math.max(0,
+    (Number($("bsTotal").value) || 0) -
+    BILL_PAYS.reduce((a, p) => a + (Number(p.amount) || 0), 0));
+  BILL_PAYS.push({
+    id: newPayId(), mode: "cash",
+    amount: remaining || null, paidAt: $("bsDate").value || todayISO(),
+    time: null, app: null, status: "success", utr: null, accountId: "",
+    note: "नकद हाथ से", at: new Date().toISOString()
+  });
+  renderPays();
+  editPayment(BILL_PAYS.length - 1);
+}
+
+/** इस अवधि में नकद कितना गया — बैंक से अलग, अपना हिसाब। */
+function cashOut(rows) {
+  let sum = 0, n = 0;
+  (rows || EXP).forEach((e) => {
+    (e.payments || []).forEach((p) => {
+      if (p.mode !== "cash" || p.status === "failed") return;
+      if (!inRange(p.paidAt || e.billDate)) return;
+      sum += Number(p.amount) || 0; n++;
+    });
+  });
+  return { sum, n };
+}
+
 /** बिल का पैसा-हिसाब: कितना बना, कितना दिया, कितना बाकी/छूट। */
 function paySummary(rec) {
   const pays = (rec && rec.payments) || [];
@@ -5394,13 +5966,15 @@ function paySummary(rec) {
 
 /** एक पेमेंट का कार्ड — ऊपर रकम, खोलने पर पूरा पता। */
 function payCard(p, idx, editable) {
-  const acc = p.accountId ? accLabel(p.accountId) : (p.fromBank || "खाता नहीं पता");
+  const m = payMode(p);
+  const acc = p.mode === "cash" ? "नकद"
+    : p.accountId ? accLabel(p.accountId) : (p.fromBank || "खाता नहीं पता");
   const when = dayLabel(String(p.paidAt || "").slice(0, 10)) + (p.time ? " · " + p.time : "");
   const bad = p.status && p.status !== "success";
   return `
-  <div class="pay ${bad ? "bad" : ""}">
+  <div class="pay ${bad ? "bad" : ""}${p.mode === "cash" ? " cash" : ""}">
     <div class="payTop" onclick="this.parentNode.classList.toggle('open')">
-      <span class="payAmt">${INR(p.amount)}</span>
+      <span class="payAmt">${m.icon} ${INR(p.amount)}</span>
       <div class="payWho">
         <b>${esc(acc)}</b>
         <small>${esc(when)}${p.app ? " · " + esc(p.app) : ""}${bad ? " · ⚠️ " + esc(p.status) : ""}</small>
@@ -5408,6 +5982,9 @@ function payCard(p, idx, editable) {
       <span class="payChev">▾</span>
     </div>
     <div class="payMore">
+      ${p.bankTxnId ? `<div class="payRow"><span>बैंक</span>
+        <b>🏦 statement की entry से जुड़ा</b></div>` : ""}
+      ${p.note ? `<div class="payRow"><span>टिप्पणी</span><b>${esc(p.note)}</b></div>` : ""}
       ${p.utr ? `<div class="payRow"><span>UTR</span><code>${esc(p.utr)}</code>
         <button type="button" class="mini" onclick="copyText('${esc(p.utr)}');toast('📋 UTR कॉपी')">📋</button></div>` : ""}
       ${p.fromName ? `<div class="payRow"><span>भेजा</span><b>${esc(p.fromName)}</b></div>` : ""}
@@ -5497,7 +6074,7 @@ function addPayManual() {
     (Number($("bsTotal").value) || 0) -
     BILL_PAYS.reduce((a, p) => a + (Number(p.amount) || 0), 0));
   BILL_PAYS.push({
-    id: "p" + Date.now().toString(36),
+    id: newPayId(), mode: "bank",
     amount: remaining || null, paidAt: $("bsDate").value || todayISO(),
     time: null, app: null, status: "success", utr: null,
     accountId: $("bsPayAcc") ? $("bsPayAcc").value : "", at: new Date().toISOString()
