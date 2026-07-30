@@ -120,6 +120,62 @@
     content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px;
     border-radius: 2px; background: linear-gradient(90deg, var(--s1), var(--s3));
   }
+  /* ⚠️ Flags — तीन स्तर, और हर एक का इलाज साथ */
+  .fgTop { display: flex; align-items: center; gap: 10px; font-size: 13.5px;
+    color: var(--ink-2); padding: 2px 0 12px; }
+  .fgTop b { color: var(--ink); font-size: 16px; }
+  .fgGroup { border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 10px; overflow: hidden; }
+  .fgGroup > summary { list-style: none; cursor: pointer; padding: 12px 14px;
+    font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 8px;
+    min-height: 46px; }
+  .fgGroup > summary::-webkit-details-marker { display: none; }
+  .fgGroup > summary::after { content: "▾"; margin-left: auto; color: var(--muted);
+    transition: transform .18s ease; }
+  .fgGroup[open] > summary::after { transform: rotate(180deg); }
+  .fgN { font-size: 11.5px; padding: 2px 8px; border-radius: 999px;
+    background: rgba(255,255,255,.09); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .fgGroup.red { border-color: rgba(208,59,59,.45);
+    background: linear-gradient(160deg, rgba(208,59,59,.12), transparent 60%); }
+  .fgGroup.amber { border-color: rgba(250,178,25,.4);
+    background: linear-gradient(160deg, rgba(250,178,25,.10), transparent 60%); }
+  .fgGroup.blue { border-color: rgba(57,135,229,.35);
+    background: linear-gradient(160deg, rgba(57,135,229,.09), transparent 60%); }
+  .fgItem { display: flex; gap: 11px; padding: 11px 14px 13px;
+    border-top: 1px solid rgba(255,255,255,.07); }
+  .fgIco { font-size: 20px; line-height: 1.2; flex: 0 0 auto; }
+  .fgTxt { flex: 1; min-width: 0; font-size: 13.5px; }
+  .fgTxt > .muted { margin-top: 3px; line-height: 1.5; }
+  .fgAct { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 9px; }
+
+  /* 💹 Pricebook — सब सामने, एक नज़र में */
+  .chips { display: flex; gap: 7px; overflow-x: auto; margin-bottom: 10px;
+    padding-bottom: 2px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chipBtn { white-space: nowrap; border-radius: 999px; padding: 7px 13px;
+    font-size: 12.5px; color: var(--ink-2); min-height: 36px; }
+  .chipBtn.on { color: #fff; font-weight: 600;
+    background: linear-gradient(160deg, rgba(57,135,229,.36), rgba(57,135,229,.12));
+    border-color: rgba(57,135,229,.55); }
+  .pbRow { display: flex; align-items: center; gap: 10px; padding: 11px 2px;
+    border-bottom: 1px solid var(--grid); cursor: pointer; min-height: 56px; }
+  .pbRow:last-child { border-bottom: 0; }
+  .pbRow:active { background: rgba(255,255,255,.03); }
+  .pbMain { flex: 1; min-width: 0; }
+  .pbName { font-size: 14px; font-weight: 600; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pbSub { font-size: 11.5px; color: var(--muted); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pbRight { flex: 0 0 auto; text-align: right; }
+  .pbRate { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pbRight svg.sp { display: block; width: 56px; height: 18px; margin-top: 2px; opacity: .85; }
+  .pbD { flex: 0 0 auto; font-size: 11.5px; padding: 3px 7px; border-radius: 999px;
+    color: var(--muted); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  .pbD.up { color: #ff9c9c; border-color: rgba(208,59,59,.45); }
+  .pbD.down { color: #7de3b6; border-color: rgba(25,158,112,.45); }
+  .pbNew { flex: 0 0 auto; font-size: 11px; padding: 3px 7px; border-radius: 999px;
+    color: #cfe3ff; border: 1px solid rgba(57,135,229,.45); }
+
   /* 📎 «10 सबसे बड़े» — देखने की नहीं, निपटाने की सूची */
   .todo { border: 1px solid rgba(250,178,25,.4); border-radius: 16px;
     padding: 13px 13px 10px; margin-bottom: 14px; overflow: hidden;
@@ -813,18 +869,35 @@
 
     <!-- ── Pricebook ── -->
     <section class="view" id="v-price">
-      <div class="filters"><select id="fItem" style="flex:1"></select></div>
-      <div id="priceAdvice"></div>
-      <div class="tiles" id="priceTiles"></div>
-      <div class="card chartCard tilt">
-        <h3 id="priceChartTitle">रेट history</h3>
-        <div class="chartBox"><canvas id="chPrice"></canvas></div>
+      <!-- सब कुछ सामने — पहले एक dropdown था जिसमें से हर चीज़ ढूँढनी पड़ती
+           थी और एक बार में एक ही दिखती थी -->
+      <div class="filters">
+        <input id="pqSearch" type="search" placeholder="🔍 सामान का नाम…">
       </div>
-      <div class="card tableWrap">
-        <table>
-          <thead><tr><th>तारीख</th><th>दुकान</th><th class="num">मात्रा</th><th class="num">रेट ₹</th><th class="num">राशि ₹</th><th>Receipt</th></tr></thead>
-          <tbody id="priceRows"></tbody>
-        </table>
+      <div class="chips" id="pbChips"></div>
+      <div id="pbBrain"></div>
+      <div class="card"><div id="pbList"></div></div>
+
+      <!-- एक चीज़ का पूरा हाल — पंक्ति दबाने पर नीचे से उठती है -->
+      <div id="priceSheet" class="sheet" hidden>
+        <div class="sheetBox">
+          <div class="grab"></div>
+          <div class="sheetHead">
+            <h3 id="priceChartTitle">रेट का इतिहास</h3>
+            <button class="x" onclick="closeSheet('priceSheet')">✕</button>
+          </div>
+          <div id="priceAdvice"></div>
+          <div class="tiles" id="priceTiles"></div>
+          <div class="card chartCard tilt">
+            <div class="chartBox"><canvas id="chPrice"></canvas></div>
+          </div>
+          <div class="card tableWrap">
+            <table>
+              <thead><tr><th>तारीख</th><th>दुकान</th><th class="num">मात्रा</th><th class="num">रेट ₹</th><th class="num">राशि ₹</th><th>बिल</th></tr></thead>
+              <tbody id="priceRows"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1964,15 +2037,110 @@ function renderBills() {
 ["fStatus", "fStaff", "fSearch", "fChallan"].forEach(id => $(id).addEventListener("input", renderBills));
 
 /* ── Pricebook ── */
+/* ── 💹 Pricebook — «ख़ाली-ख़ाली» से «सबसे काम की» ────────────────────
+   पहले यहाँ एक dropdown था: हर चीज़ ढूँढनी पड़ती थी और एक बार में एक ही
+   दिखती थी, इसलिए जो सामान डला था वह कहीं नज़र ही नहीं आता था। अब सब सामने
+   है — नाम, आख़िरी भाव, चाल का छोटा ग्राफ़ और बदलाव का तीर। खोज सिर्फ़
+   जल्दी के लिए है, ज़रूरत नहीं।                                        */
+
+let PB_FILTER = "all";
+
+/** एक चीज़ का सार — भाव, चाल, कितनी बार, कहाँ से। */
+function pbStat(p) {
+  const h = (p.history || []).filter((x) => x.rate != null);
+  const rates = h.map((x) => x.rate);
+  const last = h[h.length - 1] || null;
+  const prev3 = rates.slice(-4, -1);
+  const base = prev3.length ? prev3.reduce((a, b) => a + b, 0) / prev3.length : null;
+  const cur = p.lastRate != null ? p.lastRate : (last && last.rate);
+  return {
+    h, rates, last, cur,
+    lo: rates.length ? Math.min(...rates) : null,
+    hi: rates.length ? Math.max(...rates) : null,
+    delta: (base && cur != null) ? Math.round((cur / base - 1) * 100) : null,
+    fresh: h.length <= 1,
+    when: last ? String(last.date || "").slice(0, 10) : "",
+    vendor: last ? last.vendor : null
+  };
+}
+
+function pbRows() {
+  const sq = String($("pqSearch") ? $("pqSearch").value : "").trim().toLowerCase();
+  return PRICEBOOK
+    .filter((p) => !p.mergedInto)
+    .map((p) => Object.assign({ p }, pbStat(p)))
+    .filter((r) => {
+      if (sq) {
+        const hay = [r.p.canonicalName].concat(r.p.aliases || []).join(" ").toLowerCase();
+        if (!hay.includes(sq)) return false;
+      }
+      if (PB_FILTER === "up") return r.delta != null && r.delta >= 5;
+      if (PB_FILTER === "down") return r.delta != null && r.delta <= -5;
+      if (PB_FILTER === "new") return r.fresh;
+      return true;
+    })
+    .sort((a, b) => String(b.when).localeCompare(String(a.when)));
+}
+
+function setPbFilter(k) { PB_FILTER = k; renderPricebook(); }
+
 function renderPricebook() {
-  if (!PRICEBOOK.length) {
-    $("fItem").innerHTML = "<option>अभी कोई आइटम नहीं</option>";
+  const list = $("pbList");
+  if (!list) return;
+  const chips = [["all", "सब"], ["up", "📈 महँगी हुई"], ["down", "📉 सस्ती हुई"], ["new", "🆕 नई"]];
+  $("pbChips").innerHTML = chips.map(([k, t]) =>
+    `<button type="button" class="chipBtn${PB_FILTER === k ? " on" : ""}"
+      onclick="setPbFilter('${k}')">${t}</button>`).join("");
+
+  if (!PRICEBOOK.filter((x) => !x.mergedInto).length) {
+    $("pbBrain").innerHTML = "";
+    list.innerHTML = `<div class="empty">अभी कोई सामान दर्ज नहीं।<br>
+      <span class="muted">जैसे ही किसी बिल में सामान और रेट लिखा जाएगा, वह
+      यहाँ अपने-आप आ जाएगा — और अगली बार भाव मिलाकर बताया जाएगा।</span></div>`;
     return;
   }
-  $("fItem").innerHTML = PRICEBOOK
-    .map((p, i) => `<option value="${i}">${esc(p.canonicalName)}</option>`).join("");
-  $("fItem").onchange = () => renderPriceItem(PRICEBOOK[+$("fItem").value]);
-  renderPriceItem(PRICEBOOK[0]);
+
+  const all = PRICEBOOK.filter((x) => !x.mergedInto).map((p) => Object.assign({ p }, pbStat(p)));
+  const up = all.filter((r) => r.delta != null && r.delta >= 5)
+    .sort((a, b) => b.delta - a.delta).slice(0, 3);
+  $("pbBrain").innerHTML = up.length
+    ? gfx.insight({ icon: "📈", tone: "warn",
+        title: `${up.length} चीज़ें महँगी हो रही हैं`,
+        body: up.map((r) => `<b>${esc(r.p.canonicalName)}</b> ₹${r.cur} (▲${r.delta}%)`).join(" · ") +
+          `<br><span class="muted">पिछली 3 बार के औसत से मिलाकर।</span>` })
+    : gfx.insight({ icon: "🟢", tone: "down", title: "भाव अभी ठिकाने पर हैं",
+        body: `${all.length} चीज़ों का हिसाब रखा जा रहा है — कोई ख़ास उछाल नहीं।` });
+
+  const rows = pbRows();
+  list.innerHTML = rows.length ? rows.map((r) => {
+    const d = r.delta;
+    const tone = d == null ? "" : d >= 5 ? " up" : d <= -5 ? " down" : "";
+    const arrow = r.fresh ? `<span class="pbNew">🆕 पहली बार</span>`
+      : d == null ? "" : `<span class="pbD${tone}">${d > 0 ? "▲" : d < 0 ? "▼" : "▬"}${
+          d ? Math.abs(d) + "%" : " वही"}</span>`;
+    return `
+    <div class="pbRow" onclick="openPriceItem('${esc(r.p.id || r.p.canonicalName)}')">
+      <div class="pbMain">
+        <div class="pbName">${esc(r.p.canonicalName)}</div>
+        <div class="pbSub">${esc(r.vendor || "—")}${
+          r.when ? " · " + esc(dayLabel(r.when).replace(/\s\d{4}$/, "")) : ""} ·
+          ${r.h.length} बार ली</div>
+      </div>
+      <div class="pbRight">
+        <div class="pbRate">${r.cur != null ? INR(r.cur) : "—"}</div>
+        ${gfx.spark(r.rates.slice(-12), d != null && d >= 5 ? gfx.C.out : gfx.C.in)}
+      </div>
+      ${arrow}
+    </div>`;
+  }).join("") : `<div class="empty">इस छन्नी में कुछ नहीं</div>`;
+}
+
+/** एक चीज़ का पूरा हाल — नीचे से उठती हुई sheet में। */
+function openPriceItem(key) {
+  const p = PRICEBOOK.filter((x) => (x.id || x.canonicalName) === key)[0];
+  if (!p) return;
+  renderPriceItem(p);
+  openSheet("priceSheet");
 }
 
 function renderPriceItem(p) {
@@ -1980,7 +2148,7 @@ function renderPriceItem(p) {
   const rates = hist.map(h => h.rate);
   const lo = rates.length ? Math.min(...rates) : null;
   const hi = rates.length ? Math.max(...rates) : null;
-  $("priceChartTitle").textContent = p.canonicalName + " — रेट history";
+  $("priceChartTitle").textContent = "💹 " + p.canonicalName;
 
   // सलाह पहले, आँकड़े बाद में — दुकान पर काम की बात यही है।
   $("priceAdvice").innerHTML = priceAdvice(p);
@@ -2032,17 +2200,190 @@ const FLAG_TEXT = {
   over_threshold: "limit से ऊपर",
   price_spike: "कीमत में उछाल"
 };
+
+/* ══════════ ⚠️ Flags — अब समझ में आए, और निपट भी जाए ══════════════
+   पहले यहाँ एक लंबी सूची थी जिसमें ज़्यादातर «नई दुकान» लिखा रहता था, और
+   करना क्या है यह कहीं नहीं लिखा होता — इसलिए यह पन्ना कभी ख़ाली नहीं होता
+   था और देखा भी नहीं जाता था।
+
+   अब तीन ही स्तर हैं, हर चेतावनी के आगे एक बटन जो सचमुच काम करता है, और
+   «ठीक है» कहने पर वह हट जाती है — मिटती नहीं, «देख ली गईं» में चली जाती
+   है (इस app में कुछ मिटता नहीं)।                                     */
+
+/** हिंदी में एक और अनेक — «1 बिलों में» पढ़ने में खटकता है। */
+const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
+
+let FLAG_SEEN = {};
+try { FLAG_SEEN = JSON.parse(localStorage.getItem("vbeSeen") || "{}"); } catch (e) {}
+const flagSeen = (k) => !!FLAG_SEEN[k];
+function markSeen(k, n) {
+  FLAG_SEEN[k] = Date.now();
+  try { localStorage.setItem("vbeSeen", JSON.stringify(FLAG_SEEN)); } catch (e) {}
+  renderFlags();
+  toast(`✅ देख ली — ${n || 1} हटीं`);
+}
+function unseeAll() {
+  FLAG_SEEN = {};
+  try { localStorage.removeItem("vbeSeen"); } catch (e) {}
+  renderFlags();
+  toast("↩️ सब वापस");
+}
+
+/** दो पेमेंट एक ही तो नहीं — वही पार्टी, वही रकम, 7 दिन के अंदर। */
+function doublePays() {
+  const out = [], seen = {};
+  BANKTXNS.filter((t) => t.type === "debit").forEach((t) => {
+    const k = pKey(t.party) + "|" + Math.round(t.amount || 0);
+    if (!k || !t.amount) return;
+    (seen[k] = seen[k] || []).push(t);
+  });
+  Object.values(seen).forEach((g) => {
+    if (g.length < 2) return;
+    g.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    for (let i = 1; i < g.length; i++) {
+      const d1 = new Date(String(g[i - 1].date) + "T12:00:00");
+      const d2 = new Date(String(g[i].date) + "T12:00:00");
+      if (Math.abs(d2 - d1) <= 7 * 86400000) out.push([g[i - 1], g[i]]);
+    }
+  });
+  return out;
+}
+
+/** सब चेतावनियाँ, तीन स्तरों में — हर एक अपने काम के बटन के साथ। */
+function buildFlags() {
+  const G = { red: [], amber: [], blue: [] };
+
+  doublePays().forEach(([a, b]) => {
+    G.red.push({ key: "dup|" + a._id + "|" + b._id, icon: "💸",
+      title: "दोहरा पेमेंट लगता है",
+      body: `<b>${esc(a.party || "—")}</b> को ${INR(a.amount)} दो बार — ` +
+        `${esc(dayLabel(String(a.date).slice(0, 10)))} और ${esc(dayLabel(String(b.date).slice(0, 10)))}`,
+      act: `<button type="button" class="mini" onclick="goTab('ledger');reSearch('lSearch','${a.amount}')">देखें</button>` });
+  });
+
+  EXP.forEach((e) => {
+    const s = paySummary(e);
+    if (s.total && s.paid - s.total > 1 && !s.discount) {
+      G.red.push({ key: "over|" + e._id, icon: "🧾", title: "बिल से ज़्यादा दिया",
+        body: `<b>${esc((e.vendor && e.vendor.name) || "—")}</b> — बिल ${INR(s.total)}, ` +
+          `दिया ${INR(s.paid)} (${INR(s.paid - s.total)} ज़्यादा)`,
+        act: `<button type="button" class="mini" onclick="editExpense('${esc(e._id)}')">बिल खोलें</button>` });
+    }
+  });
+
+  const noBill = BANKTXNS.filter((t) => t.type === "debit" && !t.matched &&
+    !t.matchedReceiptId && !t.billPhotoId);
+  if (noBill.length) {
+    G.amber.push({ key: "nobill", icon: "📎", n: noBill.length,
+      title: `${noBill.length} पेमेंट पर बिल नहीं`,
+      body: `कुल ${INR(noBill.reduce((a, t) => a + (t.amount || 0), 0))} —
+        सबसे बड़े दस Overview पर एक-एक करके निपटाए जा सकते हैं।`,
+      act: `<button type="button" class="mini primary" onclick="goTab('overview')">एक-एक करके निपटाएँ →</button>` });
+  }
+
+  const noUnit = EXP.filter((e) => !e.unit);
+  if (noUnit.length) {
+    G.amber.push({ key: "nounit", icon: "🎯", n: noUnit.length,
+      title: plural(noUnit.length, "बिल", "बिलों") + " पर यूनिट नहीं लिखी",
+      body: "यूनिट के बिना चालान नहीं बन सकता और यूनिट-वार हिसाब अधूरा रहता है।",
+      act: `<button type="button" class="mini primary" onclick="goTab('unit')">अभी भर दें →</button>` });
+  }
+
+  const noChallan = EXP.filter((e) => needsChallan(e));
+  if (noChallan.length) {
+    G.amber.push({ key: "nochallan", icon: "🚚", n: noChallan.length,
+      title: plural(noChallan.length, "बिल", "बिलों") + " का चालान नंबर बाकी",
+      body: "व्यापारी से नंबर आते ही भर दीजिए — तब तक ये गुलाबी दिखेंगे।",
+      act: `<button type="button" class="mini primary" onclick="goTab('unit')">भर दें →</button>` });
+  }
+
+  const due = EXP.filter((e) => paySummary(e).due > 0.5);
+  if (due.length) {
+    const sum = due.reduce((a, e) => a + paySummary(e).due, 0);
+    G.amber.push({ key: "due", icon: "⚖️", n: due.length,
+      title: plural(due.length, "बिल", "बिलों") + " का पैसा बाकी — " + INR(sum),
+      body: "आधा पेमेंट हुआ है या छूट लिखनी रह गई है।",
+      act: `<button type="button" class="mini primary" onclick="goTab('udhaar')">उधार खोलें →</button>` });
+  }
+
+  const spikes = EXP.filter((e) => (e.priceAlerts || []).length);
+  if (spikes.length) {
+    G.amber.push({ key: "spike", icon: "📈", n: spikes.length,
+      title: plural(spikes.length, "बिल", "बिलों") + " में भाव उछला",
+      body: spikes.slice(0, 2).map((e) => esc(e.priceAlerts[0])).join("<br>"),
+      act: `<button type="button" class="mini" onclick="goTab('price');setPbFilter('up')">Pricebook →</button>` });
+  }
+
+  const newV = EXP.filter((e) => (e.flags || []).indexOf("unknown_vendor") >= 0);
+  if (newV.length) {
+    G.blue.push({ key: "newvendor|" + newV.length, icon: "🆕", n: newV.length,
+      title: plural(newV.length, "नई दुकान", "नई दुकानें") + " — पहली बार लेन-देन हुआ",
+      body: newV.slice(0, 4).map((e) => esc((e.vendor && e.vendor.name) || "—")).join(" · ") +
+        (newV.length > 4 ? ` और ${newV.length - 4}` : ""),
+      act: "" });
+  }
+
+  const big = EXP.filter((e) => (e.flags || []).indexOf("over_threshold") >= 0);
+  if (big.length) {
+    G.blue.push({ key: "big|" + big.length, icon: "💰", n: big.length,
+      title: plural(big.length, "बिल", "बिल") + " ₹5,000 से ऊपर",
+      body: "बड़ी रकम — एक नज़र डाल लेना अच्छा रहता है।",
+      act: `<button type="button" class="mini" onclick="goTab('bills');reSearch('fSearch','5000+')">देखें</button>` });
+  }
+
+  return G;
+}
+
+const FLAG_LEVELS = [
+  ["red", "🔴", "पैसा फँस सकता है"],
+  ["amber", "🟡", "हिसाब अधूरा है"],
+  ["blue", "🔵", "जान लेना अच्छा"]
+];
+
 function renderFlags() {
-  const rows = EXP.filter(e => (e.flags || []).length).slice(0, 100);
-  $("flagList").innerHTML = rows.length ? rows.map(e => `
-    <div class="flagRow">
-      <div class="fi">${(e.flags || []).map(f => FLAG_ICONS[f] || "⚠️").join("")}</div>
-      <div class="ft"><b>${esc(e.receiptId)}</b> — ${esc(e.vendor && e.vendor.name || "?")}
-        — ${e.billTotal != null ? INR(e.billTotal) : "—"} — ${esc(e.submittedBy && e.submittedBy.name)}
-        <div class="muted">${(e.flags || []).map(f => (FLAG_ICONS[f] || "⚠️") + " " + (FLAG_TEXT[f] || f)).join(" · ")}
-          ${(e.priceAlerts || []).map(a => "<br>" + esc(a)).join("")}</div>
-      </div>
-    </div>`).join("") : '<div class="empty">कोई flag नहीं 🎉</div>';
+  const box = $("flagList");
+  if (!box) return;
+  const G = buildFlags();
+  let left = 0, hidden = 0;
+  FLAG_LEVELS.forEach(([k]) => G[k].forEach((f) => {
+    if (flagSeen(f.key)) hidden += (f.n || 1); else left += (f.n || 1);
+  }));
+
+  if (!left) {
+    box.innerHTML = gfx.insight({ icon: "🎉", tone: "down",
+      title: hidden ? "सब निपट गईं — बस «देख ली गईं» बची हैं" : "कोई चेतावनी नहीं",
+      body: hidden
+        ? `${hidden} चेतावनियाँ आपने «ठीक है» कही थीं।
+           <button type="button" class="mini" onclick="unseeAll()">↩️ वापस लाएँ</button>`
+        : "जैसे ही कुछ ध्यान देने लायक होगा, वह यहीं दिखेगा।" });
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="fgTop">
+      <b>${left}</b> चीज़ें ध्यान माँगती हैं
+      ${hidden ? `<button type="button" class="mini" onclick="unseeAll()">↩️ ${hidden} देख ली गईं</button>` : ""}
+    </div>` +
+    FLAG_LEVELS.map(([k, dot, name]) => {
+      const items = G[k].filter((f) => !flagSeen(f.key));
+      if (!items.length) return "";
+      const n = items.reduce((a, f) => a + (f.n || 1), 0);
+      return `
+      <details class="fgGroup ${k}" ${k === "red" ? "open" : ""}>
+        <summary>${dot} ${name} <span class="fgN">${n}</span></summary>
+        ${items.map((f) => `
+          <div class="fgItem">
+            <div class="fgIco">${f.icon}</div>
+            <div class="fgTxt">
+              <b>${f.title}</b>
+              <div class="muted">${f.body}</div>
+              <div class="fgAct">${f.act}
+                <button type="button" class="mini" onclick="markSeen('${esc(f.key)}',${f.n || 1})">✓ ठीक है</button>
+              </div>
+            </div>
+          </div>`).join("")}
+      </details>`;
+    }).join("");
 }
 
 /* बकाया tab अब v4 वाले renderMissing() से बनता है — नीचे देखें। */
