@@ -571,6 +571,20 @@
   /* हिसाब — money in vs out reads at a glance */
   .amt.in  { color: var(--good); }
   .amt.out { color: #ff7b7b; }
+  /* 📥 एक साथ कई रसीदें — फोटो बाईं ओर, उसके ख़ाने दाईं ओर */
+  .bkRow { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--grid); }
+  .bkRow:last-of-type { border-bottom: 0; }
+  .bkRow img { width: 62px; height: 82px; object-fit: cover; border-radius: 9px;
+    border: 1px solid var(--border); cursor: zoom-in; flex: 0 0 auto; }
+  .bkRow.done { opacity: .55; }
+  .bkFields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .bkFields input { font: inherit; width: 100%; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 9px; }
+  .bkPair { display: flex; gap: 6px; }
+  .bkPair input { min-width: 0; flex: 1 1 auto; }
+  .bkPair input[type=date] { flex: 0 0 150px; }
+
   .mrow.txn { border-left: 3px solid transparent; padding-left: 10px; border-radius: 0 10px 10px 0; }
   .mrow.txn.in  { border-left-color: var(--good); background: linear-gradient(90deg, rgba(12,163,12,.10), transparent 40%); }
   .mrow.txn.out { border-left-color: #d03b3b; background: linear-gradient(90deg, rgba(208,59,59,.10), transparent 40%); }
@@ -1033,13 +1047,13 @@
           <input type="file" id="aRecvFile" accept="image/*" hidden>
           <div class="aiBtn bill">
             <span class="ico">🧾</span>
-            <div class="aiTxt">बिल की फोटो<small>AI पढ़कर दुकान, सामान, रेट भर देगा</small>
+            <div class="aiTxt">बिल की फोटो<small>फोटो जुड़ जाएगी — ख़ाने नीचे भर दें</small>
               <button type="button" style="width:100%" onclick="pickPhoto('aBillFile')">🖼️ गैलरी से चुनें</button>
             </div>
           </div>
           <div class="aiBtn recv">
             <span class="ico">💳</span>
-            <div class="aiTxt">पेमेंट रसीद<small>UTR अपने-आप निकल जाएगा</small>
+            <div class="aiTxt">पेमेंट रसीद<small>फोटो जुड़ जाएगी — UTR भर दें</small>
               <button type="button" style="width:100%" onclick="pickPhoto('aRecvFile')">🖼️ गैलरी से चुनें</button>
             </div>
           </div>
@@ -1083,7 +1097,7 @@
           <button type="button" onclick="resetEntry()">साफ़ करें</button>
           <span id="aMsg" class="muted"></span>
         </div>
-        <p class="muted" style="margin-top:12px">ऊपर से फोटो लें या गैलरी से पुरानी फोटो चुनें — AI पढ़कर सब भर देगा, फिर आप जाँचकर सुधार लें। Telegram bot पर भेजा बिल भी यहीं आ जाता है।</p>
+        <p class="muted" style="margin-top:12px">गैलरी से फोटो चुनें — वह बिल के साथ जुड़ जाएगी। ख़ाने हाथ से भर दें, या 📋 वाले बटन से Claude का जवाब चिपका दें। ⚡ फास्ट एंट्री वाला रास्ता AI से अपने-आप भी भर देता है।</p>
       </div>
     </section>
 
@@ -1141,6 +1155,10 @@
             <button class="x" onclick="closeSheet('priceSheet')">✕</button>
           </div>
           <div id="priceAdvice"></div>
+          <div style="margin:8px 0">
+            <button type="button" class="mini" id="priceMergeBtn">🔗 यह वही चीज़ है</button>
+          </div>
+          <div id="priceMerge"></div>
           <div class="tiles" id="priceTiles"></div>
           <div class="card chartCard tilt">
             <div class="chartBox"><canvas id="chPrice"></canvas></div>
@@ -1715,9 +1733,10 @@ placeholder="917568 माजीसा डिस्पोजल
           <h3>📥 एक साथ कई रसीदें</h3>
           <button type="button" class="x" onclick="closeSheet('bulkSheet')">✕</button>
         </div>
-        <p class="muted">GPay / PhonePe की जितनी रसीदें हैं, सब एक साथ चुन लें। हर एक से
-          UTR, रकम, खाता और समय निकालकर पक्की entry बन जाएगी — बैंक statement का
-          इंतज़ार किए बिना। वही UTR दुबारा आया तो नया नहीं बनेगा।</p>
+        <p class="muted">GPay / PhonePe की जितनी रसीदें हैं, सब एक साथ चुन लें —
+          सब एक ही सूची में सामने आ जाएँगी। हर एक की <b>रकम</b> और <b>UTR</b> भरकर
+          «सब सहेजें» दबा दीजिए; बैंक statement का इंतज़ार किए बिना entry पक्की हो
+          जाएगी। वही UTR दुबारा आया तो नया नहीं बनेगा।</p>
         <input type="file" id="bulkFiles" accept="image/*" multiple hidden>
         <button type="button" class="primary" style="width:100%;margin:12px 0"
           onclick="document.getElementById('bulkFiles').click()">🖼️ रसीदें चुनें (कई)</button>
@@ -2090,6 +2109,9 @@ async function loadData(force) {
   try {
     const n = await fetchAll();
     renderSync();
+    // 🔗 अलग-अलग भाषा में लिखे एक ही सामान को जोड़ दो — शब्दकोश से, बिना
+    //    किसी कॉल के। ताज़ा डेटा आने पर ही, और आगे का काम इस पर नहीं रुकता।
+    autoMergePricebook().catch(() => {});
     return n;
   } catch (err) {
     // सीमा पार हो गई या नेट नहीं है — सँभाले हुए डेटा से काम चलता रहे,
@@ -2117,7 +2139,8 @@ function renderSync(err) {
         (err ? ' · ⚠️ नया नहीं मिल पाया' : '') + '<br>' +
         '<small>आज ' + used.toLocaleString("en-IN") + ' / 50,000 पढ़ाई' +
         (hot ? ' — अब सँभालकर' : '') +
-        ' · 🧠 ' + ai.n + ' AI' + (ai.bg ? ' (' + ai.bg + ' अपने-आप)' : '') +
+        ' · 🧠 ' + ai.n + ' AI' +
+        (GEMINI_MODEL ? ' · 🪶 ' + GEMINI_MODEL.replace(/^gemini-/, "") : '') +
         '</small></span>' +
       '<i style="width:' + pct.toFixed(1) + '%"></i>' +
     '</div>';
@@ -2640,6 +2663,9 @@ function openPriceItem(key) {
 }
 
 function renderPriceItem(p) {
+  closeMergePick();
+  const key = p.id || p.canonicalName;
+  $("priceMergeBtn").onclick = () => openMergePick(key);
   const hist = (p.history || []).filter(h => h.rate != null);
   const rates = hist.map(h => h.rate);
   const lo = rates.length ? Math.min(...rates) : null;
@@ -4292,65 +4318,12 @@ function initRecon() {
 let ENTRY_SHOTS = { bill: null, receipt: null };   // data URLs, uploaded on save
 let ENTRY_PAY = null;                              // रसीद से निकला पूरा पेमेंट
 
-const RECEIPT_PROMPT =
-  'You read Indian UPI / bank payment receipts: GPay, PhonePe, Paytm, BHIM and ' +
-  'bank apps. The image is often a PHOTO OF A PHONE SCREEN — glare, tilt and ' +
-  'moiré are normal, read through them.\n' +
-  'Return STRICT JSON only:\n' +
-  '{"paidTo":string|null,"amount":number|null,"utr":string|null,' +
-  '"paidAt":"YYYY-MM-DD"|null,"time":"HH:MM"|null,"mode":string|null,' +
-  '"status":"success"|"pending"|"failed"|null,"summary":string}\n' +
-  'Rules:\n' +
-  '- paidTo = the merchant/person the money went TO ("Payment to X" → X).\n' +
-  '- amount = plain number, no ₹ or commas. "₹1,665" → 1665.\n' +
-  '- utr = the 12-digit UTR / UPI transaction ID / reference number, exactly as ' +
-  'printed. Many GPay chat bubbles do NOT show it — it only appears after ' +
-  'opening the payment. If it is not visible, return null. NEVER guess or ' +
-  'invent a UTR, and never use the amount, the phone number or the time as one.\n' +
-  '- paidAt: if the screen says only a time ("Paid · 10:08 pm") with no date, ' +
-  'the payment is from TODAY — use the today-date given below.\n' +
-  '- status: "success" for Paid/Completed/✓, else what it says.\n' +
-  '- summary = ONE short Hindi line, e.g. "J M Motel को ₹1665 दिए".\n' +
-  'null for anything you cannot actually read. Return only the JSON object.';
-
-const BILL_PROMPT =
-  'You read Indian purchase bills for a canteen supply business: thermal ' +
-  'printer slips, GST invoices, kacha parchi and handwritten bills, in Hindi or ' +
-  'English. The photo may be crumpled, tilted, dim or shot at an angle — read ' +
-  'through that.\n' +
-  'Return STRICT JSON only:\n' +
-  '{"vendor":string|null,"phone":string|null,"gstin":string|null,' +
-  '"invoiceNo":string|null,"billDate":"YYYY-MM-DD"|null,' +
-  '"items":[{"name":string,"qty":number|null,"unit":string|null,' +
-  '"rate":number|null,"amount":number|null}],' +
-  '"subTotal":number|null,"gst":number|null,"total":number|null,' +
-  '"paidVia":string|null,"summary":string}\n' +
-  'Rules:\n' +
-  '- vendor = the shop/firm name printed at the top, exactly as written.\n' +
-  '- IMPORTANT, thermal slips wrap: an item name often sits on one line while ' +
-  'its QTY / RATE / AMT sit on the NEXT line, so the columns look shifted. Pair ' +
-  'them by ORDER, not by which line they are on — the Nth item name takes the ' +
-  'Nth set of numbers. If the slip prints an item count ("NITEMS: 8"), return ' +
-  'exactly that many items.\n' +
-  '- For every item: amount must equal qty × rate. If a row does not add up, ' +
-  're-read that row before answering.\n' +
-  '- total = the final payable amount (the "TOTAL" line, after GST and round ' +
-  'off) — NOT the subtotal.\n' +
-  '- Amounts are plain numbers: no ₹, no commas. "1,665.0" → 1665.\n' +
-  '- Dates on Indian bills are DD-MM-YYYY. "27-07-2026" → "2026-07-27".\n' +
-  '- paidVia = CASH / UPI / CARD / CREDIT if the bill says so.\n' +
-  '- Keep item names as printed (Hindi is fine); do not translate or "correct" ' +
-  'spellings.\n' +
-  '- summary = ONE short Hindi line naming the shop and what was bought.\n' +
-  'Use null for anything genuinely unreadable — never guess a number. ' +
-  'Return only the JSON object.';
-
 /* ── Gemini: model discovery, because a hardcoded name goes 404 ───────────
    Model IDs get retired, and which ones a key may call differs per project.
    So ask the API what it has, keep the answer, and re-ask the moment a call
    comes back 404/400 — the same self-healing the Telegram bot does. */
 let GEMINI_MODEL = null;
-try { GEMINI_MODEL = localStorage.getItem("vbeGeminiModel") || null; } catch (e) {}
+try { GEMINI_MODEL = localStorage.getItem("vbeAiModel") || null; } catch (e) {}
 
 /** Local date, not toISOString() — after 5:30am IST those two disagree. */
 function todayISO() {
@@ -4358,7 +4331,41 @@ function todayISO() {
   return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
 }
 
+/* ══════════ 🔒 AI का एक ही दरवाज़ा ════════════════════════════════════
+
+   ऑडिट में AI नौ जगह चलता मिला — और उनमें से आठ जगह विक्रम जी ने कभी
+   माँगा ही नहीं था। मुफ़्त सीमा वहीं ख़र्च हो जाती थी, और जब ⚡ में सचमुच
+   एक बिल पढ़वाना होता तब «सीमा पूरी» लिखा आ जाता।
+
+   इसलिए अब भरोसा «हमने वहाँ से हटा दिया था» पर नहीं, **बनावट** पर है:
+   askGemini() का पहला सवाल यही है कि यह किस काम के लिए है। नाम इस सूची
+   में न हो तो कॉल जाती ही नहीं — कहीं से भी बुलाई जाए।
+
+   ➕ आगे कभी कहीं और चाहिए हो, तो यहाँ एक लाइन जोड़नी है, बस।           */
+
+const AI_USES = { fast: true };          // ⚡ फास्ट एंट्री — बस यही
+
+function aiOn(use) { return !!(GEMINI_KEY && AI_USES[use]); }
+
+/* ── 🪶 कौन-सा मॉडल ───────────────────────────────────────────────────
+   पुराना कोड जान-बूझकर **सबसे ऊँचा** gemini-N-flash चुनता था। मुफ़्त तख़्ते
+   पर गणित उल्टा चलता है: मॉडल जितना नया और बड़ा, उसकी मुफ़्त सीमा उतनी कम
+   और टोकन उतने भारी। यानी app सबसे महँगा दरवाज़ा चुन रहा था।
+
+   हमारा काम छोटा है — एक फोटो पढ़ो, रकम और नाम निकालो। इसलिए अब उल्टा
+   क्रम: पहले lite, फिर सादा flash, फिर जो भी flash मिले।                */
+
+function modelRank(name) {
+  let m = name.match(/^gemini-(\d+(?:\.\d+)?)-flash-lite$/);
+  if (m) return [3, Number(m[1])];       // सबसे हल्का · कोटा सबसे बड़ा
+  m = name.match(/^gemini-(\d+(?:\.\d+)?)-flash$/);
+  if (m) return [2, Number(m[1])];       // lite न मिले तो
+  if (name.indexOf("flash") >= 0) return [1, 0];
+  return [0, 0];
+}
+
 async function geminiDiscoverModel() {
+  await aiGap();
   aiCount({ calls: 1 });
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${GEMINI_KEY}`);
@@ -4369,20 +4376,20 @@ async function geminiDiscoverModel() {
     throw e;
   }
   const models = ((await res.json()).models || [])
-    .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"));
-  // Newest plain "gemini-N-flash" wins: fast, free-tier friendly, sees images.
-  let best = null, bestV = -1;
-  models.forEach(m => {
-    const mm = m.name.match(/^models\/gemini-(\d+(?:\.\d+)?)-flash$/);
-    if (mm && Number(mm[1]) > bestV) { bestV = Number(mm[1]); best = m.name.slice(7); }
+    .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
+    .map(m => m.name.slice(7));          // "models/" हटाकर
+
+  let best = null, bestR = [-1, -1];
+  models.forEach(n => {
+    const r = modelRank(n);
+    if (r[0] > bestR[0] || (r[0] === bestR[0] && r[1] > bestR[1])) { bestR = r; best = n; }
   });
-  if (!best) {
-    const f = models.find(m => m.name.includes("flash")) || models[0];
-    if (f) best = f.name.slice(7);
-  }
+  if (!best) best = models[0];
   if (!best) throw new Error("इस चाबी के लिए कोई AI मॉडल नहीं मिला");
   GEMINI_MODEL = best;
-  try { localStorage.setItem("vbeGeminiModel", best); } catch (e) {}
+  // 🔑 सँभालने की जगह का नाम v13 में बदला गया है, ताकि फ़ोन में पड़ा हुआ
+  //    पुराना (बड़ा) मॉडल अपने-आप छूट जाए — विक्रम जी को कुछ न करना पड़े।
+  try { localStorage.setItem("vbeAiModel", best); } catch (e) {}
   return best;
 }
 
@@ -4402,6 +4409,17 @@ function geminiWhy(status, detail) {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* ── ⏱️ दो कॉल के बीच कम से कम इतना ठहराव ────────────────────────────
+   Gemini की मुफ़्त सीमा **प्रति मिनट** की है। पहले app 429 आने का इंतज़ार
+   करता था और फिर रुकता था; अब वह 429 आने ही नहीं देता।                */
+const AI_GAP = 4000;
+let AI_LAST = 0;
+async function aiGap() {
+  const left = AI_GAP - (Date.now() - AI_LAST);
+  if (left > 0) await sleep(left);
+  AI_LAST = Date.now();
+}
 
 /* ══════════ 🧮 AI कितनी बार बुलाया गया ═══════════════════════════
    Gemini की मुफ़्त सीमा **प्रति मिनट** और **प्रति दिन**, दोनों है। इसलिए हर
@@ -4426,29 +4444,69 @@ function aiToday() {
   } catch (e) { return { n: 0, bg: 0 }; }
 }
 
+/* ── 🧠 «सोच» बंद — यह सबसे बड़ी टोकन-बचत है ─────────────────────────
+   नए Gemini मॉडल जवाब देने से पहले मन-ही-मन *सोचते* हैं, और वह सोच भी
+   टोकन में गिनी जाती है — अक्सर जवाब से कई गुना ज़्यादा। बिल पढ़ने में उस
+   सोच का कोई फ़ायदा नहीं, इसलिए साफ़ लिखकर भेजा जाता है: सोचो मत।
+
+   हर मॉडल यह बात नहीं समझता; न समझने वाला 400 लौटाता है। तब app एक बार
+   बिना यह बात कहे भेजता है, और वह चल जाए तो **याद रख लेता है** — आगे से
+   सीधे वैसे ही। (याद सिर्फ़ चलने पर रखी जाती है; ग़लत चाबी वाला 400 इस
+   बचत को हमेशा के लिए बंद न कर दे।)                                    */
+
+let GEMINI_NO_THINK = false;
+try { GEMINI_NO_THINK = localStorage.getItem("vbeNoThink") === "1"; } catch (e) {}
+
+function geminiUrl(model) {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}` +
+    `:generateContent?key=${GEMINI_KEY}`;
+}
+
+function geminiBody(parts, plain) {
+  const cfg = {
+    responseMimeType: "application/json",
+    temperature: 0,
+    maxOutputTokens: 4096            // पूरा बिल आ जाए, उससे आगे एक टोकन नहीं
+  };
+  if (!plain) cfg.thinkingConfig = { thinkingBudget: 0 };
+  return JSON.stringify({ contents: [{ parts }], generationConfig: cfg });
+}
+
 async function geminiPost(model, parts) {
-  return fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
+  const send = (plain) => fetch(geminiUrl(model),
     { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0 }
-      }) });
+      body: geminiBody(parts, plain) });
+
+  let res = await send(GEMINI_NO_THINK);
+  if (res.status === 400 && !GEMINI_NO_THINK) {
+    await aiGap();
+    aiCount({ calls: 1 });
+    const plain = await send(true);
+    if (plain.ok) {
+      GEMINI_NO_THINK = true;
+      try { localStorage.setItem("vbeNoThink", "1"); } catch (e) {}
+    }
+    res = plain;
+  }
+  return res;
 }
 
 /**
- * @param {object} [opts] {bg:true} = app का अपना पर्दे-के-पीछे वाला काम —
- *   उस पर न बार-बार कोशिश होती है, न वह विक्रम जी के काम से आगे बढ़ता है।
+ * @param {string} use किस काम के लिए — AI_USES में लिखा होना ज़रूरी है।
+ *   सूची में न हो तो कॉल जाती ही नहीं। यही v13 का ताला है।
  */
-async function askGemini(prompt, dataUrl, extraText, onWait, opts) {
+async function askGemini(use, prompt, dataUrl, extraText, onWait) {
+  if (!AI_USES[use]) {
+    throw new Error("यहाँ AI बंद है — वह सिर्फ़ ⚡ फास्ट एंट्री में चलता है");
+  }
   if (!GEMINI_KEY) throw new Error("AI की चाबी नहीं मिली — Firestore में vbe_meta › app_config › geminiKey डालें");
   const parts = [{ text: prompt + "\n\nToday's date is " + todayISO() + "." +
     (extraText ? "\n\n" + extraText : "") }];
   if (dataUrl) parts.push({ inline_data: { mime_type: "image/jpeg", data: dataUrl.split(",")[1] } });
 
-  const bg = !!(opts && opts.bg);
   let model = GEMINI_MODEL || await geminiDiscoverModel();
-  aiCount({ calls: 1, bg: bg ? 1 : 0 });
+  await aiGap();
+  aiCount({ calls: 1 });
   let res = await geminiPost(model, parts);
   if (res.status === 404 || res.status === 400) {
     // Either the cached name is gone or it never existed for this key: re-ask.
@@ -4460,10 +4518,11 @@ async function askGemini(prompt, dataUrl, extraText, onWait, opts) {
      की नहीं। ⚡ फास्ट एंट्री में 3-4 फोटो एक साथ जाती हैं, इसलिए यही सबसे
      पहले टकराती है। ऐसे में हार मान लेना ग़लत होगा: रुककर फिर कोशिश करो।
      503 (Google व्यस्त) पर भी यही। हर बार इंतज़ार दुगुना — 4s, 8s, 16s। */
-  for (let wait = 4000, tries = 0; !bg && !res.ok && tries < 3 &&
+  for (let wait = 4000, tries = 0; !res.ok && tries < 3 &&
        (res.status === 429 || res.status >= 500); tries++, wait *= 2) {
     if (typeof onWait === "function") onWait(Math.round(wait / 1000));
     await sleep(wait);
+    await aiGap();
     aiCount({ calls: 1 });
     res = await geminiPost(model, parts);
   }
@@ -4540,8 +4599,7 @@ function pasteIntoEntry() {
   if (party.name && (party.gstin || party.phone)) {
     vcardFromBill(party.name, party.gstin, party.phone).catch(() => {});
   }
-  aiSay("✅ " + esc(d.summary || "भर दिया") + ` · <b>${(d.items || []).length}</b> चीज़ें` +
-    "<br><span class='muted'>नीचे जाँचकर दर्ज करें।</span>", "ok");
+  aiSay(billReadMsg({ summary: d.summary, items: d.items, total: d.total }), "ok");
   priceHints();
 }
 
@@ -4551,54 +4609,36 @@ function fillIfEmpty(id, val) {
   if (!$(id).value) $(id).value = val;
 }
 
-/** Bill photo → vendor, items, total. Every field stays editable afterwards. */
+/* 📷 बिल की फोटो — v13 से यहाँ AI नहीं चलता।
+
+   फोटो पहले की तरह जुड़ती है और सहेजने पर Drive में जाती है; सिर्फ़ पढ़ने
+   का काम अब हाथ से या 📋 से होता है। 📋 वाला रास्ता हमारी सीमा खाता ही
+   नहीं, और वहाँ का मॉडल हमारे छोटे मॉडल से बड़ा होता है — यानी मुश्किल
+   बिल के लिए वह बेहतर रास्ता है, कमतर नहीं।                            */
 $("aBillFile").addEventListener("change", async (e) => {
   const f = e.target.files[0];
   if (!f) return;
-  aiSay('<span class="thinking"></span> बिल पढ़ रहा हूँ…');
+  aiSay('<span class="thinking"></span> फोटो तैयार कर रहा हूँ…');
   try {
     ENTRY_SHOTS.bill = await shrinkImage(f, 1800, 0.85);   // small print needs pixels
     showShots();
-    const r = await askGemini(BILL_PROMPT, ENTRY_SHOTS.bill);
-
-    if (r.vendor) $("aVendor").value = r.vendor;
-    if (r.billDate) $("aDate").value = r.billDate;
-    fillIfEmpty("aInvoice", r.invoiceNo);
-    PRINTED_EXTRA = 0;
-    if (r.items && r.items.length) {
-      $("aItems").innerHTML = "";
-      r.items.forEach((it) => addItemRow(it));
-      // GST / round-off = whatever the printed total carries beyond the items.
-      const sum = itemRows().reduce((a, i) => a + (i.amount || 0), 0);
-      if (r.total != null && sum > 0 && r.total > sum) {
-        PRINTED_EXTRA = Math.round((r.total - sum) * 100) / 100;
-      }
-    }
-    recalcTotal();
-    if (r.total != null) $("aTotal").value = r.total;    // printed total wins
-    if (r.paidVia) fillIfEmpty("aNote", r.paidVia.toUpperCase() + " से");
-
-    // The business card writes itself — GSTIN and phone are on most bills.
-    if (r.vendor && (r.gstin || r.phone)) {
-      vcardFromBill(r.vendor, r.gstin, r.phone).catch(() => {});
-    }
-
-    aiSay(billReadMsg(r), "ok");
-    priceHints();
+    aiSay("📷 बिल की फोटो लग गई — सहेजते ही Drive में चली जाएगी।" +
+      "<br><b>नीचे के ख़ाने हाथ से भर दीजिए</b>, या " +
+      `<a href="#" onclick="pasteIntoEntry();return false">📋 AI-पेस्ट</a> से ` +
+      "Claude से पढ़वाकर जवाब यहीं चिपका दीजिए।", "ok");
   } catch (err) {
-    aiSay("बिल नहीं पढ़ पाया — " + esc(err.message) +
-      "<br><span class='muted'>नीचे हाथ से भर सकते हैं, फोटो फिर भी जुड़ जाएगी।</span>", "bad");
+    aiSay("फोटो नहीं लग पाई — " + esc(err.message), "bad");
   }
 });
 
 /**
- * What the AI read, said back in one glance — and the one number worth
- * checking: the items add up to X but the slip says Y. Silent mismatch is
- * how a wrong bill gets filed.
+ * जो पढ़ा गया, एक नज़र में वापस — और वह अकेला अंक जो जाँचने लायक है:
+ * सामान का जोड़ X है पर परची पर Y लिखा है। चुपचाप का यही फ़र्क़ ग़लत बिल
+ * दर्ज करा देता है। (v13 से यह 📋 वाले रास्ते के काम आता है।)
  */
 function billReadMsg(r) {
   const n = (r.items || []).length;
-  let msg = "✅ " + esc(r.summary || "बिल पढ़ लिया");
+  let msg = "✅ " + esc(r.summary || "बिल भर दिया");
   if (n) msg += ` · <b>${n}</b> चीज़ें`;
   if (r.total != null) msg += ` · कुल <b>${INR(r.total)}</b>`;
   const sum = (r.items || []).reduce((s, it) => s + (Number(it.amount) || 0), 0);
@@ -4609,47 +4649,25 @@ function billReadMsg(r) {
   return msg + "<br><span class='muted'>नीचे जाँचकर सुधार लें, फिर दर्ज करें।</span>";
 }
 
-/** Receipt photo → UTR, party, amount. This is what makes a bill permanent. */
+/* 🧾 रसीद की फोटो — v13 से यहाँ भी AI नहीं।
+
+   रसीद पर काम की चीज़ एक ही है: **UTR**। वही बिल को पक्का करता है और
+   statement आने पर उसी से मिलान होता है। वह सामने ही लिखा होता है, इसलिए
+   उसे हाथ से भर देना AI की एक पूरी कॉल से सस्ता और पक्का दोनों है।     */
 $("aRecvFile").addEventListener("change", async (e) => {
   const f = e.target.files[0];
   if (!f) return;
-  aiSay('<span class="thinking"></span> रसीद पढ़ रहा हूँ…');
+  aiSay('<span class="thinking"></span> फोटो तैयार कर रहा हूँ…');
   try {
     ENTRY_SHOTS.receipt = await shrinkImage(f, 1800, 0.85);
     showShots();
-    // वही पूरा रसीद-प्रॉम्प्ट जो बिल sheet इस्तेमाल करती है — नाम, खाता,
-    // समय, UTR सब निकालता है, सिर्फ़ UTR नहीं।
-    const r = await askGemini(PAY_PROMPT, ENTRY_SHOTS.receipt);
-    ENTRY_PAY = paymentFromReceipt(r, null);
-
-    if (r.utr) $("aUtr").value = r.utr;
-    fillIfEmpty("aVendor", r.toName);
-    fillIfEmpty("aTotal", r.amount);
-    if (r.paidAt && !$("aBillFile").value) $("aDate").value = r.paidAt;
-    if (ENTRY_PAY.accountId && !$("aAccount").value) $("aAccount").value = ENTRY_PAY.accountId;
-
-    let msg = "✅ " + esc(r.summary || "रसीद पढ़ ली");
-    const bits = [];
-    if (ENTRY_PAY.accountId) bits.push("🏦 " + esc(accLabel(ENTRY_PAY.accountId)));
-    else if (r.fromBank) bits.push("🏦 " + esc(r.fromBank) + (r.fromLast4 ? " " + esc(r.fromLast4) : ""));
-    if (r.time) bits.push("🕘 " + esc(r.time));
-    if (r.app) bits.push("📱 " + esc(r.app));
-    if (bits.length) msg += "<br>" + bits.join(" · ");
-    if (r.utr) msg += `<br>🔗 UTR <b>${esc(r.utr)}</b>`;
-    else msg += `<br>⚠️ इस स्क्रीन पर UTR नहीं दिखा — रसीद खोलकर ` +
-      `(Payment details) दोबारा फोटो लें, या UTR हाथ से भर दें`;
-    if (r.status && r.status !== "success") msg += `<br>⚠️ पेमेंट की हालत: ${esc(r.status)}`;
-
-    // Bill और रसीद दोनों हैं तो रकम मिलनी चाहिए।
-    const billTotal = Number($("aTotal").value);
-    if (ENTRY_SHOTS.bill && r.amount != null && billTotal &&
-        Math.abs(billTotal - r.amount) > 1) {
-      msg += `<br>⚠️ बिल ${INR(billTotal)} का है पर दिए ${INR(r.amount)} — जाँच लें`;
-    }
-    aiSay(msg, "ok");
+    ENTRY_PAY = null;              // पेमेंट की पूरी पंक्ति अब फ़ॉर्म से बनेगी
+    aiSay("🧾 रसीद की फोटो लग गई — सहेजते ही Drive में चली जाएगी।" +
+      "<br>अब <b>UTR</b> का ख़ाना भर दीजिए (रसीद खोलकर «Payment details» में " +
+      "दिखता है) — बैंक की statement आते ही यही entry उससे जुड़ जाएगी।", "ok");
+    if (!$("aUtr").value) $("aUtr").focus();
   } catch (err) {
-    aiSay("रसीद नहीं पढ़ पाया — " + esc(err.message) +
-      "<br><span class='muted'>UTR हाथ से भर सकते हैं।</span>", "bad");
+    aiSay("फोटो नहीं लग पाई — " + esc(err.message), "bad");
   }
 });
 
@@ -6068,11 +6086,6 @@ function showParty(key) {
 
 /* ══════════ 💼 बिज़नेस कार्ड — कॉल, WhatsApp, GSTIN ══════════ */
 
-const VCARD_PROMPT =
-  'You read Indian business cards and shop bills for contact details. Return ' +
-  'STRICT JSON only: {"firm":string|null,"person":string|null,"phone":string|null,' +
-  '"gstin":string|null,"address":string|null}. phone is digits only (10 digits ' +
-  'if Indian mobile). null for anything not printed.';
 
 let VCARD_PARTY = null;
 
@@ -6123,18 +6136,24 @@ async function copyVcard() {
   toast("📋 कॉपी हो गया");
 }
 
+/* 📇 कार्ड की फोटो — v13 से बिना AI।
+   फोटो सँभल जाती है (कार्ड कभी खोता नहीं), और ✍️ वाला ख़ाना अपने-आप खुल
+   जाता है ताकि जो सामने दिख रहा है वह उतार दिया जाए। कार्ड साल में एक-दो
+   बार ही आता है — उसके लिए AI की एक कॉल रखना सौदा नहीं। */
 async function vcardFromPhoto(e) {
   const f = e.target.files[0];
   if (!f || !VCARD_PARTY) return;
   const m = $("vcMsg");
-  m.className = "muted"; m.innerHTML = '<span class="thinking"></span> कार्ड पढ़ रहा हूँ…';
+  m.className = "muted"; m.innerHTML = '<span class="thinking"></span> कार्ड सँभाल रहा हूँ…';
   try {
     const img = await shrinkImage(f);
-    const r = await askGemini(VCARD_PROMPT, img);
     const up = await driveUpload(img, "card_" + VCARD_PARTY.key);
-    await saveVcard(Object.assign({}, r, { cardUrl: up.ok ? up.url : null }));
+    await saveVcard({ cardUrl: up.ok ? up.url : null });
+    m.className = "ok";
+    m.innerHTML = "📇 कार्ड सँभल गया — अब जो उस पर लिखा है वह भर दीजिए।";
+    editVcard();
   } catch (err) {
-    m.className = "bad"; m.textContent = "नहीं पढ़ पाया: " + err.message;
+    m.className = "bad"; m.textContent = "फोटो नहीं लग पाई: " + err.message;
   }
 }
 
@@ -6227,11 +6246,6 @@ function shrinkImage(file, maxSide = 1400, quality = 0.72) {
     img.onerror = reject;
     img.src = URL.createObjectURL(file);
   });
-}
-
-async function readBillWithAI(dataUrl) {
-  if (!GEMINI_KEY) return null;
-  return askGemini(BILL_PROMPT, dataUrl);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -6715,7 +6729,7 @@ function openBillSheet(opts) {
   $("bsTitle").textContent = BILL_EXP ? "✏️ बिल सुधारें" : "📎 बिल जोड़ें";
   $("bsJson").value = "";
   $("bsPasteMsg").textContent = "";
-  $("bmAI").textContent = GEMINI_KEY ? "" : "(AI बंद है — बिल फिर भी जुड़ जाएगा)";
+  $("bmAI").textContent = "";
   $("bsMsg").textContent = "";
   $("bsItems").innerHTML = "";
   ["bsVendor", "bsInvoice", "bsPhone", "bsGstin", "bsUtr", "bsGst", "bsTotal",
@@ -6781,6 +6795,8 @@ function openBillFor(txnId) {
   if (t) openBillSheet({ txn: t });
 }
 
+/* 📎 बिल-शीट की फोटो — v13 से बिना AI। फोटो जुड़ती है, पढ़ना हाथ से
+   या नीचे 📋 वाले ख़ाने से। */
 $("bmFile").addEventListener("change", async (e) => {
   const f = e.target.files[0];
   if (!f) return;
@@ -6789,21 +6805,13 @@ $("bmFile").addEventListener("change", async (e) => {
   try {
     BILL_SHOTS.bill = await shrinkImage(f, 1800, 0.85);
     bsShowShots();
-    if (!GEMINI_KEY) { ai.textContent = "फोटो लग गई (AI बंद है — नीचे हाथ से भर दें)"; return; }
-    ai.innerHTML = '<span class="thinking"></span> 🧠 AI बिल पढ़ रहा है…';
-    const r = await askGemini(BILL_PROMPT, BILL_SHOTS.bill);
-    fillBillSheet({
-      party: { name: r.vendor, phone: r.phone, gstin: r.gstin },
-      invoiceNo: r.invoiceNo, billDate: r.billDate, items: r.items,
-      gst: r.gst, total: r.total, summary: r.summary
-    });
     ai.className = "ok";
-    ai.innerHTML = "🧠 " + esc(r.summary || "पढ़ लिया") +
-      (r.total != null ? ` · कुल <b>${INR(r.total)}</b>` : "") +
-      "<br><span class='muted'>नीचे जाँचकर सुधार लें।</span>";
+    ai.innerHTML = "📷 बिल की फोटो लग गई — सहेजते ही Drive में चली जाएगी।" +
+      "<br><span class='muted'>नीचे के ख़ाने भर दीजिए, या 📋 वाले ख़ाने में " +
+      "Claude का जवाब चिपका दीजिए।</span>";
   } catch (err) {
     ai.className = "bad";
-    ai.textContent = "AI नहीं पढ़ पाया (बिल फिर भी जुड़ जाएगा): " + err.message;
+    ai.textContent = "फोटो नहीं लग पाई: " + err.message;
   }
 });
 
@@ -6816,7 +6824,7 @@ $("bsPayShot").addEventListener("change", async (e) => {
 
 $("bulkFiles").addEventListener("change", async (e) => {
   const files = [...e.target.files];
-  if (files.length) await bulkReceipts(files);
+  if (files.length) await bulkPick(files);
 });
 
 $("bsMore").addEventListener("change", async (e) => {
@@ -7807,34 +7815,6 @@ function billCards(rows) {
 
 /* ── 💳 पेमेंट का पूरा रिकॉर्ड ─────────────────────────────────────── */
 
-const PAY_PROMPT =
-  'You read Indian UPI payment receipts: Google Pay, PhonePe, Paytm, BHIM, ' +
-  'and bank apps. The image is usually a photo or screenshot of a phone ' +
-  'screen — glare, tilt and moiré are normal, read through them.\n' +
-  'Return STRICT JSON only:\n' +
-  '{"amount":number|null,"paidAt":"YYYY-MM-DD"|null,"time":"HH:MM"|null,' +
-  '"app":string|null,"status":"success"|"pending"|"failed"|null,' +
-  '"utr":string|null,"appTxnId":string|null,' +
-  '"fromName":string|null,"fromBank":string|null,"fromLast4":string|null,' +
-  '"fromVpa":string|null,"toName":string|null,"toVpa":string|null,' +
-  '"summary":string}\n' +
-  'Rules:\n' +
-  '- amount: plain number, no ₹ or commas. "₹3,250" → 3250.\n' +
-  '- time: 24-hour. "4:42 pm" → "16:42".\n' +
-  '- app: "Google Pay", "PhonePe", "Paytm", or the bank app name.\n' +
-  '- utr: the "UPI transaction ID" / UTR / RRN — usually 12 digits. This is ' +
-  'the one number the bank statement will also carry, so never guess it. If ' +
-  'it is not printed, return null.\n' +
-  '- appTxnId: the app\'s own reference ("Google transaction ID"), which is ' +
-  'NOT the UTR. Keep them apart.\n' +
-  '- fromBank / fromLast4: the sender\'s bank and the last digits shown next ' +
-  'to it. "AU Small Finance Bank 0628" → fromBank "AU Small Finance Bank", ' +
-  'fromLast4 "0628".\n' +
-  '- fromName: who paid ("From: UJJWAL BHARAT INFRATECH" → that).\n' +
-  '- toName / toVpa: who was paid, and their UPI id.\n' +
-  '- status: "success" for Completed / Paid / ✓.\n' +
-  '- summary: ONE short Hindi line, e.g. "Manak Provision Store को ₹3250".\n' +
-  'null for anything you cannot actually read. Return only the JSON object.';
 
 /* ══════════ ⚡ फास्ट एंट्री — पेमेंट करते ही दर्ज ═══════════════════
    विक्रम जी करोड़ों रुपए भेजते हैं। दो महीने बाद कोई हिसाब माँगे तो एक-एक
@@ -8309,9 +8289,9 @@ async function runOneJob(job) {
   job.status = "reading"; job.err = null; saveJobs(); renderFastSheet();
   for (const sh of job.shots) {
     if (sh.r || sh.skip) continue;
-    if (!GEMINI_KEY) { sh.skip = true; continue; }
+    if (!aiOn("fast")) { sh.skip = true; continue; }
     try {
-      sh.r = await askGemini(FAST_PROMPT, sh.dataUrl);
+      sh.r = await askGemini("fast", FAST_PROMPT, sh.dataUrl);
       saveJobs();
     } catch (err) {
       if (err.canRetry) { jobWait(job, err.message); return; }
@@ -9273,28 +9253,32 @@ function addPayManual() {
   editPayment(BILL_PAYS.length - 1);
 }
 
-/** रसीद की फोटो से पेमेंट — पूरा पता AI निकालता है। */
+/* 🧾 रसीद की फोटो से पेमेंट — v13 से बिना AI।
+
+   फोटो Drive में चली जाती है और पेमेंट की एक पूरी पंक्ति बन जाती है, जिसमें
+   रकम बिल के कुल से और तारीख़/खाता ऊपर के ख़ानों से पहले ही भरे मिलते हैं।
+   बचता है सिर्फ़ UTR — इसलिए ✏️ वाला ख़ाना अपने-आप खुल जाता है।        */
 async function addPayFromShot(dataUrl, msgEl) {
   const say = (t, c) => { if (msgEl) { msgEl.className = c || "muted"; msgEl.innerHTML = t; } };
-  say('<span class="thinking"></span> रसीद पढ़ रहा हूँ…');
-  let parsed = null;
-  try { parsed = await askGemini(PAY_PROMPT, dataUrl); }
-  catch (err) { say("रसीद नहीं पढ़ पाई: " + esc(err.message), "bad"); }
+  say('<span class="thinking"></span> रसीद सँभाल रहा हूँ…');
 
   const up = await driveUpload(dataUrl, "receipt_" + Date.now());
-  const p = paymentFromReceipt(parsed || {}, up && up.ok ? up.url : null);
-  if (!p.amount) p.amount = Number($("bsTotal").value) || null;
+  const left = Math.max(0, (Number($("bsTotal").value) || 0) -
+    BILL_PAYS.reduce((a, x) => a + (Number(x.amount) || 0), 0));
+  const p = paymentFromReceipt({
+    amount: left || Number($("bsTotal").value) || null,
+    paidAt: $("bsDate").value || todayISO(),
+    utr: String($("bsUtr").value || "").trim().toUpperCase() || null
+  }, up && up.ok ? up.url : null);
+  if (!p.accountId && $("bsPayAcc")) p.accountId = $("bsPayAcc").value || "";
   if (!p.photoUrl) p.rawShot = dataUrl;      // Drive न चले तो फोटो फिर भी बची रहे
   BILL_PAYS.push(p);
   renderPays();
 
-  if (parsed) {
-    const missing = [!p.utr && "UTR", !p.accountId && "खाता", !p.time && "समय"].filter(Boolean);
-    say("✅ " + esc(parsed.summary || "रसीद पढ़ ली") +
-      (p.accountId ? ` · <b>${esc(accLabel(p.accountId))}</b>` : "") +
-      (p.utr ? ` · UTR <b>${esc(p.utr)}</b>` : "") +
-      (missing.length ? `<br>⚠️ ${missing.join(", ")} नहीं मिला — ✏️ से भर दें` : ""), "ok");
-  }
+  say("🧾 रसीद जुड़ गई" + (p.amount ? ` · ${INR(p.amount)}` : "") +
+    (p.utr ? ` · UTR <b>${esc(p.utr)}</b>`
+           : "<br>⚠️ अब <b>UTR</b> भर दीजिए — ✏️ दबाकर"), "ok");
+  if (!p.utr) editPayment(BILL_PAYS.length - 1);
   return p;
 }
 
@@ -9302,64 +9286,134 @@ async function addPayFromShot(dataUrl, msgEl) {
 
 /**
  * बैंक statement आने में दिन लग जाते हैं। तब तक रसीदें ही सच हैं — इसलिए
- * 20 screenshot एक साथ डालो, हर एक से एक पक्की entry बने, और UTR को ही
- * पहचान मानो ताकि statement आने पर वही entry दुबारा न बने।
+ * 20 screenshot एक साथ डालो, हर एक से एक पक्की entry बने, और **UTR को ही
+ * पहचान मानो** ताकि statement आने पर वही entry दुबारा न बने।
+ *
+ * ⚠️ v13 में यहाँ से AI हटा दिया गया — और यही ऑडिट का सबसे बड़ा शिकार था।
+ *    20 फोटो चुनने पर 20 कॉल एक के पीछे एक, बिना साँस लिए, जबकि Gemini की
+ *    मुफ़्त सीमा **प्रति मिनट** की है। छठी-सातवीं कॉल पर 429 आना शुरू, और
+ *    हर नाकाम कॉल पर तीन «दोबारा कोशिश» — यानी एक फोटो = चार कॉल, बीस
+ *    फोटो = अस्सी तक। एक मिनट में पूरा दिन ख़त्म।
+ *
+ *    अब सारी फोटो एक ही सूची में सामने आ जाती हैं और रकम + UTR वहीं भरने
+ *    होते हैं। हाथ का काम ज़रूर है, पर UTR रसीद पर सामने ही लिखा होता है,
+ *    और यह रास्ता किसी सीमा से नहीं बँधा — 20 हों या 200।
  */
-async function bulkReceipts(files) {
-  const box = $("bulkMsg"), list = $("bulkList");
-  const out = { added: 0, dupe: 0, failed: 0, rows: [] };
-  list.innerHTML = "";
-  for (let i = 0; i < files.length; i++) {
-    box.className = "muted";
-    box.innerHTML = `<span class="thinking"></span> ${i + 1} / ${files.length} पढ़ रहा हूँ…` +
-      gfx.meter(((i) / files.length) * 100, gfx.C.bill);
-    let r = null, shot = null;
-    try {
-      shot = await shrinkImage(files[i], 1800, 0.85);
-      r = await askGemini(PAY_PROMPT, shot);
-    } catch (e) {
-      out.failed++;
-      out.rows.push({ ok: false, why: e.message, name: files[i].name });
-      continue;
-    }
-    if (!r.utr || !r.amount) {
-      out.failed++;
-      out.rows.push({ ok: false, why: r.utr ? "रकम नहीं पढ़ी" : "UTR नहीं दिखा", r });
-      continue;
-    }
-    const id = "utr-" + String(r.utr).toUpperCase();
-    if (BANKTXNS.some((t) => t._id === id)) { out.dupe++; out.rows.push({ ok: true, dupe: true, r }); continue; }
 
-    const up = await driveUpload(shot, "receipt_" + r.utr);
-    const pay = paymentFromReceipt(r, up && up.ok ? up.url : null);
+let BULK = [];        // {dataUrl, amount, utr, name, date, done}
+
+async function bulkPick(files) {
+  const box = $("bulkMsg");
+  BULK = [];
+  box.className = "muted";
+  for (let i = 0; i < files.length; i++) {
+    box.innerHTML = `<span class="thinking"></span> ${i + 1} / ${files.length} फोटो तैयार…` +
+      gfx.meter(((i + 1) / files.length) * 100, gfx.C.bill);
+    BULK.push({ dataUrl: await shrinkImage(files[i], 1200, 0.75),
+      amount: "", utr: "", name: "", date: todayISO(), done: null });
+  }
+  box.className = "muted";
+  box.innerHTML = `${BULK.length} रसीदें लग गईं — हर एक की <b>रकम</b> और
+    <b>UTR</b> भर दीजिए, फिर नीचे «सब सहेजें»।
+    <br><span class="muted">UTR रसीद खोलने पर «UPI transaction ID» में दिखता
+    है — वही statement से मिलान कराता है।</span>`;
+  renderBulk();
+}
+
+function bulkSet(i, k, v) { if (BULK[i]) BULK[i][k] = v; }
+function bulkZoom(i) { if (BULK[i]) lightbox(BULK[i].dataUrl); }
+
+function bulkReady() {
+  return BULK.filter((b) => !b.done &&
+    String(b.utr || "").trim() && Number(String(b.amount || "").replace(/[^\d.]/g, ""))).length;
+}
+
+function renderBulk() {
+  const list = $("bulkList");
+  if (!list) return;
+  if (!BULK.length) { list.innerHTML = ""; return; }
+  const ready = bulkReady();
+  list.innerHTML = BULK.map((b, i) => `
+    <div class="bkRow${b.done ? " done" : ""}">
+      <img src="${b.dataUrl}" onclick="bulkZoom(${i})" alt="रसीद ${i + 1}">
+      <div class="bkFields">
+        <div class="bkPair">
+          <input type="number" inputmode="decimal" placeholder="रकम ₹" value="${esc(b.amount)}"
+            oninput="bulkSet(${i},'amount',this.value);renderBulkFoot()">
+          <input type="date" value="${esc(b.date)}"
+            oninput="bulkSet(${i},'date',this.value)">
+        </div>
+        <input placeholder="UTR / UPI transaction ID" value="${esc(b.utr)}"
+          oninput="bulkSet(${i},'utr',this.value);renderBulkFoot()">
+        <input placeholder="किसको दिया (पता हो तो)" value="${esc(b.name)}"
+          oninput="bulkSet(${i},'name',this.value)">
+        ${b.done ? `<span class="badge ${b.done === "dupe" ? "warn2" : "ok2"}">${
+          b.done === "dupe" ? "🔁 पहले से थी" : "✅ जुड़ गई"}</span>` : ""}
+      </div>
+    </div>`).join("") +
+    `<div id="bulkFoot" style="margin-top:12px">${bulkFootHtml(ready)}</div>`;
+}
+
+function bulkFootHtml(ready) {
+  return `<button type="button" class="primary" style="width:100%"
+    onclick="bulkSave()" ${ready ? "" : "disabled"}>💾 सब सहेजें${
+    ready ? " (" + ready + ")" : ""}</button>
+    ${ready ? "" : `<div class="muted" style="margin-top:6px">रकम और UTR — दोनों
+      भरे बिना entry पक्की नहीं होती।</div>`}`;
+}
+
+function renderBulkFoot() {
+  const f = $("bulkFoot");
+  if (f) f.innerHTML = bulkFootHtml(bulkReady());
+}
+
+async function bulkSave() {
+  const box = $("bulkMsg");
+  const out = { added: 0, dupe: 0, skipped: 0 };
+  for (let i = 0; i < BULK.length; i++) {
+    const b = BULK[i];
+    if (b.done) continue;
+    const utr = String(b.utr || "").trim().toUpperCase();
+    const amt = Number(String(b.amount || "").replace(/[^\d.]/g, ""));
+    if (!utr || !amt) { out.skipped++; continue; }
+
+    const id = "utr-" + utr;
+    if (BANKTXNS.some((t) => t._id === id)) { out.dupe++; b.done = "dupe"; continue; }
+
+    box.className = "muted";
+    box.innerHTML = `<span class="thinking"></span> ${i + 1} / ${BULK.length} सहेज रहा हूँ…` +
+      gfx.meter(((i + 1) / BULK.length) * 100, gfx.C.bill);
+
+    const up = await driveUpload(b.dataUrl, "receipt_" + utr);
+    const pay = paymentFromReceipt({
+      amount: amt, utr, toName: b.name || null, paidAt: b.date || todayISO()
+    }, up && up.ok ? up.url : null);
     const doc = {
-      date: pay.paidAt, time: pay.time || null, amount: pay.amount, type: "debit",
+      date: pay.paidAt, time: null, amount: pay.amount, type: "debit",
       party: pay.toName || null, utr: pay.utr, matched: false,
-      accountId: pay.accountId || "", narration: "UPI/" + (pay.app || "APP") + "/" +
-        pay.utr + "/" + (pay.toName || ""),
-      source: "receipt_bulk", paymentDetail: pay,
+      accountId: pay.accountId || "",
+      narration: "UPI/" + pay.utr + "/" + (pay.toName || ""),
+      source: "receipt_hand", paymentDetail: pay,
       importedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    await db.collection("vbe_bank_txns").doc(id).set(doc, { merge: true });
-    BANKTXNS.push(Object.assign({ _id: id }, doc));
-    out.added++;
-    out.rows.push({ ok: true, r, pay });
-    list.innerHTML = out.rows.map((x) => x.ok
-      ? `<div class="mrow txn out"><div class="amt out">−${INR((x.pay || x.r).amount)}</div>
-           <div class="mx"><b>${esc((x.pay || x.r).toName || "—")}</b>
-             <br><span class="muted">${esc(x.r.utr)}${x.dupe ? " · 🔁 पहले से थी" : " · ✅ जुड़ी"}</span></div></div>`
-      : `<div class="mrow"><div class="amt">—</div><div class="mx">
-           <b class="badge lo">❌ ${esc(x.why)}</b></div></div>`).join("");
+    try {
+      await db.collection("vbe_bank_txns").doc(id).set(doc, { merge: true });
+      BANKTXNS.push(Object.assign({ _id: id }, doc));
+      out.added++; b.done = "ok";
+    } catch (e) { out.skipped++; }
+    renderBulk();
   }
+
   box.className = out.added ? "ok" : "bad";
   box.innerHTML = `✅ <b>${out.added}</b> नई जुड़ीं · 🔁 <b>${out.dupe}</b> पहले से थीं` +
-    (out.failed ? ` · ❌ <b>${out.failed}</b> नहीं पढ़ी गईं` : "");
-  await auditLog("bulk_receipts", null, { added: out.added, dupe: out.dupe, failed: out.failed });
+    (out.skipped ? ` · ⏭️ <b>${out.skipped}</b> रह गईं (रकम/UTR बाकी)` : "");
+  await auditLog("bulk_receipts", null, out);
   refreshAll();
   return out;
 }
 
 function openBulk() {
+  BULK = [];
   $("bulkMsg").innerHTML = "";
   $("bulkList").innerHTML = "";
   openSheet("bulkSheet");
@@ -9929,68 +9983,124 @@ function renderChallanWatch() {
    और एक बार में थोड़े ही नाम भेजता है। जो एक बार जुड़ गया, दुबारा नहीं
    पूछा जाता। */
 
-let IDLE_AT = Date.now();
-["click", "touchstart", "keydown", "scroll"].forEach((ev) =>
-  window.addEventListener(ev, () => { IDLE_AT = Date.now(); }, { passive: true }));
+/* ── 🔗 «आम / Aam / mango एक ही चीज़ है» ─────────────────────────────
 
-const MERGE_PROMPT =
-  'You group product names that mean the SAME item, written in different ' +
-  'languages or spellings — Hindi, English, Hinglish, or a local Rajasthani ' +
-  'word. "आम", "Aam", "mango", "Mangoes" are one item. "आलू", "Aloo", ' +
-  '"potato" are one item. Different items with similar names stay apart: ' +
-  '"आलू" and "आलू चिप्स" are NOT the same, "दूध" and "दही" are NOT the same.\n' +
-  'Input is a JSON array of names. Return STRICT JSON only:\n' +
-  '{"groups":[{"canonical":string,"names":[string,...]}]}\n' +
-  'canonical = the clearest Hindi name for the group. Include only groups ' +
-  'that have 2 or more names; leave a name out entirely if it stands alone. ' +
-  'Return only the JSON object.';
+   पहले यह पहचानने के लिए Gemini बुलाया जाता था — पर्दे के पीछे, हर आधे
+   घंटे, बिना किसी के कहे। ऑडिट में यही सबसे चुपचाप ख़र्च होने वाली कॉल
+   निकली: विक्रम जी के फ़ोन में app का पन्ना खुला पड़ा रहता है, इसलिए दिन
+   भर कॉल जाती रहती थीं और जब ⚡ में सचमुच बिल पढ़वाना होता तब सीमा भरी
+   मिलती।
 
-/* ⚠️ यहाँ एक बड़ी ग़लती हो चुकी है, इसलिए यह टिप्पणी लंबी है।
+   v13 में यहाँ से AI हटा दिया गया। इसकी जगह दो रास्ते, दोनों मुफ़्त:
 
-   पहले यह हर 3 मिनट पर चलता था, और «फ़ुरसत» की शर्त सिर्फ़ 2 मिनट की थी।
-   विक्रम जी के फ़ोन में app का tab पीछे खुला रहता है — यानी वह हमेशा
-   «फ़ुरसत» में होता है। नतीजा: दिन भर, हर 3 मिनट पर, बिना कुछ किए एक
-   AI-कॉल। और फ़ेल होने पर नाम «हो गया» में दर्ज ही नहीं होते थे, इसलिए
-   वही 40 नाम अनंत काल तक दुबारा-दुबारा भेजे जाते रहते।
+     1. **बना-बनाया शब्दकोश** — रोज़ के सामान के हिंदी/अंग्रेज़ी/हिंग्लिश
+        नाम कोड में ही लिखे हैं। app खुलते ही चुपचाप जुड़ जाते हैं।
+     2. **«🔗 यह वही चीज़ है» बटन** — जो शब्दकोश में नहीं है उसे विक्रम जी
+        ख़ुद जोड़ सकते हैं।
 
-   इसी से Gemini की मुफ़्त सीमा चुपचाप ख़त्म हो जाती थी — और जब विक्रम जी
-   सचमुच कोई फोटो भेजते, तब सीमा पहले ही भरी मिलती।
+   जुड़ने का तरीक़ा वही पुराना, जो पहले से सही है: सबसे लंबे इतिहास वाला
+   मुखिया बनता है, बाक़ी का पूरा इतिहास उसी में समा जाता है, और **कुछ
+   मिटता नहीं** — पुराना दस्तावेज़ रहता है, बस नए की तरफ़ इशारा कर देता है।
 
-   अब चार ताले:
-     1. tab सामने न हो तो कभी नहीं (यही सबसे बड़ा ताला है)
-     2. हर 3 मिनट नहीं — हर 30 मिनट
-     3. दिन में ज़्यादा से ज़्यादा 4 बार
-     4. फ़ेल हो या पास — नाम «देख लिए» में दर्ज, ताकि वही बैच दुबारा न जाए  */
+   ⚠️ मिलान **पूरे नाम** पर होता है, नाम के किसी टुकड़े पर नहीं। इसलिए
+      «आलू» और «aloo» जुड़ते हैं, पर «आलू» और «आलू चिप्स» अलग ही रहते हैं।
+      ग़लत जुड़ाव सही जुड़ाव से कहीं ज़्यादा महँगा पड़ता है।              */
 
-const BG_MAX_DAY = 4;
+const ITEM_WORDS = [
+  ["आलू", "aloo", "alu", "potato", "potatoes"],
+  ["प्याज", "pyaj", "pyaz", "onion", "onions"],
+  ["टमाटर", "tamatar", "tomato", "tomatoes"],
+  ["दूध", "doodh", "dudh", "milk"],
+  ["दही", "dahi", "curd", "yogurt"],
+  ["पनीर", "paneer", "cottage cheese"],
+  ["घी", "ghee", "ghi"],
+  ["मक्खन", "makhan", "butter"],
+  ["तेल", "tel", "oil"],
+  ["सरसों", "sarson", "mustard"],
+  ["चीनी", "cheeni", "chini", "sugar"],
+  ["नमक", "namak", "salt"],
+  ["चाय", "chai", "tea"],
+  ["कॉफ़ी", "coffee", "kaafi"],
+  ["आटा", "atta", "aata", "wheat flour", "flour"],
+  ["मैदा", "maida"],
+  ["सूजी", "sooji", "suji", "semolina", "rava"],
+  ["बेसन", "besan", "gram flour"],
+  ["चावल", "chawal", "chaval", "rice"],
+  ["पोहा", "poha"],
+  ["सेवई", "sewai", "seviyan", "vermicelli"],
+  ["दाल", "dal", "daal", "lentil", "lentils"],
+  ["चना", "chana", "chana dal", "gram"],
+  ["मूंग", "moong", "mung"],
+  ["राजमा", "rajma", "kidney beans"],
+  ["मटर", "matar", "peas", "green peas"],
+  ["अंडा", "anda", "egg", "eggs"],
+  ["ब्रेड", "bread", "pav"],
+  ["गोभी", "gobhi", "gobi", "cauliflower"],
+  ["पत्ता गोभी", "patta gobhi", "cabbage"],
+  ["भिंडी", "bhindi", "okra", "lady finger"],
+  ["बैंगन", "baingan", "brinjal", "eggplant"],
+  ["गाजर", "gajar", "carrot", "carrots"],
+  ["मूली", "mooli", "muli", "radish"],
+  ["पालक", "palak", "spinach"],
+  ["खीरा", "kheera", "khira", "cucumber"],
+  ["कद्दू", "kaddu", "pumpkin"],
+  ["शिमला मिर्च", "shimla mirch", "capsicum", "bell pepper"],
+  ["मशरूम", "mushroom", "mushrooms", "khumb"],
+  ["अदरक", "adrak", "ginger"],
+  ["लहसुन", "lehsun", "lahsun", "garlic"],
+  ["हरी मिर्च", "hari mirch", "green chilli", "green chili"],
+  ["लाल मिर्च", "lal mirch", "red chilli", "chilli powder"],
+  ["धनिया", "dhaniya", "dhania", "coriander"],
+  ["जीरा", "jeera", "cumin"],
+  ["हल्दी", "haldi", "turmeric"],
+  ["गरम मसाला", "garam masala"],
+  ["नींबू", "nimbu", "nibu", "lemon", "lime"],
+  ["केला", "kela", "banana", "bananas"],
+  ["सेब", "seb", "apple", "apples"],
+  ["आम", "aam", "mango", "mangoes"],
+  ["संतरा", "santra", "orange", "oranges"],
+  ["अंगूर", "angoor", "grapes"],
+  ["तरबूज", "tarbooj", "watermelon"],
+  ["नारियल", "nariyal", "coconut"],
+  ["काजू", "kaju", "cashew", "cashews"],
+  ["बादाम", "badam", "almond", "almonds"],
+  ["किशमिश", "kishmish", "raisin", "raisins"],
+  ["मूंगफली", "moongfali", "mungfali", "peanut", "peanuts", "groundnut"],
+  ["पापड़", "papad", "papadum"],
+  ["अचार", "achar", "pickle"],
+  ["नमकीन", "namkeen"],
+  ["बिस्किट", "biscuit", "biscuits", "biskut"],
+  ["पानी", "pani", "water"],
+  ["गैस", "gas", "cylinder", "सिलेंडर"],
+  ["मेथी", "methi", "fenugreek"],
+  ["सोया", "soya", "soyabean", "सोयाबीन"]
+];
 
-function bgAllowed() {
-  if (!GEMINI_KEY) return false;
-  if (typeof document !== "undefined" && document.hidden) return false;  // 1
-  if (Date.now() - IDLE_AT < 120000) return false;
-  if (Date.now() - PAGE_AT < 300000) return false;   // खुलते ही नहीं
-  return aiToday().bg < BG_MAX_DAY;                                       // 3
+/** हर पर्यायवाची → उस समूह का हिंदी नाम। */
+const ITEM_SYN = (() => {
+  const m = {};
+  ITEM_WORDS.forEach((row) => row.forEach((w) => { m[pKey(w)] = row[0]; }));
+  return m;
+})();
+
+/** शब्दकोश से बने समूह — वही रूप जो पहले AI लौटाता था। */
+function codeMergeGroups() {
+  const by = {};
+  PRICEBOOK.filter((x) => !x.mergedInto).forEach((x) => {
+    const canon = ITEM_SYN[pKey(x.canonicalName)];       // पूरा नाम, टुकड़ा नहीं
+    if (!canon) return;
+    (by[canon] = by[canon] || []).push(x.canonicalName);
+  });
+  return Object.keys(by).filter((c) => by[c].length > 1)
+    .map((c) => ({ canonical: c, names: by[c] }));
 }
 
-async function idleMergePricebook() {
-  if (!bgAllowed()) return;
-  if (!PRICEBOOK.length) return;
-  let done = {};
-  try { done = JSON.parse(localStorage.getItem("vbeMerged") || "{}"); } catch (e) {}
-
-  const names = PRICEBOOK.map((p) => p.canonicalName).filter(Boolean)
-    .filter((n) => !done[pKey(n)]).slice(0, 40);      // एक बार में थोड़े ही
-  if (names.length < 2) return;
-
-  // 4. भेजने से *पहले* ही «देख लिए» में दर्ज — फ़ेल हो तो भी वही बैच
-  //    दुबारा नहीं जाएगा। यही अनंत लूप की जड़ थी।
-  names.forEach((n) => { done[pKey(n)] = 1; });
-  try { localStorage.setItem("vbeMerged", JSON.stringify(done)); } catch (e) {}
-
-  let r;
-  try { r = await askGemini(MERGE_PROMPT, null, JSON.stringify(names), null, { bg: true }); }
-  catch (e) { return; }
-  const groups = (r && r.groups) || [];
+/**
+ * दिए हुए समूहों को सचमुच जोड़ देता है। यह हिस्सा v13 में नहीं बदला —
+ * यह पहले से सही था, बस इसे अब AI नहीं, कोड या विक्रम जी बुलाते हैं।
+ * @param {Array<{canonical:string, names:string[]}>} groups
+ */
+async function mergeSameItems(groups) {
   let merged = 0;
 
   for (const g of groups) {
@@ -10035,19 +10145,73 @@ async function idleMergePricebook() {
       }
       merged++;
     } catch (e) { /* अगली बार */ }
-    names2.forEach((n) => { done[pKey(n)] = 1; });
   }
-  names.forEach((n) => { done[pKey(n)] = 1; });
-  try { localStorage.setItem("vbeMerged", JSON.stringify(done)); } catch (e) {}
   if (merged) {
     PRICEBOOK = PRICEBOOK.filter((x) => !x.mergedInto);
     saveCache();
     renderPricebook();
-    toast("🧠 " + merged + " चीज़ों के अलग-अलग नाम एक साथ जोड़ दिए");
+    toast("🔗 " + merged + " चीज़ों के अलग-अलग नाम एक साथ जोड़ दिए");
   }
+  return merged;
 }
-let PAGE_AT = Date.now();
-setInterval(() => { idleMergePricebook().catch(() => {}); }, 1800000);   // 2
+
+/** शब्दकोश वाला जुड़ाव — कोई कॉल नहीं, कोई सीमा नहीं, कोई इंतज़ार नहीं। */
+async function autoMergePricebook() {
+  if (!PRICEBOOK.length) return 0;
+  const groups = codeMergeGroups();
+  if (!groups.length) return 0;
+  return mergeSameItems(groups);
+}
+
+/* ── 🔗 «यह वही चीज़ है» — जो शब्दकोश में नहीं, वह हाथ से ──────────── */
+
+let MERGE_FROM = null;
+
+function openMergePick(key) {
+  MERGE_FROM = PRICEBOOK.filter((x) => (x.id || x.canonicalName) === key)[0] || null;
+  const box = $("priceMerge");
+  if (!box || !MERGE_FROM) return;
+  const others = PRICEBOOK.filter((x) => !x.mergedInto && x !== MERGE_FROM)
+    .sort((a, b) => String(a.canonicalName).localeCompare(String(b.canonicalName), "hi"));
+  if (!others.length) {
+    box.innerHTML = `<div class="muted">जोड़ने के लिए दूसरी चीज़ है ही नहीं।</div>`;
+    return;
+  }
+  box.innerHTML = `
+    <div class="card" style="margin-top:10px">
+      <b>🔗 «${esc(MERGE_FROM.canonicalName)}» किस चीज़ के साथ एक है?</b>
+      <div class="muted" style="margin:6px 0 8px">दोनों का पूरा इतिहास एक हो
+        जाएगा। कुछ मिटेगा नहीं।</div>
+      <select id="mergeWith" style="width:100%">
+        ${others.map((o) => `<option value="${esc(o.id || o.canonicalName)}">${
+          esc(o.canonicalName)}</option>`).join("")}
+      </select>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button type="button" class="primary" onclick="doMergePick()">🔗 एक कर दें</button>
+        <button type="button" class="mini" onclick="closeMergePick()">रहने दें</button>
+      </div>
+    </div>`;
+}
+
+function closeMergePick() {
+  MERGE_FROM = null;
+  const box = $("priceMerge");
+  if (box) box.innerHTML = "";
+}
+
+async function doMergePick() {
+  const sel = $("mergeWith");
+  if (!MERGE_FROM || !sel) return;
+  const other = PRICEBOOK.filter((x) => (x.id || x.canonicalName) === sel.value)[0];
+  if (!other) return;
+  const from = MERGE_FROM;
+  closeMergePick();
+  closeSheet("priceSheet");
+  // नाम वही रखा जाता है जिसका इतिहास लंबा है — वही रोज़ का चलने वाला नाम है
+  const keep = ((from.history || []).length >= (other.history || []).length ? from : other);
+  await mergeSameItems([{ canonical: keep.canonicalName,
+    names: [from.canonicalName, other.canonicalName] }]);
+}
 
 /* ── 🧾 चेक रजिस्टर ──────────────────────────────────────────────────
    चालू खाते की statement में «REMT THRU CHQ» वाली पंक्ति पर पार्टी का नाम
