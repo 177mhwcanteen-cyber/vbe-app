@@ -275,6 +275,49 @@
     border-radius: 16px; border: 1px solid var(--border);
     background: linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); }
   .toonArt { flex: 0 0 auto; }
+  .toonBox.tight { padding: 10px 11px; gap: 10px; }
+  .toonBox.tight .toonSay p { font-size: 12px; }
+
+  /* 🙋 «किसके कहने पर» की संपर्क-सूची */
+  .akFind { margin: 10px 0 4px; }
+  .akFind input { font: inherit; width: 100%; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 11px 12px; }
+  .akList { max-height: 46vh; overflow-y: auto; margin: 4px 0 12px;
+    border-radius: 12px; border: 1px solid var(--border); }
+  .akList:empty { display: none; }
+  .akRow { display: flex; align-items: center; gap: 11px; cursor: pointer;
+    padding: 10px 11px; border-bottom: 1px solid var(--grid); }
+  .akRow:last-child { border-bottom: 0; }
+  .akRow:active { background: var(--surface-2); }
+  .akWho { flex: 1; min-width: 0; }
+  .akWho b { display: block; font-size: 13.5px; }
+  .akWho small { display: block; font-size: 11.5px; color: var(--muted); }
+  .akSum { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px;
+    color: var(--ink-2); white-space: nowrap; }
+  .akNew { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px;
+    background: var(--surface-2); }
+  .akNew summary { cursor: pointer; font-weight: 700; font-size: 13.5px; }
+  .akNew[open] summary { margin-bottom: 8px; }
+
+  /* 👤 «यह नंबर किसका है» वाली पट्टी — हर नंबर के ख़ाने के नीचे */
+  .whoWrap:not(:empty) { margin-top: 7px; }
+  .whoBar { display: flex; align-items: center; gap: 10px; cursor: pointer;
+    padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(12,163,12,.35);
+    background: linear-gradient(100deg, rgba(12,163,12,.13), transparent 65%); }
+  .whoBar.new { cursor: default; border-color: var(--border);
+    background: var(--surface-2); }
+  .whoBar b { display: block; font-size: 13.5px; }
+  .whoBar small { display: block; font-size: 11.5px; color: var(--muted);
+    line-height: 1.45; }
+  .whoBar > div { flex: 1; min-width: 0; }
+  .whoGo { color: var(--muted); font-size: 20px; line-height: 1; }
+
+  /* 🅰️ नाम का गोल चिह्न — हर जगह एक ही नाप-रूप का */
+  .avat { display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto; border-radius: 50%; color: #fff; font-weight: 800;
+    letter-spacing: .3px; line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,.35);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 2px 6px rgba(0,0,0,.3); }
   .toonSay { flex: 1; min-width: 0; }
   .toonSay b { display: block; font-size: 14.5px; margin-bottom: 4px; }
   .toonSay p { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: 0; }
@@ -581,6 +624,15 @@
   .bkFields input { font: inherit; width: 100%; color: var(--ink);
     background: var(--surface-2); border: 1px solid var(--border);
     border-radius: 9px; padding: 8px 9px; }
+  /* 🧠 «AI से पढ़वाएँ» — दबाने पर ही चलने वाला बटन। जान-बूझकर बाक़ी बटनों
+     से अलग रंग का, ताकि दिख जाए कि यहाँ कुछ ख़र्च होता है। */
+  .aiGo { width: 100%; margin-top: 8px; font-weight: 700;
+    color: #fff; border: 0;
+    background: linear-gradient(135deg, #d55181, #b8407a); }
+  .aiGo:disabled { opacity: .75; }
+  .aiGo.done { background: var(--surface-2); color: var(--ink-2);
+    border: 1px solid var(--border); font-weight: 600; }
+
   .bkPair { display: flex; gap: 6px; }
   .bkPair input { min-width: 0; flex: 1 1 auto; }
   .bkPair input[type=date] { flex: 0 0 150px; }
@@ -1047,14 +1099,18 @@
           <input type="file" id="aRecvFile" accept="image/*" hidden>
           <div class="aiBtn bill">
             <span class="ico">🧾</span>
-            <div class="aiTxt">बिल की फोटो<small>फोटो जुड़ जाएगी — ख़ाने नीचे भर दें</small>
+            <div class="aiTxt">बिल की फोटो<small>चुनकर 🧠 दबाइए — या हाथ से भर दीजिए</small>
               <button type="button" style="width:100%" onclick="pickPhoto('aBillFile')">🖼️ गैलरी से चुनें</button>
+              <button type="button" id="aBillAI" class="aiGo" hidden
+                onclick="readEntryBill(this)">🧠 AI से पढ़वाएँ</button>
             </div>
           </div>
           <div class="aiBtn recv">
             <span class="ico">💳</span>
-            <div class="aiTxt">पेमेंट रसीद<small>फोटो जुड़ जाएगी — UTR भर दें</small>
+            <div class="aiTxt">पेमेंट रसीद<small>चुनकर 🧠 दबाइए — या UTR भर दीजिए</small>
               <button type="button" style="width:100%" onclick="pickPhoto('aRecvFile')">🖼️ गैलरी से चुनें</button>
+              <button type="button" id="aRecvAI" class="aiGo" hidden
+                onclick="readEntryRecv(this)">🧠 AI से पढ़वाएँ</button>
             </div>
           </div>
         </div>
@@ -1543,6 +1599,8 @@ placeholder="917568 माजीसा डिस्पोजल
           <input type="file" id="bmFile" accept="image/*" hidden>
           <button type="button" style="width:100%" onclick="pickPhoto('bmFile')">
             🖼️ गैलरी से बिल की फोटो चुनें</button>
+          <button type="button" id="bmGo" class="aiGo" hidden
+            onclick="readSheetBill(this)">🧠 AI से पढ़वाएँ</button>
           <div id="bmAI" class="muted" style="margin-top:10px"></div>
         </div>
 
@@ -2197,6 +2255,7 @@ function renderAll() {
   renderCheques();
   renderContacts();
   renderStaff();
+  wireAllPhones();        // 👤 हर नंबर के ख़ाने के नीचे «यह किसका है»
 }
 
 function monthKey(d) { return d ? d.toISOString().slice(0, 7) : ""; }
@@ -4318,6 +4377,79 @@ function initRecon() {
 let ENTRY_SHOTS = { bill: null, receipt: null };   // data URLs, uploaded on save
 let ENTRY_PAY = null;                              // रसीद से निकला पूरा पेमेंट
 
+/* ══════════ 🖲️ बटन दबाने पर पढ़े जाने वाले काग़ज़ ═══════════════════
+   ये तीनों प्रॉम्प्ट सिर्फ़ तब चलते हैं जब विक्रम जी 🧠 वाला बटन दबाते हैं।
+   ⚡ फास्ट एंट्री का अपना FAST_PROMPT अलग है (वह पाँच तरह की फोटो पहचानता
+   है); यहाँ हर काग़ज़ का अपना, कसकर लिखा हुआ प्रॉम्प्ट है, क्योंकि यहाँ यह
+   पहले से पता होता है कि फोटो में क्या है।                              */
+
+const BILL_PROMPT =
+  'You read Indian purchase bills for a canteen supply business: thermal ' +
+  'printer slips, GST invoices, kacha parchi and handwritten bills, in Hindi or ' +
+  'English. The photo may be crumpled, tilted, dim or shot at an angle — read ' +
+  'through that.\n' +
+  'Return STRICT JSON only:\n' +
+  '{"vendor":string|null,"phone":string|null,"gstin":string|null,' +
+  '"invoiceNo":string|null,"billDate":"YYYY-MM-DD"|null,' +
+  '"items":[{"name":string,"qty":number|null,"unit":string|null,' +
+  '"rate":number|null,"amount":number|null}],' +
+  '"subTotal":number|null,"gst":number|null,"total":number|null,' +
+  '"paidVia":string|null,"summary":string}\n' +
+  'Rules:\n' +
+  '- vendor = the shop/firm name printed at the top, exactly as written.\n' +
+  '- IMPORTANT, thermal slips wrap: an item name often sits on one line while ' +
+  'its QTY / RATE / AMT sit on the NEXT line, so the columns look shifted. Pair ' +
+  'them by ORDER, not by which line they are on — the Nth item name takes the ' +
+  'Nth set of numbers. If the slip prints an item count ("NITEMS: 8"), return ' +
+  'exactly that many items.\n' +
+  '- For every item: amount must equal qty × rate. If a row does not add up, ' +
+  're-read that row before answering.\n' +
+  '- total = the final payable amount (the "TOTAL" line, after GST and round ' +
+  'off) — NOT the subtotal.\n' +
+  '- Amounts are plain numbers: no ₹, no commas. "1,665.0" → 1665.\n' +
+  '- Dates on Indian bills are DD-MM-YYYY. "27-07-2026" → "2026-07-27".\n' +
+  '- paidVia = CASH / UPI / CARD / CREDIT if the bill says so.\n' +
+  '- Keep item names as printed (Hindi is fine); do not translate or "correct" ' +
+  'spellings.\n' +
+  '- summary = ONE short Hindi line naming the shop and what was bought.\n' +
+  'Use null for anything genuinely unreadable — never guess a number. ' +
+  'Return only the JSON object.';
+
+const PAY_PROMPT =
+  'You read Indian UPI payment receipts: Google Pay, PhonePe, Paytm, BHIM, ' +
+  'and bank apps. The image is usually a photo or screenshot of a phone ' +
+  'screen — glare, tilt and moiré are normal, read through them.\n' +
+  'Return STRICT JSON only:\n' +
+  '{"amount":number|null,"paidAt":"YYYY-MM-DD"|null,"time":"HH:MM"|null,' +
+  '"app":string|null,"status":"success"|"pending"|"failed"|null,' +
+  '"utr":string|null,"appTxnId":string|null,' +
+  '"fromName":string|null,"fromBank":string|null,"fromLast4":string|null,' +
+  '"fromVpa":string|null,"toName":string|null,"toVpa":string|null,' +
+  '"summary":string}\n' +
+  'Rules:\n' +
+  '- amount: plain number, no ₹ or commas. "₹3,250" → 3250.\n' +
+  '- time: 24-hour. "4:42 pm" → "16:42".\n' +
+  '- app: "Google Pay", "PhonePe", "Paytm", or the bank app name.\n' +
+  '- utr: the "UPI transaction ID" / UTR / RRN — usually 12 digits. This is ' +
+  'the one number the bank statement will also carry, so never guess it. If ' +
+  'it is not printed, return null.\n' +
+  '- appTxnId: the app\'s own reference ("Google transaction ID"), which is ' +
+  'NOT the UTR. Keep them apart.\n' +
+  '- fromBank / fromLast4: the sender\'s bank and the last digits shown next ' +
+  'to it. "AU Small Finance Bank 0628" → fromBank "AU Small Finance Bank", ' +
+  'fromLast4 "0628".\n' +
+  '- fromName: who paid ("From: UJJWAL BHARAT INFRATECH" → that).\n' +
+  '- toName / toVpa: who was paid, and their UPI id.\n' +
+  '- status: "success" for Completed / Paid / ✓.\n' +
+  '- summary: ONE short Hindi line, e.g. "Manak Provision Store को ₹3250".\n' +
+  'null for anything you cannot actually read. Return only the JSON object.';
+
+const VCARD_PROMPT =
+  'You read Indian business cards and shop bills for contact details. Return ' +
+  'STRICT JSON only: {"firm":string|null,"person":string|null,"phone":string|null,' +
+  '"gstin":string|null,"address":string|null}. phone is digits only (10 digits ' +
+  'if Indian mobile). null for anything not printed.';
+
 /* ── Gemini: model discovery, because a hardcoded name goes 404 ───────────
    Model IDs get retired, and which ones a key may call differs per project.
    So ask the API what it has, keep the answer, and re-ask the moment a call
@@ -4343,9 +4475,54 @@ function todayISO() {
 
    ➕ आगे कभी कहीं और चाहिए हो, तो यहाँ एक लाइन जोड़नी है, बस।           */
 
-const AI_USES = { fast: true };          // ⚡ फास्ट एंट्री — बस यही
+/* v14: AI चारों जगह वापस — पर **कहीं भी अपने-आप नहीं**।
 
-function aiOn(use) { return !!(GEMINI_KEY && AI_USES[use]); }
+   ⚡ फास्ट एंट्री ही अकेली जगह है जहाँ फोटो डालते ही काम शुरू हो जाता है
+   (वहाँ पूरा मक़सद ही «डाला और छोड़ दिया» है)। बाक़ी तीनों जगह कॉल तभी
+   निकलती है जब वह **किसी बटन के दबाव के अंदर** से चली हो।
+
+   यह जान-बूझकर सिर्फ़ «बटन के handler से बुला लेंगे» भरोसे पर नहीं छोड़ा
+   गया — v13 की सीख यही थी कि वह भरोसा टूटता है। इसलिए दबाव के दौरान एक
+   निशानी रखी जाती है और askGemini उसी को देखकर आगे बढ़ता है। timer से,
+   पन्ना खुलते ही, या भूल से लिखे किसी कोड से — किसी हाल में नहीं।
+
+   यानी सीमा तभी ख़र्च होगी जब विक्रम जी की उँगली ख़र्च करेगी।           */
+
+const AI_USES = {
+  fast: { auto: true  },   // ⚡ फास्ट एंट्री — फोटो डालते ही
+  bill: { click: true },   // 📎 बिल की फोटो — सिर्फ़ बटन से
+  pay:  { click: true },   // 🧾 रसीद       — सिर्फ़ बटन से
+  card: { click: true }    // 📇 पार्टी कार्ड — सिर्फ़ बटन से
+};
+
+let AI_CLICK = null;       // अभी किस बटन का दबाव चल रहा है
+
+/**
+ * बटन का दबाव — इसी के अंदर से «सिर्फ़ बटन से» वाली कॉल निकल सकती है।
+ * बटन को दबते ही बंद कर देता है, ताकि दो बार दबाकर दो कॉल ख़र्च न हों।
+ */
+async function aiClick(use, btn, fn) {
+  if (AI_CLICK) return;                       // एक बार में एक ही
+  const busy = '<span class="thinking"></span> पढ़ रहा हूँ…';
+  const was = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = busy; }
+  AI_CLICK = use;
+  try { return await fn(); }
+  finally {
+    AI_CLICK = null;
+    if (btn) {
+      btn.disabled = false;
+      // पढ़ने वाले ने बटन पर कुछ और लिख दिया हो (जैसे «पढ़ लिया») तो उसे
+      // मत मिटाओ — सिर्फ़ अपनी «पढ़ रहा हूँ…» वाली धड़कन हटाओ
+      if (btn.innerHTML === busy) btn.innerHTML = was;
+    }
+  }
+}
+
+function aiOn(use) {
+  const u = AI_USES[use];
+  return !!(GEMINI_KEY && u && (u.auto || u.click));
+}
 
 /* ── 🪶 कौन-सा मॉडल ───────────────────────────────────────────────────
    पुराना कोड जान-बूझकर **सबसे ऊँचा** gemini-N-flash चुनता था। मुफ़्त तख़्ते
@@ -4496,8 +4673,11 @@ async function geminiPost(model, parts) {
  *   सूची में न हो तो कॉल जाती ही नहीं। यही v13 का ताला है।
  */
 async function askGemini(use, prompt, dataUrl, extraText, onWait) {
-  if (!AI_USES[use]) {
-    throw new Error("यहाँ AI बंद है — वह सिर्फ़ ⚡ फास्ट एंट्री में चलता है");
+  const u = AI_USES[use];
+  if (!u) throw new Error("यहाँ AI बंद है");
+  // «सिर्फ़ बटन से» वाली कॉल बटन के दबाव के बाहर से नहीं निकल सकती
+  if (!u.auto && AI_CLICK !== use) {
+    throw new Error("यह काम बटन दबाने पर ही होता है — 🧠 वाला बटन दबाइए");
   }
   if (!GEMINI_KEY) throw new Error("AI की चाबी नहीं मिली — Firestore में vbe_meta › app_config › geminiKey डालें");
   const parts = [{ text: prompt + "\n\nToday's date is " + todayISO() + "." +
@@ -4622,14 +4802,71 @@ $("aBillFile").addEventListener("change", async (e) => {
   try {
     ENTRY_SHOTS.bill = await shrinkImage(f, 1800, 0.85);   // small print needs pixels
     showShots();
+    aiShowBtn("aBillAI");
     aiSay("📷 बिल की फोटो लग गई — सहेजते ही Drive में चली जाएगी।" +
-      "<br><b>नीचे के ख़ाने हाथ से भर दीजिए</b>, या " +
-      `<a href="#" onclick="pasteIntoEntry();return false">📋 AI-पेस्ट</a> से ` +
-      "Claude से पढ़वाकर जवाब यहीं चिपका दीजिए।", "ok");
+      "<br>अब <b>🧠 AI से पढ़वाएँ</b> दबाइए, या ख़ाने ख़ुद भर दीजिए।", "ok");
   } catch (err) {
     aiSay("फोटो नहीं लग पाई — " + esc(err.message), "bad");
   }
 });
+
+/** फोटो लगी हो और चाबी हो, तभी 🧠 वाला बटन दिखे। */
+function aiShowBtn(id, use) {
+  const b = $(id);
+  if (!b) return;
+  b.hidden = !aiOn(use || "bill");
+  b.classList.remove("done");
+  b.disabled = false;
+}
+
+/* 🧠 बिल की फोटो पढ़वाना — विक्रम जी के बटन दबाने पर ही। */
+function readEntryBill(btn) {
+  return aiClick("bill", btn, async () => {
+    if (!ENTRY_SHOTS.bill) { aiSay("पहले बिल की फोटो चुनिए", "bad"); return; }
+    try {
+      const r = await askGemini("bill", BILL_PROMPT, ENTRY_SHOTS.bill);
+
+      if (r.vendor) $("aVendor").value = r.vendor;
+      if (r.billDate) $("aDate").value = r.billDate;
+      fillIfEmpty("aInvoice", r.invoiceNo);
+      PRINTED_EXTRA = 0;
+      if (r.items && r.items.length) {
+        $("aItems").innerHTML = "";
+        r.items.forEach((it) => addItemRow(it));
+        // GST / round-off = whatever the printed total carries beyond the items.
+        const sum = itemRows().reduce((a, i) => a + (i.amount || 0), 0);
+        if (r.total != null && sum > 0 && r.total > sum) {
+          PRINTED_EXTRA = Math.round((r.total - sum) * 100) / 100;
+        }
+      }
+      recalcTotal();
+      if (r.total != null) $("aTotal").value = r.total;    // printed total wins
+      if (r.paidVia) fillIfEmpty("aNote", r.paidVia.toUpperCase() + " से");
+
+      // The business card writes itself — GSTIN and phone are on most bills.
+      if (r.vendor && (r.gstin || r.phone)) {
+        vcardFromBill(r.vendor, r.gstin, r.phone).catch(() => {});
+      }
+      aiSay(billReadMsg(r) + aiUsed(), "ok");
+      priceHints();
+      aiDone("aBillAI");
+    } catch (err) {
+      aiSay("बिल नहीं पढ़ पाया — " + esc(err.message) +
+        "<br><span class='muted'>नीचे हाथ से भर सकते हैं, फोटो फिर भी जुड़ जाएगी।</span>", "bad");
+    }
+  });
+}
+
+/** पढ़ने के बाद बटन बुझ जाए — वही फोटो दुबारा पढ़वाने का कोई मतलब नहीं। */
+function aiDone(id) {
+  const b = $(id);
+  if (!b) return;
+  b.classList.add("done");
+  b.innerHTML = "🧠 पढ़ लिया — दुबारा पढ़वाएँ";
+}
+
+/** «आज कितनी कॉल लगीं» — वहीं, जहाँ काम हुआ। */
+const aiUsed = () => `<br><span class="muted">🧠 आज ${aiToday().n} AI कॉल लगी हैं</span>`;
 
 /**
  * जो पढ़ा गया, एक नज़र में वापस — और वह अकेला अंक जो जाँचने लायक है:
@@ -4661,15 +4898,57 @@ $("aRecvFile").addEventListener("change", async (e) => {
   try {
     ENTRY_SHOTS.receipt = await shrinkImage(f, 1800, 0.85);
     showShots();
-    ENTRY_PAY = null;              // पेमेंट की पूरी पंक्ति अब फ़ॉर्म से बनेगी
+    ENTRY_PAY = null;              // पढ़वाने पर भरेगा, वरना फ़ॉर्म से
+    aiShowBtn("aRecvAI", "pay");
     aiSay("🧾 रसीद की फोटो लग गई — सहेजते ही Drive में चली जाएगी।" +
-      "<br>अब <b>UTR</b> का ख़ाना भर दीजिए (रसीद खोलकर «Payment details» में " +
-      "दिखता है) — बैंक की statement आते ही यही entry उससे जुड़ जाएगी।", "ok");
-    if (!$("aUtr").value) $("aUtr").focus();
+      "<br>अब <b>🧠 AI से पढ़वाएँ</b> दबाइए, या <b>UTR</b> ख़ुद भर दीजिए " +
+      "(रसीद खोलकर «Payment details» में दिखता है)।", "ok");
   } catch (err) {
     aiSay("फोटो नहीं लग पाई — " + esc(err.message), "bad");
   }
 });
+
+/* 🧾 रसीद पढ़वाना — बटन दबाने पर ही। यही वह जगह है जहाँ UTR मिलता है,
+   और UTR ही बिल को पक्का करता है। */
+function readEntryRecv(btn) {
+  return aiClick("pay", btn, async () => {
+    if (!ENTRY_SHOTS.receipt) { aiSay("पहले रसीद की फोटो चुनिए", "bad"); return; }
+    try {
+      const r = await askGemini("pay", PAY_PROMPT, ENTRY_SHOTS.receipt);
+      ENTRY_PAY = paymentFromReceipt(r, null);
+
+      if (r.utr) $("aUtr").value = r.utr;
+      fillIfEmpty("aVendor", r.toName);
+      fillIfEmpty("aTotal", r.amount);
+      if (r.paidAt && !ENTRY_SHOTS.bill) $("aDate").value = r.paidAt;
+      if (ENTRY_PAY.accountId && !$("aAccount").value) $("aAccount").value = ENTRY_PAY.accountId;
+
+      let msg = "✅ " + esc(r.summary || "रसीद पढ़ ली");
+      const bits = [];
+      if (ENTRY_PAY.accountId) bits.push("🏦 " + esc(accLabel(ENTRY_PAY.accountId)));
+      else if (r.fromBank) bits.push("🏦 " + esc(r.fromBank) + (r.fromLast4 ? " " + esc(r.fromLast4) : ""));
+      if (r.time) bits.push("🕘 " + esc(r.time));
+      if (r.app) bits.push("📱 " + esc(r.app));
+      if (bits.length) msg += "<br>" + bits.join(" · ");
+      if (r.utr) msg += `<br>🔗 UTR <b>${esc(r.utr)}</b>`;
+      else msg += `<br>⚠️ इस स्क्रीन पर UTR नहीं दिखा — रसीद खोलकर ` +
+        `(Payment details) दोबारा फोटो लें, या UTR हाथ से भर दें`;
+      if (r.status && r.status !== "success") msg += `<br>⚠️ पेमेंट की हालत: ${esc(r.status)}`;
+
+      // Bill और रसीद दोनों हैं तो रकम मिलनी चाहिए।
+      const billTotal = Number($("aTotal").value);
+      if (ENTRY_SHOTS.bill && r.amount != null && billTotal &&
+          Math.abs(billTotal - r.amount) > 1) {
+        msg += `<br>⚠️ बिल ${INR(billTotal)} का है पर दिए ${INR(r.amount)} — जाँच लें`;
+      }
+      aiSay(msg + aiUsed(), "ok");
+      aiDone("aRecvAI");
+    } catch (err) {
+      aiSay("रसीद नहीं पढ़ पाया — " + esc(err.message) +
+        "<br><span class='muted'>UTR हाथ से भर सकते हैं।</span>", "bad");
+    }
+  });
+}
 
 /**
  * What did this item cost last time, and from whom? Straight out of the data —
@@ -6140,21 +6419,72 @@ async function copyVcard() {
    फोटो सँभल जाती है (कार्ड कभी खोता नहीं), और ✍️ वाला ख़ाना अपने-आप खुल
    जाता है ताकि जो सामने दिख रहा है वह उतार दिया जाए। कार्ड साल में एक-दो
    बार ही आता है — उसके लिए AI की एक कॉल रखना सौदा नहीं। */
+/* 📇 कार्ड की फोटो — फोटो पहले सँभलती है, पढ़ना बटन दबाने पर।
+
+   नया कार्ड कभी-कभार ही आता है, पर जब आता है तो उस पर छह चीज़ें लिखी होती
+   हैं — फर्म, आदमी, नंबर, GSTIN, पता, UPI। वे सब हाथ से उतारना लंबा काम
+   है, इसलिए यहाँ 🧠 वाला बटन सबसे ज़्यादा काम आता है।                   */
+
+let VCARD_SHOT = null, VCARD_SHOT_KEEP = null;
+
 async function vcardFromPhoto(e) {
   const f = e.target.files[0];
   if (!f || !VCARD_PARTY) return;
   const m = $("vcMsg");
   m.className = "muted"; m.innerHTML = '<span class="thinking"></span> कार्ड सँभाल रहा हूँ…';
   try {
-    const img = await shrinkImage(f);
-    const up = await driveUpload(img, "card_" + VCARD_PARTY.key);
+    VCARD_SHOT = await shrinkImage(f, 1600, 0.82);
+    const up = await driveUpload(VCARD_SHOT, "card_" + VCARD_PARTY.key);
     await saveVcard({ cardUrl: up.ok ? up.url : null });
-    m.className = "ok";
-    m.innerHTML = "📇 कार्ड सँभल गया — अब जो उस पर लिखा है वह भर दीजिए।";
-    editVcard();
+    // saveVcard पूरा कार्ड दुबारा बनाता है — यानी ऊपर पकड़ा हुआ vcMsg अब
+    // पन्ने पर है ही नहीं। इसलिए लिखने से पहले नया वाला उठाओ।
+    const m2 = $("vcMsg") || m;
+    m2.className = "ok";
+    m2.innerHTML = `<div class="toonBox tight">
+        <div class="toonArt">${gfx.toon("card", 60)}</div>
+        <div class="toonSay"><b>📇 कार्ड सँभल गया</b>
+          <p>अब इसे पढ़वा लीजिए, या ✍️ से ख़ुद भर दीजिए।</p></div>
+      </div>` +
+      (aiOn("card")
+        ? `<button type="button" class="aiGo" onclick="readVcard(this)">🧠 कार्ड पढ़वाएँ</button>`
+        : "");
+    if (!aiOn("card")) editVcard();
+    VCARD_SHOT_KEEP = VCARD_SHOT;
   } catch (err) {
     m.className = "bad"; m.textContent = "फोटो नहीं लग पाई: " + err.message;
   }
+}
+
+/** 🧠 कार्ड पढ़वाना — बटन दबाने पर ही। */
+function readVcard(btn) {
+  return aiClick("card", btn, async () => {
+    const m = $("vcMsg");
+    if (!VCARD_SHOT) VCARD_SHOT = VCARD_SHOT_KEEP;
+    if (!VCARD_SHOT) { m.className = "bad"; m.textContent = "पहले कार्ड की फोटो लगाइए"; return; }
+    try {
+      const r = await askGemini("card", VCARD_PROMPT, VCARD_SHOT);
+      // कार्ड में सिर्फ़ कार्ड की चीज़ें जाएँ। AI कभी कुछ और भी लौटा दे तो
+      // वह चुपचाप Firestore में नहीं बैठना चाहिए।
+      const card = {};
+      ["firm", "person", "phone", "gstin", "address", "upi"].forEach((k) => {
+        if (r[k]) card[k] = r[k];
+      });
+      await saveVcard(card);
+      // नंबर मिला तो वह संपर्क-सूची में भी बैठ जाए — नंबर ही पहचान है
+      if (phoneKey(r.phone)) {
+        touchContact(r.phone, r.firm || r.person || VCARD_PARTY.name,
+          { auto: true }).catch(() => {});     // कार्ड AI ने पढ़ा है
+      }
+      const m2 = $("vcMsg") || m;          // कार्ड दुबारा बन चुका है
+      m2.className = "ok";
+      m2.innerHTML = `✅ कार्ड पढ़ लिया — <b>${Object.keys(card).length}</b> चीज़ें भर दीं।` +
+        "<br><span class='muted'>ऊपर देख लीजिए; ✍️ से सुधार भी सकते हैं।</span>" + aiUsed();
+    } catch (err) {
+      const m2 = $("vcMsg") || m;
+      m2.className = "bad";
+      m2.textContent = "कार्ड नहीं पढ़ पाया: " + err.message + " — ✍️ से भर सकते हैं";
+    }
+  });
 }
 
 /** जितना पता है उतना भरें — खाली छोड़ी हुई चीज़ पुरानी वाली मिटाती नहीं। */
@@ -6730,6 +7060,7 @@ function openBillSheet(opts) {
   $("bsJson").value = "";
   $("bsPasteMsg").textContent = "";
   $("bmAI").textContent = "";
+  if ($("bmGo")) $("bmGo").hidden = true;
   $("bsMsg").textContent = "";
   $("bsItems").innerHTML = "";
   ["bsVendor", "bsInvoice", "bsPhone", "bsGstin", "bsUtr", "bsGst", "bsTotal",
@@ -6805,15 +7136,40 @@ $("bmFile").addEventListener("change", async (e) => {
   try {
     BILL_SHOTS.bill = await shrinkImage(f, 1800, 0.85);
     bsShowShots();
+    aiShowBtn("bmGo", "bill");
     ai.className = "ok";
     ai.innerHTML = "📷 बिल की फोटो लग गई — सहेजते ही Drive में चली जाएगी।" +
-      "<br><span class='muted'>नीचे के ख़ाने भर दीजिए, या 📋 वाले ख़ाने में " +
-      "Claude का जवाब चिपका दीजिए।</span>";
+      "<br><span class='muted'>अब 🧠 वाला बटन दबाइए, या नीचे के ख़ाने ख़ुद " +
+      "भर दीजिए।</span>";
   } catch (err) {
     ai.className = "bad";
     ai.textContent = "फोटो नहीं लग पाई: " + err.message;
   }
 });
+
+/* 📎 बिल-शीट का बिल पढ़वाना — बटन दबाने पर ही। */
+function readSheetBill(btn) {
+  return aiClick("bill", btn, async () => {
+    const ai = $("bmAI");
+    if (!BILL_SHOTS.bill) { ai.className = "bad"; ai.textContent = "पहले फोटो चुनिए"; return; }
+    try {
+      const r = await askGemini("bill", BILL_PROMPT, BILL_SHOTS.bill);
+      fillBillSheet({
+        party: { name: r.vendor, phone: r.phone, gstin: r.gstin },
+        invoiceNo: r.invoiceNo, billDate: r.billDate, items: r.items,
+        gst: r.gst, total: r.total, summary: r.summary
+      });
+      ai.className = "ok";
+      ai.innerHTML = "🧠 " + esc(r.summary || "पढ़ लिया") +
+        (r.total != null ? ` · कुल <b>${INR(r.total)}</b>` : "") +
+        "<br><span class='muted'>नीचे जाँचकर सुधार लें।</span>" + aiUsed();
+      aiDone("bmGo");
+    } catch (err) {
+      ai.className = "bad";
+      ai.textContent = "AI नहीं पढ़ पाया (बिल फिर भी जुड़ जाएगा): " + err.message;
+    }
+  });
+}
 
 $("bsPayShot").addEventListener("change", async (e) => {
   const f = e.target.files[0];
@@ -7227,6 +7583,31 @@ const gfx = {
   /** पाँच रंग, पाँच मतलब — इसके बाहर कोई रंग नहीं। */
   C: { in: "#0ca30c", out: "#d03b3b", bill: "#3987e5", warn: "#c98500", ai: "#d55181" },
 
+  /* 🅰️ नाम का गोल चिह्न ─────────────────────────────────────────────
+     हर आदमी के नाम के दो अक्षर, और नाम से ही तय हुआ अपना रंग। रंग नाम के
+     अक्षरों के जोड़ से निकलता है, इसलिए **वही आदमी जहाँ भी दिखे, उसका रंग
+     वही रहता है** — सूची में आँख उसे बिना पढ़े पहचान लेती है।
+
+     रंग मनमाने नहीं: वही जाँचा-परखा रंग-समूह (SERIES) जो पूरे app में चलता
+     है, ताकि दस संपर्क एक साथ दिखें तब भी आँख को चुभे नहीं।            */
+  avatar(name, size, extra) {
+    const n = String(name || "?").trim();
+    const two = n.split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+    let h = 0;
+    for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
+    // पाँच रंग कम पड़ते हैं — दस संपर्कों में दो का रंग एक हो जाता है।
+    // इसलिए हर रंग के दो रूप: गहरा और हल्का। रंग वही जाँचे-परखे रहते हैं,
+    // बस उनका ढाल बदलता है — यानी दस अलग शक्लें, बिना नया रंग गढ़े।
+    const c = SERIES[h % SERIES.length];
+    const deep = ((h / SERIES.length) | 0) % 2 === 1;
+    const S = size || 38;
+    return `<span class="avat" title="${esc(n)}" style="width:${S}px;height:${S}px;
+      font-size:${Math.round(S * 0.38)}px;
+      background:linear-gradient(${deep ? "145deg, " + c + "bb, " + c
+                                       : "145deg, " + c + ", " + c + "99"});
+      ${extra || ""}">${esc(two)}</span>`;
+  },
+
   /**
    * छोटा ग्राफ़, बिना किसी library के — tile के अंदर बैठ जाता है।
    * Chart.js एक tile के लिए भारी है और यहाँ अक्ष की ज़रूरत भी नहीं:
@@ -7346,11 +7727,20 @@ const gfx = {
     sleep: { brow: "M36 41 q4-2 8 0 M52 41 q4-2 8 0", eye: "shut",
              mouth: "M43 61 q5 3 10 0", prop: "zzz" },
     money: { brow: "M36 39 q4-3 8-1 M52 38 q4-2 8 1", eye: "happy",
-             mouth: "M40 59 q8 8 16 0", prop: "coins" }
+             mouth: "M40 59 q8 8 16 0", prop: "coins" },
+
+    // v14 के तीन नए रूप
+    wave:  { brow: "M36 39 q4-3 8-1 M52 38 q4-2 8 1", eye: "happy",
+             mouth: "M40 60 q8 7 16 0", prop: "wave"  },   // 👋 संपर्क चुनते वक़्त
+    seek:  { brow: "M36 37 q4-4 8-1 M52 39 q4-2 8 2", eye: "wide",
+             mouth: "M43 61 q5 3 10 0",  prop: "lens"  },   // 🔍 कुछ न मिले तब
+    card:  { brow: "M36 40 q4-3 8-1 M52 39 q4-2 8 1", eye: "open",
+             mouth: "M41 60 q7 5 14 0",  prop: "vcard" }    // 💳 कार्ड पढ़ते वक़्त
   },
 
   /**
-   * @param {string} mood hello · think · alert · party · sleep · money
+   * @param {string} mood hello · think · alert · party · sleep · money ·
+   *   wave (👋 नमस्ते) · seek (🔍 खोजते) · card (💳 कार्ड पकड़े)
    * @param {number} size px (48–140 के बीच सबसे अच्छा लगता है)
    */
   toon(mood, size) {
@@ -7409,6 +7799,36 @@ const gfx = {
           <circle cx="48" cy="8" r="2.4"/></g>
         <g fill="#d55181"><circle cx="24" cy="18" r="2"/><circle cx="72" cy="18" r="2.4"/></g>
         <g fill="#199e70"><circle cx="6" cy="46" r="1.8"/><circle cx="90" cy="44" r="1.8"/></g></g>`,
+      // 👋 हाथ हिलाकर नमस्ते
+      wave: `<g>
+        <path d="M68 90 q14-6 15-26" stroke="#e6e0d0" stroke-width="7"
+          fill="none" stroke-linecap="round"/>
+        <ellipse cx="83" cy="60" rx="7" ry="7.5" fill="#e0aa7d"/>
+        <path d="M78 55 v-9 M83 54 v-11 M88 56 v-8" stroke="#e0aa7d"
+          stroke-width="3.4" stroke-linecap="round"/>
+        <path d="M74 46 q-3-5 -1-9 M92 44 q3-5 1-9" stroke="#fab219"
+          stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".8"/>
+        <ellipse cx="29" cy="80" rx="5.5" ry="4.5" fill="#e0aa7d"/></g>`,
+      // 🔍 लेंस लिए हुए — कुछ खोज रहे हैं
+      lens: `<g>
+        <path d="M66 92 q10-6 12-18" stroke="#e6e0d0" stroke-width="7"
+          fill="none" stroke-linecap="round"/>
+        <ellipse cx="78" cy="72" rx="7" ry="6.5" fill="#e0aa7d"/>
+        <circle cx="80" cy="50" r="12" fill="#bcd8f5" opacity=".35"/>
+        <circle cx="80" cy="50" r="12" fill="none" stroke="#8ab4e8" stroke-width="3.2"/>
+        <path d="M74 60 l-4 8" stroke="#8ab4e8" stroke-width="5" stroke-linecap="round"/>
+        <path d="M73 45 q4-5 9-4" stroke="#fff" stroke-width="2"
+          fill="none" stroke-linecap="round" opacity=".7"/>
+        <ellipse cx="29" cy="80" rx="5.5" ry="4.5" fill="#e0aa7d"/></g>`,
+      // 💳 बिज़नेस कार्ड दोनों हाथों में
+      vcard: `<g>
+        <ellipse cx="28" cy="79" rx="5.5" ry="4.5" fill="#e0aa7d"/>
+        <ellipse cx="68" cy="79" rx="5.5" ry="4.5" fill="#e0aa7d"/>
+        <rect x="29" y="72" width="38" height="23" rx="3" fill="#f4efe4"/>
+        <rect x="29" y="72" width="38" height="6" rx="3" fill="#3987e5"/>
+        <circle cx="36" cy="85" r="4" fill="#d0c6b2"/>
+        <path d="M43 82 h19 M43 86 h15 M43 90 h11" stroke="#b6ab95"
+          stroke-width="1.6" stroke-linecap="round"/></g>`,
       // 💤 सो रहे हैं
       zzz: `<g fill="#8ab4e8" opacity=".9" font-family="system-ui"
           font-weight="700" text-anchor="middle">
@@ -7924,24 +8344,41 @@ const phoneShow = (p) => String(p || "").replace(/^(\d{5})(\d{5})$/, "$1 $2");
  * नंबर न हो तो कुछ नहीं होता: बिना नंबर का संपर्क सूची में नहीं जाता,
  * वरना वही आदमी दस बार अलग-अलग नामों से बन जाएगा।
  */
+/**
+ * @param {object} [extra] `{auto:true}` = नाम मशीन का पढ़ा हुआ है (AI ने
+ *   रसीद/कार्ड/चैट से निकाला)। ऐसा नाम विक्रम जी के अपने हाथ से लिखे नाम
+ *   को **कभी नहीं हटाता** — वह «और नाम» में जुड़ जाता है, बस।
+ *
+ *   यह ज़रूरी है: कार्ड पर «राम सब्ज़ी भंडार» छपा हो और उसी नंबर को विक्रम
+ *   जी «मनोज दान» के नाम से जानते हों, तो सूची में «मनोज दान» ही दिखना
+ *   चाहिए। जो नाम उन्होंने डाला है, वही उनका सच है।
+ */
 async function touchContact(phone, name, extra) {
   const k = phoneKey(phone);
   if (!k) return null;
   const had = CONTACTS[k] || { phone: k, name: null, aliases: [], count: 0 };
   const nm = String(name || "").trim();
+  const auto = !!(extra && extra.auto);
   const doc = Object.assign({}, had, extra || {});
+  delete doc.auto;                       // यह सिर्फ़ इशारा है, दस्तावेज़ नहीं
   doc.phone = k;
   if (nm) {
-    if (!doc.name) doc.name = nm;
-    else if (pKey(doc.name) !== pKey(nm) &&
-             !(doc.aliases || []).some((a) => pKey(a) === pKey(nm))) {
+    const locked = doc.name && doc.nameByOwner && auto;   // 👑 हाथ का लिखा नाम
+    if (!doc.name) {
+      doc.name = nm;
+      if (!auto) doc.nameByOwner = true;
+    } else if (pKey(doc.name) !== pKey(nm) &&
+               !(doc.aliases || []).some((a) => pKey(a) === pKey(nm))) {
       doc.aliases = (doc.aliases || []).concat([nm]);
     }
-    // सबसे पूरा नाम आगे रहे
-    if (nm.length > String(doc.name).length) {
+    // सबसे पूरा नाम आगे रहे — पर हाथ के लिखे नाम को हटाकर नहीं
+    if (!locked && nm.length > String(doc.name).length) {
       doc.aliases = (doc.aliases || []).concat([doc.name])
         .filter((a) => a && pKey(a) !== pKey(nm));
       doc.name = nm;
+      if (!auto) doc.nameByOwner = true;
+    } else if (!auto && pKey(doc.name) === pKey(nm)) {
+      doc.nameByOwner = true;            // वही नाम हाथ से दुबारा — अब पक्का
     }
   }
   doc.lastSeen = todayISO();
@@ -7950,6 +8387,74 @@ async function touchContact(phone, name, extra) {
   try { await db.collection("vbe_contacts").doc(k).set(doc, { merge: true }); } catch (e) {}
   return doc;
 }
+
+/* ── 👤 नंबर डालो, नाम सामने ─────────────────────────────────────────
+
+   संपर्क-सूची बन तो गई थी, पर अपने ही पन्ने में बंद थी। बिल में नंबर
+   लिखते वक़्त पता ही नहीं चलता था कि यह वही मनोज भाई हैं जिनके कहने पर
+   पिछले महीने ₹45,000 गए थे।
+
+   अब 10 अंक पूरे होते ही नीचे एक पट्टी उभर आती है — नाम, नंबर, और उनके
+   कहने पर अब तक कितना गया। नंबर सूची में न हो तो «🆕 नया नंबर»।
+
+   यह एक ही जगह से बनता है और हर नंबर वाले ख़ाने से जुड़ता है, इसलिए आगे
+   कोई नया ख़ाना बने तो वह भी एक लाइन में जुड़ जाएगा — कोई छूटेगा नहीं। */
+
+/** नंबर किसका है — नाम, कितनी बार कहा, कितना गया। */
+function whoIs(phone) {
+  const k = phoneKey(phone);
+  if (!k) return null;
+  const c = CONTACTS[k];
+  if (!c) return { phone: k, known: false };
+  const sp = contactSpend(k);
+  return { phone: k, known: true, name: c.name || "नाम नहीं लिखा",
+    aliases: c.aliases || [], n: sp.rows.length, sum: sp.sum, contact: c };
+}
+
+/** वही पट्टी, HTML में। कहीं भी चिपकाई जा सकती है। */
+function whoChip(phone) {
+  const w = whoIs(phone);
+  if (!w) return "";
+  if (!w.known) {
+    return `<div class="whoBar new">
+      <span class="avat" style="width:34px;height:34px;font-size:14px;
+        background:var(--surface-2);color:var(--ink-2)">🆕</span>
+      <div><b>नया नंबर</b>
+        <small>नाम भर दीजिए — संपर्क-सूची में अपने-आप जुड़ जाएगा</small></div>
+    </div>`;
+  }
+  return `<div class="whoBar" onclick="showContact('${esc(w.phone)}')">
+    ${gfx.avatar(w.name, 34)}
+    <div><b>${esc(w.name)}</b>
+      <small>${esc(phoneShow(w.phone))}${w.n ? " · " + w.n + " बार कहा · " + INR(w.sum) : ""}${
+        w.aliases.length ? " · और नाम: " + esc(w.aliases.slice(0, 2).join(", ")) : ""}</small></div>
+    <span class="whoGo">›</span>
+  </div>`;
+}
+
+/**
+ * किसी भी नंबर वाले ख़ाने को इस पट्टी से जोड़ दो।
+ * पट्टी ख़ाने के ठीक नीचे बनती है और लिखते-लिखते बदलती रहती है।
+ */
+function wireWho(inputId) {
+  const el = $(inputId);
+  if (!el || el.dataset.who) return;
+  el.dataset.who = "1";
+  const box = document.createElement("div");
+  box.className = "whoWrap";
+  // पट्टी <label> के *बाहर* — अंदर होने पर उस पर उँगली रखते ही ख़ाना
+  // खुल जाता, और «पूरा हिसाब» वाला टैप कभी लगता ही नहीं
+  const host = el.closest("label") || el;
+  host.parentNode.insertBefore(box, host.nextSibling);
+  const draw = () => { box.innerHTML = whoChip(el.value); };
+  el.addEventListener("input", draw);
+  el.addEventListener("change", draw);
+  draw();
+}
+
+/** app के सारे नंबर वाले ख़ाने — एक ही सूची, इसलिए कोई छूटता नहीं। */
+const PHONE_FIELDS = ["ctPhone", "bsPhone", "stPhone", "stWa", "npPhone"];
+function wireAllPhones() { PHONE_FIELDS.forEach(wireWho); }
 
 /** इस संपर्क के कहने पर हुए सारे पेमेंट। */
 function contactSpend(k) {
@@ -8441,8 +8946,10 @@ async function saveFastRecord(m, job) {
     { receiptId, party: m.party, amount: m.amount, utr: m.utr || null,
       askedBy: rec.requestedBy });
   if (rec.requestedPhone) {
+    // ⚡ का नाम भी AI ने चैट की फोटो से पढ़ा है — इसलिए «auto»
     await touchContact(rec.requestedPhone, rec.requestedBy,
-      m.avatar ? { avatar: m.avatar } : {}).catch(() => {});
+      Object.assign({ auto: true }, m.avatar ? { avatar: m.avatar } : {}))
+      .catch(() => {});
   }
   EXP.unshift(Object.assign({ _id: docId, _date: when }, rec));
   saveCache();
@@ -8457,6 +8964,7 @@ async function saveFastRecord(m, job) {
 
 /* क़तार को धक्का — app खुलते ही, और हर मिनट एक नज़र (कोई काम बाकी हो तभी) */
 addEventListener("load", () => {
+  wireAllPhones();          // 👤 «यह नंबर किसका है» — शुरू से ही
   loadJobs(); renderFab();
   setTimeout(runJobs, 2500);
   // ✅ बिना देखी entries हों तो एक बार पूछ लो — पर app खुलने के 4 सेकंड बाद,
@@ -8571,15 +9079,65 @@ function askedBanner(e) {
 const askedMissing = () => EXP.filter((e) =>
   !e.requestedBy && !phoneKey(e.requestedPhone) && !e.askedNobody);
 
+/* पहले यहाँ सिर्फ़ दो ख़ाने थे — नाम और नंबर — और छह पुराने नामों की
+   चिप्पियाँ। हर बार पूरा नाम लिखना पड़ता था, और «मनोज» लिखने पर वह «मनोज
+   भाई» से अलग आदमी बन जाता था।
+
+   अब वही जगह पूरी संपर्क-सूची है: खोज (नाम से भी, नंबर से भी, पुराने नामों
+   से भी), एक टैप में दर्ज, और जो सूची में नहीं है उसे वहीं जोड़ने का ख़ाना।
+   जोड़ते ही वह संपर्क-सूची में भी बैठ जाता है — यानी अगली बार वह ऊपर की
+   सूची में मिलेगा।                                                      */
+
 let ASKED_FOR = "";
+
+/** «किसके कहने पर» के लिए संपर्क — खोज के साथ, सबसे ज़्यादा वाला ऊपर। */
+function askedRows(q) {
+  const pk = phoneKey(q), k = pKey(q);
+  const digits = String(q || "").replace(/\D/g, "");
+  return Object.values(CONTACTS)
+    .map((c) => Object.assign({}, c, contactSpend(c.phone)))
+    .filter((c) => {
+      if (!q) return true;
+      if (pk) return c.phone === pk;
+      if (digits && /^\d+$/.test(String(q).trim())) return c.phone.indexOf(digits) >= 0;
+      return [c.name].concat(c.aliases || [])
+        .some((a) => a && pKey(a).includes(k));
+    })
+    .sort((a, b) => (b.rows.length - a.rows.length) || (b.sum - a.sum));
+}
+
+function renderAskedList() {
+  const box = $("akList");
+  if (!box) return;
+  const q = String($("akSearch") ? $("akSearch").value : "").trim();
+  const rows = askedRows(q).slice(0, 40);
+  if (!rows.length) {
+    box.innerHTML = `<div class="toonBox tight">
+      <div class="toonArt">${gfx.toon("seek", 58)}</div>
+      <div class="toonSay"><b>${q ? "इस नाम/नंबर का कोई नहीं मिला" : "सूची अभी ख़ाली है"}</b>
+        <p>नीचे ➕ वाले ख़ाने में नाम और नंबर भर दीजिए — जुड़ भी जाएगा और
+          यहीं दर्ज भी हो जाएगा।</p></div></div>`;
+    return;
+  }
+  box.innerHTML = rows.map((c) => `
+    <div class="akRow" onclick="pickAsked('${esc(c.phone)}')">
+      ${gfx.avatar(c.name || "?", 38)}
+      <div class="akWho">
+        <b>${esc(c.name || "नाम नहीं लिखा")}</b>
+        <small>${esc(phoneShow(c.phone))}${
+          c.rows.length ? " · " + c.rows.length + " बार कहा" : " · अभी कुछ नहीं"}</small>
+      </div>
+      ${c.sum ? `<div class="akSum">${INR(c.sum)}</div>` : ""}
+    </div>`).join("");
+}
+
 function openAsked(id) {
   ASKED_FOR = id;
   const e = EXP.filter((x) => x._id === id)[0];
   if (!e) return;
-  const recent = [...new Set(EXP.map((x) => x.requestedBy).filter(Boolean))].slice(0, 6);
   $("askedBody").innerHTML = `
     <div class="toonBox">
-      <div class="toonArt">${gfx.toon("think", 74)}</div>
+      <div class="toonArt">${gfx.toon("wave", 74)}</div>
       <div class="toonSay"><b>यह ${INR(e.billTotal)} किसके कहने पर गया था?</b>
         <p>${esc((e.vendor && e.vendor.name) || "—")} ·
           ${esc(dayLabel(String(e.billDate || "").slice(0, 10)))}</p></div>
@@ -8590,28 +9148,58 @@ function openAsked(id) {
         इन्हें «${esc(g.name)}» लिखा था${e.requestedAvatar
           ? ` (${esc(e.requestedAvatar)})` : ""}
         <div style="margin-top:8px"><button type="button" class="mini primary"
-          onclick="document.getElementById('akName').value='${esc(g.name).replace(/'/g, "&#39;")}';
-                   document.getElementById('akPhone').value='${esc(g.phone)}'"
-          >✅ हाँ, वही हैं</button></div></div>` : "";
+          onclick="pickAsked('${esc(g.phone)}')">✅ हाँ, वही हैं</button></div></div>` : "";
     })()}
-    <label>🧑 नाम<input id="akName" placeholder="जैसे: मनोज भाई"></label>
-    <label>📞 नंबर<input id="akPhone" inputmode="numeric" placeholder="10 अंक — हो तो"></label>
-    ${recent.length ? `<div class="whatChips">🔁 ${recent.map((n) =>
-      `<button type="button" class="chipBtn" onclick="document.getElementById('akName').value='${
-        esc(n).replace(/'/g, "&#39;")}'">${esc(n)}</button>`).join("")}</div>` : ""}
+    <div class="akFind">
+      <input id="akSearch" placeholder="🔍 नाम या नंबर से खोजें…"
+        oninput="renderAskedList()">
+    </div>
+    <div id="akList" class="akList"></div>
+
+    <details class="akNew">
+      <summary>➕ नया नंबर जोड़ें</summary>
+      <label>🧑 नाम<input id="npName" placeholder="जैसे: मनोज भाई"></label>
+      <label>📞 नंबर<input id="npPhone" inputmode="numeric" placeholder="10 अंक"></label>
+      <button type="button" class="primary" style="width:100%;margin-top:10px"
+        onclick="addAskedNew()">✅ जोड़कर लिख दें</button>
+    </details>
+
     <div id="akMsg" class="muted" style="margin-top:8px"></div>
-    <div class="pairBtns" style="margin-top:12px">
-      <button type="button" class="primary" onclick="saveAsked()">✅ लिख दिया</button>
-      <button type="button" onclick="saveAsked(true)">किसी ने नहीं कहा</button>
+    <div style="margin-top:12px">
+      <button type="button" style="width:100%" onclick="saveAsked(true)">किसी ने नहीं कहा</button>
     </div>`;
+  renderAskedList();
+  wireWho("npPhone");
   openSheet("askedSheet");
 }
 
-async function saveAsked(nobody) {
+/** सूची में से एक टैप — बस, हो गया। */
+function pickAsked(phone) {
+  const c = CONTACTS[phoneKey(phone)];
+  if (!c) return Promise.resolve();
+  return saveAsked(false, c.name || null, c.phone);
+}
+
+/** जो सूची में नहीं है — नाम + नंबर, दोनों जगह एक साथ दर्ज। */
+async function addAskedNew() {
+  const name = String($("npName").value || "").trim();
+  const ph = phoneKey($("npPhone").value);
+  if (!name && !ph) {
+    $("akMsg").className = "bad"; $("akMsg").textContent = "नाम या नंबर तो भरें"; return;
+  }
+  if ($("npPhone").value.trim() && !ph) {
+    $("akMsg").className = "bad";
+    $("akMsg").textContent = "यह मोबाइल नंबर ठीक नहीं लग रहा — 10 अंक, 6–9 से शुरू";
+    return;
+  }
+  await saveAsked(false, name || null, ph);
+}
+
+async function saveAsked(nobody, nameIn, phoneIn) {
   const e = EXP.filter((x) => x._id === ASKED_FOR)[0];
   if (!e) return;
-  const name = nobody ? null : $("akName").value.trim();
-  const ph = nobody ? "" : phoneKey($("akPhone").value);
+  const name = nobody ? null : String(nameIn || "").trim();
+  const ph = nobody ? "" : phoneKey(phoneIn);
   if (!nobody && !name && !ph) {
     $("akMsg").className = "bad"; $("akMsg").textContent = "नाम या नंबर तो भरें"; return;
   }
@@ -9166,6 +9754,9 @@ function payCard(p, idx, editable) {
       ${editable ? `<div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="mini" onclick="editPayment(${idx})">✏️ सुधारें</button>
         <button type="button" class="mini" onclick="dropPayment(${idx})">🗑️ हटाएँ</button>
+        ${(p.rawShot || p.photoUrl) && !p.aiRead && aiOn("pay")
+          ? `<button type="button" class="mini aiGo" style="width:auto"
+               onclick="readPayShot(${idx}, this)">🧠 रसीद पढ़वाएँ</button>` : ""}
       </div>` : ""}
     </div>
   </div>`;
@@ -9238,6 +9829,45 @@ function editPayment(i) {
   renderPays();
 }
 
+/* 🧠 इस रसीद को पढ़वाना — बटन दबाने पर ही, और उसी पंक्ति में।
+
+   फोटो पहले ही Drive में जा चुकी है और पेमेंट की पंक्ति बन चुकी है; यह
+   सिर्फ़ उसी पंक्ति के ख़ाने भरता है। इसलिए बटन न दबाया जाए तो भी हिसाब
+   पूरा रहता है — बस UTR हाथ से भरना पड़ेगा।
+
+   ⚠️ जो विक्रम जी ने ख़ुद भर दिया, AI उसे नहीं मिटाता।                 */
+function readPayShot(idx, btn) {
+  return aiClick("pay", btn, async () => {
+    const p = BILL_PAYS[idx];
+    const msgEl = $("bsPayMsg");
+    const say = (t, c) => { if (msgEl) { msgEl.className = c || "muted"; msgEl.innerHTML = t; } };
+    const shot = p && (p.rawShot || p.photoUrl);
+    if (!shot) { say("इस पेमेंट के साथ कोई फोटो नहीं है", "bad"); return; }
+    if (!p.rawShot) { say("यह फोटो Drive में जा चुकी है — पढ़वाने के लिए रसीद " +
+      "दुबारा लगाइए, या ✏️ से भर दीजिए", "bad"); return; }
+    try {
+      const r = await askGemini("pay", PAY_PROMPT, p.rawShot);
+      const fresh = paymentFromReceipt(r, p.photoUrl || null);
+      // भरे हुए ख़ाने वैसे ही रहें — AI सिर्फ़ ख़ाली जगह भरता है
+      ["amount", "paidAt", "time", "app", "status", "utr", "appTxnId",
+       "fromName", "fromBank", "fromLast4", "fromVpa", "toName", "toVpa",
+       "accountId"].forEach((k) => {
+        if ((p[k] == null || p[k] === "") && fresh[k] != null && fresh[k] !== "") p[k] = fresh[k];
+      });
+      p.aiRead = true;
+      renderPays();
+      const missing = [!p.utr && "UTR", !p.accountId && "खाता", !p.time && "समय"].filter(Boolean);
+      say("✅ " + esc(r.summary || "रसीद पढ़ ली") +
+        (p.accountId ? ` · <b>${esc(accLabel(p.accountId))}</b>` : "") +
+        (p.utr ? ` · UTR <b>${esc(p.utr)}</b>` : "") +
+        (missing.length ? `<br>⚠️ ${missing.join(", ")} नहीं मिला — ✏️ से भर दें` : "") +
+        aiUsed(), "ok");
+    } catch (err) {
+      say("रसीद नहीं पढ़ पाई: " + esc(err.message) + " — ✏️ से भर सकते हैं", "bad");
+    }
+  });
+}
+
 /** हाथ से पेमेंट जोड़ना — रसीद न हो तब भी हिसाब पूरा रहे। */
 function addPayManual() {
   const remaining = Math.max(0,
@@ -9277,8 +9907,10 @@ async function addPayFromShot(dataUrl, msgEl) {
 
   say("🧾 रसीद जुड़ गई" + (p.amount ? ` · ${INR(p.amount)}` : "") +
     (p.utr ? ` · UTR <b>${esc(p.utr)}</b>`
-           : "<br>⚠️ अब <b>UTR</b> भर दीजिए — ✏️ दबाकर"), "ok");
-  if (!p.utr) editPayment(BILL_PAYS.length - 1);
+           : aiOn("pay")
+             ? "<br>अब <b>🧠 रसीद पढ़वाएँ</b> दबाइए (पंक्ति खोलकर), या ✏️ से UTR भर दीजिए"
+             : "<br>⚠️ अब <b>UTR</b> भर दीजिए — ✏️ दबाकर"), "ok");
+  if (!p.utr && !aiOn("pay")) editPayment(BILL_PAYS.length - 1);
   return p;
 }
 
