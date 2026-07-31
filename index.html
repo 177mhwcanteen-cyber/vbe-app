@@ -159,6 +159,43 @@
   @supports (padding: env(safe-area-inset-bottom)) {
     .fab { bottom: calc(20px + env(safe-area-inset-bottom)); }
   }
+  /* 🙋 «X के कहने पर» — बिल के सिर पर, सबसे बड़ा */
+  .askedBar { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px;
+    padding: 12px 14px; border-radius: 15px;
+    border: 1px solid rgba(213,81,129,.45);
+    background: linear-gradient(160deg, rgba(213,81,129,.18), rgba(213,81,129,.04)); }
+  .askedBar.none { border-color: rgba(250,178,25,.45);
+    background: linear-gradient(160deg, rgba(250,178,25,.15), rgba(250,178,25,.03)); }
+  .abIco { font-size: 24px; flex: 0 0 auto; }
+  .abTxt { flex: 1; min-width: 0; }
+  .abTxt b { font-size: 18px; letter-spacing: .2px; }
+  .abTxt span { font-size: 13px; color: var(--ink-2); }
+  .abTxt small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+  .badge.asked { border-color: rgba(213,81,129,.45); color: #ffc2d8; }
+
+  .fab.busy { background: linear-gradient(160deg, #3987e5, #256abf);
+    box-shadow: 0 10px 26px rgba(57,135,229,.45), 0 2px 6px rgba(0,0,0,.4); }
+  .fab.busy::after { content: ""; position: absolute; inset: -4px; border-radius: 50%;
+    border: 2px solid rgba(57,135,229,.55); border-top-color: transparent;
+    animation: fabspin 1.1s linear infinite; }
+  @keyframes fabspin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .fab.busy::after { animation: none; } }
+  .fabN { position: absolute; top: -3px; right: -3px; min-width: 20px; height: 20px;
+    border-radius: 999px; background: var(--critical); color: #fff; font-style: normal;
+    font-size: 11.5px; font-weight: 700; display: grid; place-items: center;
+    border: 2px solid var(--page); padding: 0 4px; }
+  .jobCard { display: flex; gap: 11px; align-items: center; padding: 11px;
+    border: 1px solid var(--border); border-radius: 13px; margin-bottom: 8px;
+    background: rgba(255,255,255,.04); }
+  .jobCard.waiting { border-color: rgba(250,178,25,.45);
+    background: linear-gradient(160deg, rgba(250,178,25,.12), transparent 70%); }
+  .jobCard.failed { border-color: rgba(208,59,59,.45); }
+  .jobCard.done { border-color: rgba(12,163,12,.4); }
+  .jobIco { font-size: 21px; flex: 0 0 auto; }
+  .jobTxt { flex: 1; min-width: 0; font-size: 13.5px; }
+  .jobTxt small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .jobTxt small.bad { color: #ff9c9c; }
+
   .shotWrap { display: flex; flex-direction: column; gap: 9px; }
   .shotCard { display: flex; gap: 11px; align-items: center; padding: 9px;
     border: 1px solid var(--border); border-radius: 13px;
@@ -653,6 +690,8 @@
   .tile .v.sm { font-size: 19px; letter-spacing: -.3px; }
   .tile .v.xs { font-size: 16px; letter-spacing: -.4px; }
   .tile .k, .tile .s { overflow-wrap: anywhere; }
+  .tile.go { cursor: pointer; }
+  .tile.go:active { background: rgba(255,255,255,.05); }
   .tile .s.full { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 11.5px; }
   .mrow .amt { max-width: 46%; overflow: hidden; text-overflow: ellipsis; }
   .paySum b, .io b { display: block; overflow: hidden; text-overflow: ellipsis;
@@ -880,6 +919,26 @@
   <button id="fastFab" class="fab" hidden onclick="openFast()"
           aria-label="फास्ट एंट्री — पेमेंट के स्क्रीनशॉट डालें">⚡</button>
 
+  <!-- ❓ «यह पेमेंट किसके कहने पर गया था?» -->
+  <div id="askedSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:420px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>🙋 किसके कहने पर</h3>
+        <button class="x" onclick="closeSheet('askedSheet')">✕</button></div>
+      <div id="askedBody"></div>
+    </div>
+  </div>
+
+  <!-- ✅ जो entries अपने-आप बनीं, उन पर एक बार विक्रम जी की मुहर -->
+  <div id="verifySheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:440px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>✅ एक नज़र डाल लीजिए</h3>
+        <button class="x" onclick="closeSheet('verifySheet')">✕</button></div>
+      <div id="verifyBody"></div>
+    </div>
+  </div>
+
   <div id="fastSheet" class="sheet" hidden>
     <div class="sheetBox" style="max-width:460px">
       <div class="grab"></div>
@@ -1046,6 +1105,12 @@
           <option value="no">🩷 चालान नहीं बना</option>
           <option value="yes">✅ चालान बन गया</option>
           <option value="due">⚖️ पैसा बाकी</option>
+        </select>
+        <select id="fAsked">
+          <option value="">🙋 सब</option>
+          <option value="no">❓ किसके कहने पर, पता नहीं</option>
+          <option value="yes">🙋 नाम लिखा है</option>
+          <option value="unver">✅ देखना बाकी</option>
         </select>
         <input id="fSearch" type="search" placeholder="दुकान · सामान · ₹रकम · बिल नं.">
       </div>
@@ -2135,6 +2200,8 @@ function renderTiles() {
   // लकीर बताती है "किस तरफ़ जा रहा है"। दोनों साथ चाहिए।
   const inSpark = dailySeries(14, "credit"), outSpark = dailySeries(14, "debit");
   const cash = cashOut();
+  const unSeen = unverified();
+  const noAsk = askedMissing().filter((e) => inRange(e.billDate || e.submittedAt));
   const utrLeft = pendingUtr().filter((e) => inRange(e.billDate || e.submittedAt));
   const utrSum = utrLeft.reduce((a, e) => a + (Number(e.billTotal) || 0), 0);
   const billPct = outAll.length ? 100 - (noBill.length / outAll.length) * 100 : 100;
@@ -2154,7 +2221,14 @@ function renderTiles() {
       pct: bills.length ? 100 - (pend.length / bills.length) * 100 : 0 }),
     gfx.tile({ k: "🧑 पार्टियाँ", v: String(partySet.size), s: "जिनसे लेन-देन हुआ",
       color: gfx.C.ai, pct: 70 })
-  ].concat(utrLeft.length ? [
+  ].concat(unSeen.length ? [
+    gfx.tile({ k: "✅ देखना बाकी", v: String(unSeen.length),
+      s: "अपने-आप बनी entries · एक नज़र", color: gfx.C.ai, pct: 50,
+      onclick: "openVerify()" })
+  ] : []).concat(noAsk.length ? [
+    gfx.tile({ k: "🙋 किसके कहने पर?", v: String(noAsk.length),
+      s: "इन पर नाम नहीं लिखा", color: gfx.C.warn, pct: 40 })
+  ] : []).concat(utrLeft.length ? [
     // 🟡 जिनका UTR नहीं आया — बैंक की statement आते ही ये अपने-आप भर जाएँगे
     gfx.tile({ k: "🟡 UTR बाकी", v: INR(utrSum), n: utrSum,
       s: plural(utrLeft.length, "पेमेंट", "पेमेंट") + " · statement से भरेगा",
@@ -2434,6 +2508,11 @@ function renderBills() {
     if (ch === "no" && !needsChallan(e)) return false;
     if (ch === "yes" && !e.challanNo) return false;
     if (ch === "due" && paySummary(e).due <= 0.5) return false;
+    const ak = $("fAsked") ? $("fAsked").value : "";
+    const hasAsk = !!(e.requestedBy || phoneKey(e.requestedPhone));
+    if (ak === "no" && (hasAsk || e.askedNobody)) return false;
+    if (ak === "yes" && !hasAsk) return false;
+    if (ak === "unver" && !e.unverified) return false;
     return expMatch(e, sq);
   }).slice(0, 200);
 
@@ -2447,7 +2526,8 @@ function renderBills() {
   }
   $("billRows").innerHTML = billCards(rows);
 }
-["fStatus", "fStaff", "fSearch", "fChallan"].forEach(id => $(id).addEventListener("input", renderBills));
+["fStatus", "fStaff", "fSearch", "fChallan", "fAsked"].forEach(id =>
+  $(id).addEventListener("input", renderBills));
 
 /* ── Pricebook ── */
 /* ── 💹 Pricebook — «ख़ाली-ख़ाली» से «सबसे काम की» ────────────────────
@@ -2720,6 +2800,23 @@ function buildFlags() {
       title: plural(due.length, "बिल", "बिलों") + " का पैसा बाकी — " + INR(sum),
       body: "आधा पेमेंट हुआ है या छूट लिखनी रह गई है।",
       act: `<button type="button" class="mini primary" onclick="goTab('udhaar')">उधार खोलें →</button>` });
+  }
+
+  const noAsk2 = askedMissing();
+  if (noAsk2.length) {
+    G.amber.push({ key: "noasked", icon: "🙋", n: noAsk2.length,
+      title: plural(noAsk2.length, "पेमेंट", "पेमेंट") + " — किसके कहने पर, पता नहीं",
+      body: "दो महीने बाद यही सबसे पहले पूछा जाएगा। एक-एक करके नाम लिख दीजिए।",
+      act: `<button type="button" class="mini primary"
+        onclick="goTab('bills');document.getElementById('fAsked').value='no';renderBills()">भर दें →</button>` });
+  }
+
+  const unSeen2 = unverified();
+  if (unSeen2.length) {
+    G.blue.push({ key: "unver|" + unSeen2.length, icon: "✅", n: unSeen2.length,
+      title: plural(unSeen2.length, "entry", "entries") + " अपने-आप बनी — देखना बाकी",
+      body: "⚡ फास्ट एंट्री से बनी हैं। एक नज़र डालकर मुहर लगा दीजिए।",
+      act: `<button type="button" class="mini primary" onclick="openVerify()">एक नज़र →</button>` });
   }
 
   const spikes = EXP.filter((e) => (e.priceAlerts || []).length);
@@ -4265,7 +4362,12 @@ async function geminiDiscoverModel() {
   aiCount({ calls: 1 });
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${GEMINI_KEY}`);
-  if (!res.ok) throw new Error(geminiWhy(res.status, "मॉडल की सूची नहीं मिली"));
+  if (!res.ok) {
+    const e = new Error(geminiWhy(res.status, "मॉडल की सूची नहीं मिली"));
+    e.status = res.status;
+    e.canRetry = (res.status === 429 || res.status >= 500);
+    throw e;
+  }
   const models = ((await res.json()).models || [])
     .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"));
   // Newest plain "gemini-N-flash" wins: fast, free-tier friendly, sees images.
@@ -4365,7 +4467,14 @@ async function askGemini(prompt, dataUrl, extraText, onWait, opts) {
     aiCount({ calls: 1 });
     res = await geminiPost(model, parts);
   }
-  if (!res.ok) throw new Error(geminiWhy(res.status));
+  if (!res.ok) {
+    // ग़लती की पहचान **अंक** से हो, लिखे हुए शब्दों से नहीं — वरना संदेश
+    // ज़रा बदलते ही «रुककर फिर कोशिश» वाला रास्ता चुपचाप टूट जाता है
+    const e = new Error(geminiWhy(res.status));
+    e.status = res.status;
+    e.canRetry = (res.status === 429 || res.status >= 500);
+    throw e;
+  }
 
   const body = await res.json();
   const cand = (body.candidates || [])[0];
@@ -6639,12 +6748,8 @@ function openBillSheet(opts) {
     $("bsNote").value = BILL_EXP.note || "";
     $("bsChallan").value = BILL_EXP.challanNo || "";
     showHavePhotos(BILL_EXP);
-    if (BILL_EXP.requestedBy) {
-      $("bsTxn").innerHTML += `<div class="fsNote" style="margin-top:8px">🙋
-        <b>${esc(BILL_EXP.requestedBy)}</b> ने${
-        BILL_EXP.requestedAt ? ` <b>${esc(BILL_EXP.requestedAt)}</b> पर` : ""} कहा था${
-        BILL_EXP.requestedNote ? ` — «${esc(BILL_EXP.requestedNote)}»` : ""}</div>`;
-    }
+    // 🙋 सबसे ऊपर, सबसे बड़े अक्षरों में — «किसके कहने पर»
+    $("bsTxn").innerHTML += askedBanner(BILL_EXP);
     $("bsDiscount").value = BILL_EXP.discount || "";
     BILL_PAYS = (BILL_EXP.payments || []).slice();
     // पुराना एक-UTR वाला रूप भी सँभालो, वरना पुराने बिलों का पेमेंट ग़ायब लगेगा
@@ -7149,7 +7254,8 @@ const gfx = {
     const arrow = d == null ? "" :
       `<div class="d ${d > 0 ? "up" : d < 0 ? "down" : "flat"}">${
         d > 0 ? "▲" : d < 0 ? "▼" : "•"} ${Math.abs(Math.round(d))}% ${o.deltaWhat || ""}</div>`;
-    return `<div class="card tile tilt">
+    return `<div class="card tile tilt${o.onclick ? " go" : ""}"${
+      o.onclick ? ` onclick="${o.onclick}"` : ""}>
       <div class="k">${o.k}</div>
       <div class="v${String(o.v).length > 13 ? " xs" : String(o.v).length > 10 ? " sm"
         : String(o.v).length > 8 ? " md" : ""}"${
@@ -7674,8 +7780,11 @@ function billCards(rows) {
           ${(e.flags || []).map((f) => `<span class="badge lo" title="${esc(FLAG_TEXT[f] || f)}">${FLAG_ICONS[f] || "⚠️"}</span>`).join("")}
           ${extra ? `<span class="badge">📷 ${extra}</span>` : ""}
           ${noUtr ? '<span class="utrTag">🟡 UTR बाकी</span>' : ""}
-          ${e.requestedBy ? `<span class="badge">🙋 ${esc(e.requestedBy)}${
-            e.requestedAt ? " · " + esc(e.requestedAt) : ""}</span>` : ""}
+          ${e.requestedBy ? `<span class="badge asked">🙋 ${esc(e.requestedBy)}${
+            e.requestedAt ? " · " + esc(e.requestedAt) : ""}</span>`
+            : `<button type="button" class="mini" style="border-color:rgba(250,178,25,.45)"
+                onclick="event.stopPropagation();openAsked('${esc(e._id)}')">🙋 किसके कहने पर?</button>`}
+          ${e.unverified ? '<span class="utrTag">✅ देखना बाकी</span>' : ""}
           ${s2.due > 0.5 ? `<span class="badge lo">⚖️ ${INR(s2.due)} बाकी</span>` : ""}
           ${e.challanNo ? `<span class="badge ok2">🧾 ${esc(e.challanNo)}</span>`
             : pink ? `<button type="button" class="mini" style="border-color:rgba(255,111,174,.5)"
@@ -7751,6 +7860,7 @@ const FAST_PROMPT =
   ' "fromBank":string|null,"fromLast4":string|null,"fromName":string|null,\n' +
   ' "toName":string|null,"toVpa":string|null,\n' +
   ' "askedBy":string|null,"askedPhone":string|null,"askedNote":string|null,\n' +
+  ' "askedByAvatar":string|null,\n' +
   ' "chequeNo":string|null,"bank":string|null,"payeeName":string|null,\n' +
   ' "vendor":string|null,"invoiceNo":string|null,\n' +
   ' "items":[{"name":string,"qty":number|null,"unit":string|null,' +
@@ -7790,6 +7900,12 @@ const FAST_PROMPT =
   'above "Please sign above".\n' +
   '- askedPhone: a 10-digit Indian mobile number visible in a chat header or ' +
   'printed on a bill. Digits only, no +91.\n' +
+  '- askedByAvatar: for a chat, describe the small ROUND PROFILE PICTURE at ' +
+  'the top of the screen in 3-6 plain words, e.g. "नीली टी-शर्ट में छोटा ' +
+  'बच्चा" or "सफ़ेद कुर्ते में मूँछों वाला आदमी" or "दुकान का बोर्ड". This ' +
+  'is only a description of what the picture shows — do NOT try to identify ' +
+  'who the person is. null if there is no picture or it is the default grey ' +
+  'silhouette.\n' +
   '- items: for a bill; [] otherwise.\n' +
   '- summary: ONE short Hindi line.\n' +
   'null for anything you cannot actually read. Return only the JSON object.';
@@ -7802,285 +7918,6 @@ const FAST_KINDS = {
   qr:      { icon: "🏷️", name: "QR" },
   other:   { icon: "🖼️", name: "फोटो" }
 };
-
-let FAST = null;    // { shots:[{dataUrl, r}], busy }
-
-function openFast() {
-  FAST = { shots: [], done: 0, total: 0 };
-  $("fastBody").innerHTML = gfx.empty("hello", "पेमेंट के स्क्रीनशॉट डालिए",
-    `एक साथ 2–4 फोटो चुन लीजिए — WhatsApp की बात, UPI की रसीद, और बिल।
-     मैं ख़ुद पहचान लूँगा कि कौन-सी क्या है।`,
-    `<button type="button" class="mini primary" onclick="pickPhoto('fastFiles')">🖼️ फोटो चुनें</button>`);
-  openSheet("fastSheet");
-}
-
-$("fastFiles").addEventListener("change", async (e) => {
-  const files = [...e.target.files].slice(0, 6);
-  e.target.value = "";
-  if (files.length) await readFastShots(files);
-});
-
-async function readFastShots(files) {
-  FAST = { shots: [], done: 0, total: files.length };
-  renderFast();
-  for (const f of files) {
-    const dataUrl = await shrinkImage(f, 1600, 0.8);
-    const shot = { dataUrl, r: null, err: null };
-    FAST.shots.push(shot);
-    renderFast();
-    try {
-      shot.r = GEMINI_KEY
-        ? await askGemini(FAST_PROMPT, dataUrl, null, (sec) => {
-            shot.wait = sec; renderFast();
-          })
-        : null;
-      if (!shot.r) shot.err = "AI बंद है — नीचे हाथ से भर दीजिए";
-    } catch (err) { shot.err = err.message; }
-    shot.wait = 0;
-    FAST.done++;
-    renderFast();
-    // मुफ़्त सीमा प्रति मिनट की है — फोटो के बीच ज़रा साँस लेने से वह
-    // टकराती ही नहीं, और सब फोटो एक ही बार में पढ़ी जाती हैं
-    if (FAST.done < FAST.total) await sleep(1200);
-  }
-}
-
-/** सब फोटो मिलाकर एक entry — जिससे जो मिले, वही लो। */
-function fastMerge() {
-  const get = (kind) => FAST.shots.map((x) => x.r).filter((r) => r && r.kind === kind);
-  const pay = get("payment")[0] || null;
-  const chq = get("cheque")[0] || null;
-  const req = get("request")[0] || null;
-  const bill = get("bill")[0] || null;
-  const qr = get("qr")[0] || null;
-
-  const party = (pay && pay.toName) || (chq && chq.payeeName) ||
-                (bill && bill.vendor) || (req && req.askedBy) || null;
-  const amount = (pay && pay.amount) != null ? pay.amount
-    : (chq && chq.amount) != null ? chq.amount
-    : (bill && bill.amount) != null ? bill.amount
-    : (req && req.amount) != null ? req.amount : null;
-  const vpa = (pay && pay.toVpa) || (qr && qr.toVpa) || null;
-  // QR और रसीद का UPI id एक ही निकले तो यह पक्का जोड़ है
-  const vpaMatch = !!(pay && pay.toVpa && qr && qr.toVpa &&
-    String(pay.toVpa).toLowerCase() === String(qr.toVpa).toLowerCase());
-
-  return {
-    party, amount, vpa, vpaMatch, pay, req, bill, qr, chq,
-    // चेक में UTR होता ही नहीं — उसकी जगह चेक नंबर, जो statement में हूबहू
-    // वही छपता है और इसीलिए सबसे पक्का जोड़ है
-    mode: chq && !pay ? "cheque" : "bank",
-    chequeNo: (chq && String(chq.chequeNo || "").replace(/\D/g, "")) || null,
-    phone: (req && req.askedPhone) || (bill && bill.askedPhone) || null,
-    date: (pay && pay.date) || (chq && chq.date) ||
-          (bill && bill.date) || (req && req.date) || todayISO(),
-    // रसीद न हो तो WhatsApp वाला समय ही लो — «2:20 का पेट्रोल, 2:50 का पवन
-    // कुमार» — बैंक की पंक्ति पर भी समय होता है, और यही मिलान पक्का करता है
-    time: (pay && pay.time) || (req && req.time) || null,
-    utr: (pay && pay.utr) || null,
-    accountId: pay ? matchAccount(pay.fromBank, pay.fromLast4) : "",
-    items: (bill && bill.items) || []
-  };
-}
-
-/** पिछली बार जो-जो चीज़ें लिखी थीं — एक टैप में भर जाएँ। */
-function whatChips() {
-  const seen = {}, out = [];
-  EXP.forEach((e) => {
-    (e.spentOn ? [e.spentOn] : (e.items || []).map((i) => i.name)).forEach((n) => {
-      const k = String(n || "").trim();
-      if (!k || seen[k]) return;
-      seen[k] = 1; out.push(k);
-    });
-  });
-  if (!out.length) return "";
-  return `<div class="whatChips">🔁 ${out.slice(0, 8).map((n) =>
-    `<button type="button" class="chipBtn" onclick="setWhat('${esc(n).replace(/'/g, "&#39;")}')"
-      >${esc(n)}</button>`).join("")}</div>`;
-}
-function setWhat(v) {
-  const el = $("fsWhat");
-  if (!el) return;
-  el.value = el.value.trim() ? el.value.trim() + ", " + v : v;
-}
-
-function renderFast() {
-  const box = $("fastBody");
-  if (!box || !FAST) return;
-  if (!FAST.shots.length) return;
-
-  const m = FAST.shots.length === FAST.total && FAST.done === FAST.total ? fastMerge() : null;
-  const cards = FAST.shots.map((sh, i) => {
-    const r = sh.r;
-    const k = FAST_KINDS[(r && r.kind) || "other"] || FAST_KINDS.other;
-    const busy = !r && !sh.err;
-    return `
-    <div class="shotCard${busy ? " busy" : ""}">
-      <img src="${sh.dataUrl}" alt="" onclick="lightbox('${sh.dataUrl}')">
-      <div class="shotTxt">
-        <b>${sh.wait ? `<span class="thinking"></span> AI व्यस्त है — ${sh.wait} सेकंड में फिर`
-              : busy ? '<span class="thinking"></span> पढ़ रहा हूँ…'
-              : sh.err ? "⚠️ " + esc(sh.err) : k.icon + " " + k.name}</b>
-        ${r ? `<small>${esc(r.summary || "")}</small>
-          ${r.askedBy ? `<small>🙋 ${esc(r.askedBy)}${
-            r.time ? " · " + esc(r.time) : ""}${
-            r.askedNote ? " · «" + esc(r.askedNote) + "»" : ""}</small>` : ""}
-          ${r.utr ? `<small>🔗 UTR ${esc(r.utr)}</small>` : ""}
-          ${r.toVpa ? `<small>🏷️ ${esc(r.toVpa)}</small>` : ""}` : ""}
-      </div>
-    </div>`;
-  }).join("");
-
-  box.innerHTML = `<div class="shotWrap">${cards}</div>` + (m ? `
-    <div class="fastSum">
-      <div class="fsRow"><span>🧑 पार्टी</span>
-        <input id="fsParty" value="${esc(m.party || "")}" placeholder="किसे दिया?"></div>
-      <div class="fsRow"><span>💰 रकम</span>
-        <input id="fsAmt" type="number" inputmode="decimal"
-          value="${m.amount != null ? m.amount : ""}" placeholder="₹"></div>
-      <div class="fsRow"><span>📅 तारीख़</span>
-        <input id="fsDate" type="date" value="${esc(m.date)}"></div>
-      ${m.mode === "cheque" ? `
-      <div class="fsRow"><span>🧾 चेक नं.</span>
-        <input id="fsChq" inputmode="numeric" value="${esc(m.chequeNo || "")}"
-          placeholder="चेक के नीचे छपा नंबर"></div>`
-      : `<div class="fsRow"><span>🔗 UTR</span>
-        <input id="fsUtr" value="${esc(m.utr || "")}"
-          placeholder="बाद में statement से अपने-आप भर जाएगा"></div>`}
-      <div class="fsRow"><span>📦 किस चीज़ का</span>
-        <input id="fsWhat" value="${esc((m.items || []).map((i) => i.name).join(", "))}"
-          placeholder="जैसे: बजरी 2 ट्रॉली"></div>
-      ${whatChips()}
-      <div class="fsRow"><span>📞 नंबर</span>
-        <input id="fsPhone" inputmode="numeric" value="${esc(m.phone || "")}"
-          placeholder="किसके कहने पर — 10 अंक"></div>
-      ${m.req ? `<div class="fsNote">🙋 <b>${esc(m.req.askedBy || "किसी")}</b> ने
-        ${m.req.time ? `<b>${esc(m.req.time)}</b> पर ` : ""}कहा था${
-        m.req.askedNote ? ` — «${esc(m.req.askedNote)}»` : ""}${
-        m.time && m.req.time ? ` · पैसा <b>${esc(m.time)}</b> पर गया` : ""}</div>` : ""}
-      ${m.vpaMatch ? `<div class="fsOk">✅ QR और रसीद का UPI id एक ही है — पक्का यही पेमेंट है</div>` : ""}
-      ${m.mode === "cheque" ? `<div class="fsWarn">🧾 चेक से पेमेंट — जब तक बैंक में
-        भुनाया नहीं जाता, entry पीली रहेगी। statement आते ही <b>चेक नंबर से</b>
-        अपने-आप जुड़ जाएगी।</div>`
-        : !m.utr ? `<div class="fsWarn">🟡 UTR नहीं मिला — entry पीली रहेगी, और बैंक की
-        statement आते ही अपने-आप भर जाएगी।</div>` : ""}
-    </div>
-    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-      <button class="primary" id="fsSave" onclick="saveFast(this)">⚡ दर्ज करें</button>
-      <button type="button" onclick="pickPhoto('fastFiles')">🖼️ और फोटो</button>
-      <span id="fsMsg" class="muted"></span>
-    </div>` : `<div class="muted" style="margin-top:10px">
-      ${FAST.done}/${FAST.total} फोटो पढ़ी गईं…</div>`);
-}
-
-async function saveFast(btn) {
-  const m = fastMerge();
-  const party = $("fsParty").value.trim();
-  const amount = $("fsAmt").value === "" ? null : Number($("fsAmt").value);
-  const utr = $("fsUtr") ? $("fsUtr").value.trim().toUpperCase() : "";
-  const chq = $("fsChq") ? $("fsChq").value.replace(/\D/g, "") : "";
-  const what = $("fsWhat") ? $("fsWhat").value.trim() : "";
-  const phone = $("fsPhone") ? phoneKey($("fsPhone").value) : "";
-  const msg = $("fsMsg");
-  if (!party && amount == null) {
-    msg.className = "bad"; msg.textContent = "पार्टी या रकम तो भरें"; return;
-  }
-  btn.disabled = true; btn.textContent = "दर्ज कर रहा हूँ…";
-  msg.className = "muted"; msg.textContent = "फोटो Drive में भेज रहा हूँ…";
-  try {
-    const when = new Date(($("fsDate").value || todayISO()) + "T12:00:00+05:30");
-    const receiptId = `FST/${fyLabel(when)}/${Date.now().toString().slice(-6)}`;
-    const docId = receiptId.replace(/\//g, "-");
-
-    // हर फोटो Drive में, और हर एक के साथ यह कि वह किस तरह की है
-    const photos = [];
-    for (const sh of FAST.shots) {
-      const kind = (sh.r && sh.r.kind) || "other";
-      const up = await driveUpload(sh.dataUrl, docId + "_" + kind);
-      photos.push({ kind, url: (up && up.ok) ? up.url : null,
-        dataUrl: (up && up.ok) ? null : sh.dataUrl,
-        at: (sh.r && sh.r.time) || null });
-    }
-
-    const pay = {
-      id: newPayId(), mode: m.mode || "bank", amount, chequeNo: chq || null,
-      paidAt: $("fsDate").value || todayISO(),
-      time: m.time || null, app: (m.pay && m.pay.app) || null, status: "success",
-      utr: utr || null, appTxnId: (m.pay && m.pay.appTxnId) || null,
-      accountId: m.accountId || "",
-      toName: party || null, toVpa: m.vpa || null,
-      photoUrl: (photos.filter((x) => x.kind === "payment")[0] || {}).url || null,
-      at: new Date().toISOString()
-    };
-
-    const rec = {
-      receiptId,
-      submittedBy: { telegramId: "dashboard",
-        name: (auth.currentUser && auth.currentUser.displayName) || "Owner" },
-      submittedAt: firebase.firestore.Timestamp.fromDate(when),
-      source: "fast",
-      vendor: { name: party || null, gstin: null,
-                invoiceNo: (m.bill && m.bill.invoiceNo) || null },
-      vendorKey: pKey(party) || null,
-      items: m.items || [],
-      billTotal: amount,
-      billDate: $("fsDate").value || todayISO(),
-      unit: null, discount: 0,
-      payments: [pay],
-      paidFromAccountId: m.accountId || null,
-      payment: { mode: "upi", paidToName: party || null, amount, upiRef: utr || null,
-                 paidAt: $("fsDate").value || null },
-      // 📦 «किस चीज़ का पेमेंट था» — दो महीने बाद यही पूछा जाएगा
-      spentOn: what || null,
-      chequeNo: chq || null,
-      // 🙋 किसने कहा था — दो महीने बाद यही सबसे काम आएगा
-      requestedBy: (m.req && m.req.askedBy) || null,
-      requestedPhone: phone || null,
-      requestedAt: (m.req && m.req.time) || null,
-      requestedNote: (m.req && m.req.askedNote) || null,
-      payeeVpa: m.vpa || null,
-      photos,
-      billPhotoDriveUrl: (photos.filter((x) => x.kind === "bill")[0] || {}).url || null,
-      paymentPhotoDriveUrl: (photos.filter((x) => x.kind === "payment")[0] || {}).url || null,
-      // 🟡 UTR बाकी — statement आते ही भर जाएगा
-      needsUtr: !utr,          // चेक में UTR होता ही नहीं — वह भुनने तक अधूरा
-      status: "reimbursed", reconciled: false, matchedBankTxnId: null,
-      flags: [], priceAlerts: [],
-      statusHistory: [{ status: "reimbursed",
-        at: firebase.firestore.Timestamp.fromDate(when), by: "fast" }]
-    };
-
-    try {
-      const alerts = await pricebookAdd(rec);
-      rec.priceAlerts = alerts;
-      rec.flags = computeFlags(rec, alerts);
-    } catch (e) { rec.flags = computeFlags(rec, []); }
-
-    await db.collection("vbe_expenses").doc(docId).set(rec);
-    await auditLog("fast_entry", null,
-      { receiptId, party, amount, utr: utr || null, photos: photos.length,
-        askedBy: rec.requestedBy });
-
-    EXP.unshift(Object.assign({ _id: docId, _date: when }, rec));
-    // 📇 जिसने कहा था वह संपर्क सूची में — नंबर हो तो नंबर से, वरना कुछ नहीं
-    if (phone) await touchContact(phone, rec.requestedBy, {}).catch(() => {});
-    saveCache();
-    closeSheet("fastSheet");
-    toast(utr ? `⚡ ${receiptId} दर्ज — पूरा हिसाब मिल गया`
-              : `⚡ दर्ज — 🟡 UTR बाकी, statement आते ही भर जाएगा`);
-    tgNotify(`⚡ <b>फास्ट एंट्री</b>\n🧾 ${receiptId}\n` +
-      (party ? `🏪 ${esc(party)}\n` : "") +
-      (amount != null ? `💰 <b>₹${amount}</b>\n` : "") +
-      (rec.requestedBy ? `🙋 ${esc(rec.requestedBy)} ने कहा था${
-        rec.requestedAt ? " · " + esc(rec.requestedAt) : ""}\n` : "") +
-      (utr ? `🔗 UTR ${esc(utr)}` : "🟡 UTR बाकी"));
-    refreshAll();
-  } catch (err) {
-    msg.className = "bad"; msg.textContent = "नहीं हुआ: " + err.message;
-  } finally {
-    btn.disabled = false; btn.textContent = "⚡ दर्ज करें";
-  }
-}
 
 /* ══════════ 📇 संपर्क — एक नंबर, एक बार ══════════════════════════
    WhatsApp से नाम तो मिल जाता है — «JJ 1549 74 ge…» — पर वही आदमी कल दूसरे
@@ -8309,6 +8146,534 @@ function showContact(k) {
   const el = $(id);
   if (el) el.addEventListener("input", renderContacts);
 });
+
+/* ══════════ ⚡ पीछे चलने वाली क़तार ═══════════════════════════════
+   पहले सब कुछ स्क्रीन के सामने होता था: AI पढ़े (10–30 सेकंड), फिर हर फोटो
+   Drive में जाए (10–20 सेकंड), फिर Firestore में बैठे। तीन फोटो पर कई मिनट
+   स्क्रीन पकड़े बैठना पड़ता — और बीच में पन्ना रीसेट हुआ तो सब गया।
+
+   अब विक्रम जी सिर्फ़ फोटो डालते हैं और चले जाते हैं। बाक़ी सब यहीं, पीछे:
+
+     फोटो → (क़तार में) → AI पढ़े → **Firestore में बैठे** → फिर Drive
+                                     ↑ रिकॉर्ड पहले बनता है, फोटो बाद में
+                                       जुड़ती हैं — इसलिए entry तुरंत दिखने
+                                       लगती है
+
+   पूरी क़तार फ़ोन में सँभली रहती है (localStorage)। app बंद हो, पन्ना रीसेट
+   हो, फ़ोन बंद हो — अगली बार खुलते ही वहीं से चलती है, कुछ खोता नहीं।
+
+   AI की सीमा भरी मिले तो काम फ़ेल नहीं होता, **रुक** जाता है: 5, 15, 45
+   मिनट… और अपने-आप फिर कोशिश। एक बार में एक ही काम, वरना प्रति-मिनट सीमा
+   ख़ुद ही टकरा जाएगी।                                                  */
+
+const JOB_KEY = "vbeJobs";
+const JOB_WAITS = [5, 15, 45, 90, 180, 360];   // मिनट
+let JOBS = [], JOB_BUSY = false;
+
+function loadJobs() {
+  try { JOBS = JSON.parse(localStorage.getItem(JOB_KEY) || "[]") || []; }
+  catch (e) { JOBS = []; }
+  return JOBS;
+}
+function saveJobs() {
+  try { localStorage.setItem(JOB_KEY, JSON.stringify(JOBS)); }
+  catch (e) {
+    // जगह न बचे तो सबसे पुराना पूरा हुआ काम हटाकर फिर कोशिश
+    JOBS = JOBS.filter((j) => j.status !== "done").slice(-4);
+    try { localStorage.setItem(JOB_KEY, JSON.stringify(JOBS)); } catch (e2) {}
+  }
+  renderFab();
+}
+
+const jobsLeft = () => JOBS.filter((j) => j.status !== "done").length;
+
+/** ⚡ बटन पर कितने काम पीछे चल रहे हैं। */
+function renderFab() {
+  const fab = $("fastFab");
+  if (!fab) return;
+  const n = jobsLeft();
+  fab.classList.toggle("busy", n > 0);
+  fab.innerHTML = n ? `⚡<i class="fabN">${n}</i>` : "⚡";
+}
+
+const JOB_SAY = {
+  queued:  ["⏳", "बारी का इंतज़ार"],
+  reading: ["🧠", "AI पढ़ रहा है"],
+  saving:  ["💾", "दर्ज कर रहा हूँ"],
+  photos:  ["🖼️", "फोटो Drive में जा रही हैं"],
+  waiting: ["⏳", "AI की सीमा भरी है"],
+  done:    ["✅", "हो गया"],
+  failed:  ["⚠️", "नहीं हो पाया"]
+};
+
+/* ── ⚡ का दरवाज़ा ─────────────────────────────────────────────────── */
+
+function openFast() {
+  renderFastSheet();
+  openSheet("fastSheet");
+}
+
+$("fastFiles").addEventListener("change", async (e) => {
+  const files = [...e.target.files].slice(0, 6);
+  e.target.value = "";
+  if (!files.length) return;
+  closeSheet("fastSheet");
+  toast("⚡ पीछे चल रहा है — आप अपना काम कीजिए");
+  const shots = [];
+  for (const f of files) shots.push({ dataUrl: await shrinkImage(f, 1600, 0.8) });
+  JOBS.push({
+    id: "j" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    shots, status: "queued", tries: 0, at: Date.now(), nextAt: 0
+  });
+  saveJobs();
+  runJobs();
+});
+
+/** क़तार का पन्ना — क्या चल रहा है, क्या अटका है। */
+function renderFastSheet() {
+  const box = $("fastBody");
+  if (!box) return;
+  const live = JOBS.filter((j) => j.status !== "done");
+  const head = `<div class="pick" style="margin-bottom:10px">
+      <button type="button" class="primary" onclick="pickPhoto('fastFiles')">🖼️ फोटो चुनें</button>
+      ${live.length ? `<button type="button" onclick="runJobs(true)">🔄 अभी कोशिश करें</button>` : ""}
+    </div>`;
+  if (!live.length) {
+    box.innerHTML = gfx.empty("hello", "पेमेंट के स्क्रीनशॉट डालिए",
+      `एक साथ 2–4 फोटो चुन लीजिए — WhatsApp की बात, UPI की रसीद, और बिल।
+       डालते ही sheet बंद हो जाएगी और बाक़ी काम <b>पीछे</b> चलता रहेगा।`,
+      `<button type="button" class="mini primary" onclick="pickPhoto('fastFiles')">🖼️ फोटो चुनें</button>`);
+    return;
+  }
+  box.innerHTML = head + live.map((j) => {
+    const [ic, txt] = JOB_SAY[j.status] || JOB_SAY.queued;
+    const wait = j.nextAt > Date.now()
+      ? ` · ${Math.max(1, Math.round((j.nextAt - Date.now()) / 60000))} मिनट बाद फिर` : "";
+    const m = j.merged || {};
+    return `
+    <div class="jobCard ${j.status}">
+      <div class="jobIco">${ic}</div>
+      <div class="jobTxt">
+        <b>${esc(txt)}${esc(wait)}</b>
+        <small>${j.shots.length} फोटो${
+          m.party ? " · " + esc(m.party) : ""}${
+          m.amount != null ? " · " + INR(m.amount) : ""}</small>
+        ${j.err ? `<small class="bad">${esc(j.err)}</small>` : ""}
+      </div>
+      ${j.status === "waiting" || j.status === "failed"
+        ? `<button type="button" class="mini" onclick="dropJob('${esc(j.id)}')">✕</button>` : ""}
+    </div>`;
+  }).join("") +
+    `<div class="muted" style="margin-top:10px">यह sheet बंद कर दीजिए — काम
+      पीछे चलता रहेगा। ⚡ पर लगा अंक बताता रहेगा कि कितने बाकी हैं।</div>`;
+}
+
+function dropJob(id) {
+  JOBS = JOBS.filter((j) => j.id !== id);
+  saveJobs();
+  renderFastSheet();
+  toast("हटा दिया");
+}
+
+/* ── क़तार चलाने वाला ─────────────────────────────────────────────── */
+
+async function runJobs(force) {
+  if (JOB_BUSY) return;
+  const job = JOBS.filter((j) => j.status !== "done" && j.status !== "failed" &&
+    (force || !j.nextAt || j.nextAt <= Date.now()))[0];
+  if (!job) return;
+  JOB_BUSY = true;
+  try { await runOneJob(job); }
+  catch (e) { job.status = "failed"; job.err = e.message; saveJobs(); }
+  finally {
+    JOB_BUSY = false;
+    renderFastSheet();
+    // अगला काम — एक-एक करके, ताकि AI की प्रति-मिनट सीमा न टकराए
+    if (JOBS.some((j) => j.status !== "done" && j.status !== "failed" &&
+        (!j.nextAt || j.nextAt <= Date.now()))) setTimeout(() => runJobs(), 1500);
+  }
+}
+
+/** सीमा भरी है — फ़ेल नहीं, बस रुक जाओ और बाद में फिर। */
+function jobWait(job, why) {
+  const mins = JOB_WAITS[Math.min(job.tries, JOB_WAITS.length - 1)];
+  job.tries++;
+  job.status = job.tries > JOB_WAITS.length ? "failed" : "waiting";
+  job.nextAt = Date.now() + mins * 60000;
+  job.err = why || null;
+  saveJobs();
+}
+
+async function runOneJob(job) {
+  // 1. हर फोटो AI से पढ़वाओ — जो पढ़ी जा चुकी उसे दुबारा नहीं
+  job.status = "reading"; job.err = null; saveJobs(); renderFastSheet();
+  for (const sh of job.shots) {
+    if (sh.r || sh.skip) continue;
+    if (!GEMINI_KEY) { sh.skip = true; continue; }
+    try {
+      sh.r = await askGemini(FAST_PROMPT, sh.dataUrl);
+      saveJobs();
+    } catch (err) {
+      if (err.canRetry) { jobWait(job, err.message); return; }
+      sh.skip = true; sh.err = err.message;      // यह फोटो छोड़ो, बाक़ी चलें
+      saveJobs();
+    }
+  }
+
+  // 2. सबको मिलाकर एक entry — और **पहले Firestore**, फोटो बाद में
+  const m = mergeShots(job.shots);
+  job.merged = { party: m.party, amount: m.amount };
+  if (!job.docId) {
+    job.status = "saving"; saveJobs(); renderFastSheet();
+    job.docId = await saveFastRecord(m, job);
+    saveJobs();
+  }
+
+  // 3. अब फोटो Drive में — एक-एक करके, और हर एक के बाद रिकॉर्ड में जुड़ती जाए
+  job.status = "photos"; saveJobs(); renderFastSheet();
+  const photos = job.photos || [];
+  for (let i = photos.length; i < job.shots.length; i++) {
+    const sh = job.shots[i];
+    const kind = (sh.r && sh.r.kind) || "other";
+    let url = null;
+    try {
+      const up = await driveUpload(sh.dataUrl, job.docId + "_" + kind);
+      url = (up && up.ok) ? up.url : null;
+    } catch (e) {}
+    photos.push({ kind, url, at: (sh.r && sh.r.time) || null });
+    job.photos = photos;
+    saveJobs();
+    try {
+      await db.collection("vbe_expenses").doc(job.docId).update({ photos });
+      const e = EXP.filter((x) => x._id === job.docId)[0];
+      if (e) e.photos = photos;
+    } catch (e) {}
+  }
+
+  job.status = "done"; job.err = null;
+  // फोटो का भारी डेटा अब नहीं चाहिए — जगह ख़ाली करो
+  job.shots = job.shots.map((x) => ({ r: x.r }));
+  saveJobs();
+  JOBS = JOBS.filter((j) => j.status !== "done" || Date.now() - j.at < 600000);
+  saveJobs();
+  saveCache();
+  refreshAll();
+  toast(`✅ ${m.party || "entry"} ${m.amount != null ? INR(m.amount) : ""} दर्ज — एक नज़र डाल लीजिए`);
+  askVerifyLater();
+}
+
+/** सब फोटो मिलाकर एक entry — जिससे जो मिले, वही लो। */
+function mergeShots(shots) {
+  const get = (kind) => shots.map((x) => x.r).filter((r) => r && r.kind === kind);
+  const pay = get("payment")[0] || null;
+  const chq = get("cheque")[0] || null;
+  const req = get("request")[0] || null;
+  const bill = get("bill")[0] || null;
+  const qr = get("qr")[0] || null;
+
+  const party = (pay && pay.toName) || (chq && chq.payeeName) ||
+                (bill && bill.vendor) || (req && req.askedBy) || null;
+  const amount = (pay && pay.amount) != null ? pay.amount
+    : (chq && chq.amount) != null ? chq.amount
+    : (bill && bill.amount) != null ? bill.amount
+    : (req && req.amount) != null ? req.amount : null;
+  const vpa = (pay && pay.toVpa) || (qr && qr.toVpa) || null;
+  const vpaMatch = !!(pay && pay.toVpa && qr && qr.toVpa &&
+    String(pay.toVpa).toLowerCase() === String(qr.toVpa).toLowerCase());
+
+  return {
+    party, amount, vpa, vpaMatch, pay, req, bill, qr, chq,
+    mode: chq && !pay ? "cheque" : "bank",
+    chequeNo: (chq && String(chq.chequeNo || "").replace(/\D/g, "")) || null,
+    phone: (req && req.askedPhone) || (bill && bill.askedPhone) || null,
+    avatar: (req && req.askedByAvatar) || null,
+    date: (pay && pay.date) || (chq && chq.date) ||
+          (bill && bill.date) || (req && req.date) || todayISO(),
+    time: (pay && pay.time) || (req && req.time) || null,
+    utr: (pay && pay.utr) || null,
+    accountId: pay ? matchAccount(pay.fromBank, pay.fromLast4) : "",
+    items: (bill && bill.items) || []
+  };
+}
+
+/** Firestore में रिकॉर्ड — फोटो के बिना, ताकि यह तुरंत हो जाए। */
+async function saveFastRecord(m, job) {
+  const when = new Date((m.date || todayISO()) + "T12:00:00+05:30");
+  const receiptId = `FST/${fyLabel(when)}/${String(job.id).slice(-6).toUpperCase()}`;
+  const docId = receiptId.replace(/\//g, "-");
+
+  const pay = {
+    id: newPayId(), mode: m.mode || "bank", amount: m.amount,
+    chequeNo: m.chequeNo || null,
+    paidAt: m.date || todayISO(), time: m.time || null,
+    app: (m.pay && m.pay.app) || null, status: "success",
+    utr: m.utr || null, appTxnId: (m.pay && m.pay.appTxnId) || null,
+    accountId: m.accountId || "",
+    toName: m.party || null, toVpa: m.vpa || null,
+    at: new Date().toISOString()
+  };
+
+  const rec = {
+    receiptId,
+    submittedBy: { telegramId: "dashboard",
+      name: (auth.currentUser && auth.currentUser.displayName) || "Owner" },
+    submittedAt: firebase.firestore.Timestamp.fromDate(when),
+    source: "fast",
+    vendor: { name: m.party || null, gstin: null,
+              invoiceNo: (m.bill && m.bill.invoiceNo) || null },
+    vendorKey: pKey(m.party) || null,
+    items: m.items || [], billTotal: m.amount,
+    billDate: m.date || todayISO(), unit: null, discount: 0,
+    payments: [pay], paidFromAccountId: m.accountId || null,
+    payment: { mode: "upi", paidToName: m.party || null, amount: m.amount,
+               upiRef: m.utr || null, paidAt: m.date || null },
+    spentOn: (m.items || []).map((i) => i.name).join(", ") || null,
+    chequeNo: m.chequeNo || null,
+    requestedBy: (m.req && m.req.askedBy) || null,
+    requestedPhone: phoneKey(m.phone) || null,
+    requestedAt: (m.req && m.req.time) || null,
+    requestedNote: (m.req && m.req.askedNote) || null,
+    requestedAvatar: m.avatar || null,
+    // 🖼️ नंबर न मिला हो तो हुलिये से सुझाव — जोड़ता नहीं, सिर्फ़ सुझाता है
+    avatarGuessPhone: (() => {
+      const g = avatarGuess(m.avatar, m.phone);
+      return g ? g.contact.phone : null;
+    })(),
+    payeeVpa: m.vpa || null,
+    photos: [],
+    needsUtr: !m.utr,
+    // ✅ अपने-आप बनी है — एक बार विक्रम जी की मुहर चाहिए
+    unverified: true,
+    status: "reimbursed", reconciled: false, matchedBankTxnId: null,
+    flags: [], priceAlerts: [],
+    statusHistory: [{ status: "reimbursed",
+      at: firebase.firestore.Timestamp.fromDate(when), by: "fast" }]
+  };
+
+  try {
+    const alerts = await pricebookAdd(rec);
+    rec.priceAlerts = alerts;
+    rec.flags = computeFlags(rec, alerts);
+  } catch (e) { rec.flags = computeFlags(rec, []); }
+
+  await db.collection("vbe_expenses").doc(docId).set(rec);
+  await auditLog("fast_entry", null,
+    { receiptId, party: m.party, amount: m.amount, utr: m.utr || null,
+      askedBy: rec.requestedBy });
+  if (rec.requestedPhone) {
+    await touchContact(rec.requestedPhone, rec.requestedBy,
+      m.avatar ? { avatar: m.avatar } : {}).catch(() => {});
+  }
+  EXP.unshift(Object.assign({ _id: docId, _date: when }, rec));
+  saveCache();
+  tgNotify(`⚡ <b>फास्ट एंट्री</b>\n🧾 ${receiptId}\n` +
+    (m.party ? `🏪 ${esc(m.party)}\n` : "") +
+    (m.amount != null ? `💰 <b>₹${m.amount}</b>\n` : "") +
+    (rec.requestedBy ? `🙋 ${esc(rec.requestedBy)} के कहने पर${
+      rec.requestedAt ? " · " + esc(rec.requestedAt) : ""}\n` : "") +
+    (m.utr ? `🔗 UTR ${esc(m.utr)}` : m.chequeNo ? `🧾 चेक ${esc(m.chequeNo)}` : "🟡 UTR बाकी"));
+  return docId;
+}
+
+/* क़तार को धक्का — app खुलते ही, और हर मिनट एक नज़र (कोई काम बाकी हो तभी) */
+addEventListener("load", () => {
+  loadJobs(); renderFab();
+  setTimeout(runJobs, 2500);
+  // ✅ बिना देखी entries हों तो एक बार पूछ लो — पर app खुलने के 4 सेकंड बाद,
+  //    ताकि पन्ना पहले बैठ जाए और यह काम के बीच में न कूदे
+  setTimeout(() => { if (unverified().length) openVerify(); }, 4000);
+});
+setInterval(() => { if (!document.hidden && jobsLeft()) runJobs(); }, 60000);
+addEventListener("visibilitychange", () => { if (!document.hidden) runJobs(); });
+
+/* ══════════ ✅ «एक नज़र डाल लीजिए» ═══════════════════════════════
+   जो entries app ने अपने-आप बनाईं, उन पर एक बार विक्रम जी की मुहर चाहिए —
+   पर उनका काम रोककर नहीं। इसलिए यह popup तभी आता है जब वे app खोलते हैं,
+   और «बाद में» कहने पर चुपचाप हट जाता है।                              */
+
+const unverified = () => EXP.filter((e) => e.unverified);
+let VER_Q = [], VER_AT = 0;
+
+function askVerifyLater() { renderTiles(); }
+
+function openVerify() {
+  VER_Q = unverified(); VER_AT = 0;
+  if (!VER_Q.length) return;
+  renderVerify();
+  openSheet("verifySheet");
+}
+
+async function verifyOne(ok) {
+  const e = VER_Q[VER_AT];
+  if (e && ok) {
+    try {
+      await db.collection("vbe_expenses").doc(e._id).update({ unverified: false });
+      await auditLog("verify", null, { receiptId: e.receiptId });
+      e.unverified = false;
+    } catch (err) {}
+  }
+  VER_AT++;
+  if (!ok && e) { closeSheet("verifySheet"); editExpense(e._id); saveCache(); refreshAll(); return; }
+  if (VER_AT >= VER_Q.length) {
+    closeSheet("verifySheet"); saveCache(); refreshAll();
+    toast("✅ सब देख लिया"); return;
+  }
+  renderVerify();
+}
+
+function renderVerify() {
+  const box = $("verifyBody"), e = VER_Q[VER_AT];
+  if (!box || !e) return;
+  const s = paySummary(e);
+  box.innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("think", 76)}</div>
+      <div class="toonSay"><b>विक्रम जी, यह अपने-आप बनी है</b>
+        <p>एक नज़र डाल लीजिए — ठीक हो तो मुहर लगा दीजिए।</p></div>
+    </div>
+    ${e.requestedBy ? askedBanner(e) : ""}
+    <div class="pairCard">
+      <div class="pairOne"><span class="pTag">🧑</span>
+        <div><b>${esc((e.vendor && e.vendor.name) || "—")} — ${INR(e.billTotal)}</b>
+          <small>${esc(dayLabel(String(e.billDate || "").slice(0, 10)))} · ${esc(e.receiptId)}</small>
+          ${e.spentOn ? `<small>📦 ${esc(e.spentOn)}</small>` : ""}
+          ${(e.payments || [])[0] && e.payments[0].utr
+            ? `<small>🔗 UTR ${esc(e.payments[0].utr)}</small>`
+            : e.chequeNo ? `<small>🧾 चेक ${esc(e.chequeNo)}</small>`
+            : `<small class="utrTag">🟡 UTR बाकी</small>`}
+          ${(e.photos || []).length ? `<small>🖼️ ${(e.photos || []).length} फोटो</small>` : ""}
+        </div>
+      </div>
+    </div>
+    <div class="pairBtns">
+      <button type="button" class="primary" onclick="verifyOne(true)">✅ ठीक है</button>
+      <button type="button" onclick="verifyOne(false)">✏️ सुधारें</button>
+    </div>
+    <div class="muted" style="text-align:center;margin-top:10px">
+      ${VER_AT + 1} / ${VER_Q.length} ·
+      <button type="button" class="mini" onclick="closeSheet('verifySheet')">बाद में</button>
+    </div>`;
+}
+
+/* ══════════ 🙋 «X के कहने पर» — हर बिल के सिर पर ═══════════════════
+   «यह मेरे को भरोसा बनाए रखेगा» — इसलिए नाम सबसे बड़े अक्षरों में, सबसे
+   ऊपर। और पता न हो तो खाली छोड़ने के बजाय app पूछता है।                */
+
+function askedBanner(e) {
+  const ph = phoneKey(e.requestedPhone);
+  const c = ph && CONTACTS[ph];
+  const name = (c && c.name) || e.requestedBy;
+  if (!name) {
+    return `<div class="askedBar none">
+      <div class="abIco">❓</div>
+      <div class="abTxt"><b>किसके कहने पर, पता नहीं</b>
+        <small>${INR(e.billTotal)} · ${esc(dayLabel(String(e.billDate || "").slice(0, 10)))}</small></div>
+      <button type="button" class="mini primary"
+        onclick="openAsked('${esc(e._id)}')">🙋 लिख दें</button>
+    </div>`;
+  }
+  return `<div class="askedBar">
+    <div class="abIco">🙋</div>
+    <div class="abTxt">
+      <b>${esc(name)}</b> <span>के कहने पर</span>
+      <small>${e.requestedAt ? esc(e.requestedAt) + " बजे कहा" : ""}${
+        e.requestedAt && (e.payments || [])[0] && e.payments[0].time
+          ? " · " + esc(e.payments[0].time) + " पर पैसा गया" : ""}${
+        e.requestedNote ? " · «" + esc(e.requestedNote) + "»" : ""}</small>
+      ${ph ? `<small>📞 ${esc(phoneShow(ph))}</small>` : ""}
+    </div>
+    ${ph ? `<button type="button" class="mini"
+      onclick="showContact('${esc(ph)}')">पूरा हिसाब</button>` : ""}
+  </div>`;
+}
+
+/** जिन पेमेंट पर «किसके कहने पर» खाली है। */
+const askedMissing = () => EXP.filter((e) =>
+  !e.requestedBy && !phoneKey(e.requestedPhone) && !e.askedNobody);
+
+let ASKED_FOR = "";
+function openAsked(id) {
+  ASKED_FOR = id;
+  const e = EXP.filter((x) => x._id === id)[0];
+  if (!e) return;
+  const recent = [...new Set(EXP.map((x) => x.requestedBy).filter(Boolean))].slice(0, 6);
+  $("askedBody").innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("think", 74)}</div>
+      <div class="toonSay"><b>यह ${INR(e.billTotal)} किसके कहने पर गया था?</b>
+        <p>${esc((e.vendor && e.vendor.name) || "—")} ·
+          ${esc(dayLabel(String(e.billDate || "").slice(0, 10)))}</p></div>
+    </div>
+    ${(() => {
+      const g = e.avatarGuessPhone && CONTACTS[e.avatarGuessPhone];
+      return g ? `<div class="fsOk">🖼️ <b>यह वही लगते हैं</b> — पिछली बार आपने
+        इन्हें «${esc(g.name)}» लिखा था${e.requestedAvatar
+          ? ` (${esc(e.requestedAvatar)})` : ""}
+        <div style="margin-top:8px"><button type="button" class="mini primary"
+          onclick="document.getElementById('akName').value='${esc(g.name).replace(/'/g, "&#39;")}';
+                   document.getElementById('akPhone').value='${esc(g.phone)}'"
+          >✅ हाँ, वही हैं</button></div></div>` : "";
+    })()}
+    <label>🧑 नाम<input id="akName" placeholder="जैसे: मनोज भाई"></label>
+    <label>📞 नंबर<input id="akPhone" inputmode="numeric" placeholder="10 अंक — हो तो"></label>
+    ${recent.length ? `<div class="whatChips">🔁 ${recent.map((n) =>
+      `<button type="button" class="chipBtn" onclick="document.getElementById('akName').value='${
+        esc(n).replace(/'/g, "&#39;")}'">${esc(n)}</button>`).join("")}</div>` : ""}
+    <div id="akMsg" class="muted" style="margin-top:8px"></div>
+    <div class="pairBtns" style="margin-top:12px">
+      <button type="button" class="primary" onclick="saveAsked()">✅ लिख दिया</button>
+      <button type="button" onclick="saveAsked(true)">किसी ने नहीं कहा</button>
+    </div>`;
+  openSheet("askedSheet");
+}
+
+async function saveAsked(nobody) {
+  const e = EXP.filter((x) => x._id === ASKED_FOR)[0];
+  if (!e) return;
+  const name = nobody ? null : $("akName").value.trim();
+  const ph = nobody ? "" : phoneKey($("akPhone").value);
+  if (!nobody && !name && !ph) {
+    $("akMsg").className = "bad"; $("akMsg").textContent = "नाम या नंबर तो भरें"; return;
+  }
+  const patch = nobody
+    ? { askedNobody: true }
+    : { requestedBy: name || (CONTACTS[ph] && CONTACTS[ph].name) || null,
+        requestedPhone: ph || null };
+  try {
+    await db.collection("vbe_expenses").doc(e._id).update(patch);
+    await auditLog("who_asked", null, Object.assign({ receiptId: e.receiptId }, patch));
+    if (ph) await touchContact(ph, name, {}).catch(() => {});
+  } catch (err) {}
+  Object.assign(e, patch);
+  saveCache();
+  closeSheet("askedSheet");
+  refreshAll();
+  toast(nobody ? "ठीक है — दुबारा नहीं पूछूँगा" : "🙋 लिख दिया");
+}
+
+/**
+ * हुलिये से सुझाव — «दो फ़ोन, दो नाम, आदमी वही»।
+ * यह चेहरा पहचानना नहीं है: AI सिर्फ़ यह बताता है कि गोल फोटो में दिख क्या
+ * रहा है («नीली टी-शर्ट में छोटा बच्चा»), और वही हुलिया पहले किस संपर्क के
+ * साथ दर्ज हुआ था, यह मिलाया जाता है।
+ *
+ * नंबर मिल जाए तो हुलिया देखा ही नहीं जाता — नंबर हमेशा भारी पड़ता है।
+ * और यह जोड़ता कुछ नहीं, सिर्फ़ सुझाता है; पक्का विक्रम जी करते हैं।
+ */
+function avatarGuess(avatar, phone) {
+  if (phoneKey(phone)) return null;              // नंबर है तो सुझाव की ज़रूरत नहीं
+  const a = String(avatar || "").trim();
+  if (a.length < 6) return null;
+  const bits = nameBits(a);
+  if (bits.length < 2) return null;
+  let best = null;
+  Object.values(CONTACTS).forEach((c) => {
+    if (!c.avatar) return;
+    const sc = nameScore(a, c.avatar);
+    if (sc >= 0.7 && (!best || sc > best.score)) best = { contact: c, score: sc };
+  });
+  return best;
+}
 
 /** जिन entries का UTR अभी नहीं आया — यही पीली दिखती हैं। */
 function pendingUtr() {
