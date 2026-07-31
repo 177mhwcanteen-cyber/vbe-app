@@ -278,6 +278,105 @@
   .toonBox.tight { padding: 10px 11px; gap: 10px; }
   .toonBox.tight .toonSay p { font-size: 12px; }
 
+  /* 📊 statement का सार */
+  .stSum { margin-top: 12px; padding: 12px; border-radius: 15px;
+    border: 1px solid var(--border); background: var(--surface-2); }
+  .stHead { display: flex; align-items: center; gap: 11px; }
+  .stHead b { display: block; font-size: 14px; }
+  .stHead small { display: block; font-size: 11.5px; color: var(--muted); }
+  .stFoot { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+
+  /* 🏦 पासबुक — आया बाएँ हरा, गया दाएँ लाल */
+  .pbTop { display: flex; gap: 8px; margin-bottom: 12px; }
+  .pbTop select { flex: 1; min-width: 0; font: inherit; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 11px; padding: 9px 10px; }
+  .pbBar { display: flex; align-items: center; gap: 10px; }
+  .pbSide { flex: 1; min-width: 0; padding: 11px 12px; border-radius: 13px;
+    border: 1px solid var(--border); background: var(--surface-2); }
+  .pbSide span { display: block; font-size: 11.5px; color: var(--muted); }
+  .pbSide b { display: block; font-size: 19px; font-variant-numeric: tabular-nums;
+    margin-top: 2px; }
+  .pbSide small { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .pbSide.now { border-color: rgba(57,135,229,.5);
+    background: linear-gradient(150deg, rgba(57,135,229,.14), transparent 70%); }
+  .pbArrow { color: var(--muted); font-size: 20px; flex: 0 0 auto; }
+  .pbFlow { display: flex; gap: 10px; margin-top: 10px; }
+  .pbIn, .pbOut { flex: 1; min-width: 0; padding: 9px 11px; border-radius: 12px;
+    font-size: 11.5px; color: var(--muted); }
+  .pbIn { border: 1px solid rgba(12,163,12,.4); text-align: left;
+    background: linear-gradient(100deg, rgba(12,163,12,.14), transparent 75%); }
+  .pbOut { border: 1px solid rgba(208,59,59,.4); text-align: right;
+    background: linear-gradient(260deg, rgba(208,59,59,.14), transparent 75%); }
+  .pbIn b, .pbOut b { display: block; font-size: 16px; margin-top: 2px;
+    font-variant-numeric: tabular-nums; }
+  .pbIn b { color: #7de07d; } .pbOut b { color: #ff9d9d; }
+  .pbIn small, .pbOut small { display: block; font-size: 10.5px; }
+
+  .pbDay { border: 1px solid var(--border); border-radius: 15px;
+    margin-bottom: 12px; overflow: hidden; background: var(--surface); }
+  .pbDayHead { display: flex; align-items: baseline; justify-content: space-between;
+    gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--grid);
+    background: var(--surface-2); }
+  .pbDayHead b { font-size: 13.5px; }
+  .pbDayHead span { font-size: 11.5px; color: var(--muted);
+    font-variant-numeric: tabular-nums; }
+  .pbCols { display: flex; }
+  .pbCol { flex: 1; min-width: 0; padding: 8px 10px; }
+  .pbCol.in { border-right: 1px solid var(--grid); }
+  .pbCol.out { text-align: right; }
+  .pbNone { color: var(--muted); font-size: 12px; padding: 6px 0; }
+  .pbTxn { padding: 7px 0; border-bottom: 1px solid var(--grid); }
+  .pbTxn:last-child { border-bottom: 0; }
+  .pbAmt { font-weight: 800; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+  .pbTxn.in .pbAmt { color: #7de07d; } .pbTxn.out .pbAmt { color: #ff9d9d; }
+  .pbWho { font-size: 12.5px; color: var(--ink); overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .pbSub { font-size: 10.5px; color: var(--muted); }
+  .pbTxn .badge, .pbTxn button { margin-top: 5px; }
+  .pbDayFoot { display: flex; justify-content: space-between; gap: 8px;
+    padding: 8px 12px; border-top: 1px solid var(--grid); font-size: 12px;
+    font-variant-numeric: tabular-nums; background: var(--surface-2); }
+  .pbDayFoot .i { color: #7de07d; } .pbDayFoot .o { color: #ff9d9d; }
+
+  /* 🚨 Overview की ऊपरी चिप्पियाँ */
+  .alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .alert { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+    padding: 11px 12px; border-radius: 14px; font: inherit; cursor: pointer; }
+  .alert.bad { border: 1px solid rgba(208,59,59,.5);
+    background: linear-gradient(100deg, rgba(208,59,59,.16), transparent 70%); }
+  .alert.warn { border: 1px solid rgba(201,133,0,.5);
+    background: linear-gradient(100deg, rgba(201,133,0,.15), transparent 70%); }
+  .aIco { font-size: 22px; line-height: 1; flex: 0 0 auto; }
+  .aTxt { flex: 1; min-width: 0; }
+  .aTxt b { display: block; font-size: 13.5px; color: var(--ink); }
+  .aTxt small { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+  .aGo { color: var(--muted); font-size: 20px; line-height: 1; }
+
+  /* 🧹 दोहरी entry का जोड़ा */
+  .dupe { border: 1px solid var(--border); border-radius: 14px; padding: 11px 12px;
+    margin-bottom: 10px; background: var(--surface-2); }
+  .dupe.sure { border-color: rgba(208,59,59,.45); }
+  .dHead { display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-bottom: 7px; }
+  .dHead b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .dSide { font-size: 12.5px; color: var(--ink-2); line-height: 1.5;
+    padding: 5px 0; border-top: 1px solid var(--grid); }
+  .dupe button { margin-top: 9px; }
+
+  /* ⏳ UTR चाहिए */
+  .utrRow { display: flex; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--grid); }
+  .utrRow:last-child { border-bottom: 0; }
+  .uAmt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+    color: #ff9d9d; }
+  .uMx { flex: 1; min-width: 0; }
+  .uMx b { display: block; font-size: 13.5px; }
+  .uMx small { display: block; font-size: 11.5px; color: var(--muted); }
+  .uFill { display: flex; gap: 7px; margin-top: 7px; }
+  .uFill input { flex: 1; min-width: 0; font: inherit; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 10px; }
+
   /* 🙋 «किसके कहने पर» की संपर्क-सूची */
   .akFind { margin: 10px 0 4px; }
   .akFind input { font: inherit; width: 100%; color: var(--ink);
@@ -1060,6 +1159,7 @@
       <button data-v="price">💹 Pricebook</button>
       <button data-v="flags">⚠️ Flags</button>
       <button data-v="ledger">📜 हिसाब</button>
+      <button data-v="pass">🏦 पासबुक</button>
       <button data-v="party">🧑 पार्टी</button>
       <button data-v="recon">🏦 मिलान</button>
       <button data-v="unit">🎯 यूनिट</button>
@@ -1074,6 +1174,8 @@
     <!-- ── Overview ── -->
     <section class="view active" id="v-overview">
       <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
+      <!-- 🚨 सबसे ऊपर वही जो आज रोकना ज़रूरी है: दोहरी entry, और बिना UTR -->
+      <div id="ovAlerts"></div>
       <div class="tiles" id="tiles"></div>
       <!-- 📎 काम करने की जगह — 10 सबसे बड़े बिना-बिल पेमेंट, एक-एक करके -->
       <div id="ovTodo"></div>
@@ -1227,6 +1329,19 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- ── 🏦 पासबुक — «बैंक का चक्कर ख़त्म» ── -->
+    <section class="view" id="v-pass">
+      <div class="card">
+        <div class="pbTop">
+          <select id="pbAccount"></select>
+          <select id="pbMonth"></select>
+        </div>
+        <div id="pbHead"></div>
+      </div>
+      <div id="pbOpenAsk"></div>
+      <div id="pbDays"></div>
     </section>
 
     <!-- ── Flags ── -->
@@ -1783,6 +1898,30 @@ placeholder="917568 माजीसा डिस्पोजल
       </div>
     </div>
 
+    <!-- 🧹 दोहरी entry — ढूँढो और जोड़ो -->
+    <div id="dupeSheet" class="sheet" hidden>
+      <div class="sheetBox">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3>🧹 दोहरी entry</h3>
+          <button type="button" class="x" onclick="closeSheet('dupeSheet')">✕</button>
+        </div>
+        <div id="dupeBody"></div>
+      </div>
+    </div>
+
+    <!-- ⏳ UTR चाहिए -->
+    <div id="utrSheet" class="sheet" hidden>
+      <div class="sheetBox">
+        <div class="grab"></div>
+        <div class="sheetHead">
+          <h3>⏳ UTR चाहिए</h3>
+          <button type="button" class="x" onclick="closeSheet('utrSheet')">✕</button>
+        </div>
+        <div id="utrBody"></div>
+      </div>
+    </div>
+
     <!-- 📥 एक साथ कई रसीदें -->
     <div id="bulkSheet" class="sheet" hidden>
       <div class="sheetBox">
@@ -2199,6 +2338,8 @@ function renderSync(err) {
         (hot ? ' — अब सँभालकर' : '') +
         ' · 🧠 ' + ai.n + ' AI' +
         (GEMINI_MODEL ? ' · 🪶 ' + GEMINI_MODEL.replace(/^gemini-/, "") : '') +
+        (GEMINI_BIG && GEMINI_BIG !== GEMINI_MODEL
+          ? ' · ⚡ ' + GEMINI_BIG.replace(/^gemini-/, "") : '') +
         '</small></span>' +
       '<i style="width:' + pct.toFixed(1) + '%"></i>' +
     '</div>';
@@ -2255,6 +2396,8 @@ function renderAll() {
   renderCheques();
   renderContacts();
   renderStaff();
+  renderAlerts();           // 🚨 दोहरी entry · ⏳ UTR बाकी
+  initPass();               // 🏦 पासबुक
   wireAllPhones();        // 👤 हर नंबर के ख़ाने के नीचे «यह किसका है»
 }
 
@@ -4283,7 +4426,8 @@ async function commitRecon() {
     status.className = "ok";
     status.innerHTML = importReport({
       total: saved + (RECON.dupes || []).length, added,
-      existed: enriched + (RECON.dupes || []).length, enriched, linked });
+      existed: enriched + (RECON.dupes || []).length, enriched, linked }) +
+      statementSummary(RECON.account, added, (RECON.dupes || []).length);
     const utrBefore = pendingUtr().length;
     // 🔗 जो फास्ट entries UTR के इंतज़ार में थीं, वे अब भर जाएँ — «आज भी
     // करो और बाद में बैंक से भी» वाली दोहरी मेहनत यहीं ख़त्म होती है
@@ -4315,6 +4459,51 @@ async function commitRecon() {
   } finally {
     btn.disabled = false;
   }
+}
+
+/**
+ * 📊 statement डालते ही उसका सार — «इसमें 25 entries हैं, ₹50 लाख गए,
+ * ₹12 लाख आए»। विक्रम जी की माँग: «ताकि आनंद आए।»
+ *
+ * अंक इसी statement के नहीं, **इस खाते के पूरे** हैं — क्योंकि statement
+ * टुकड़ों में आती है और आदमी जानना यह चाहता है कि खाते में अब तक क्या है।
+ */
+function statementSummary(acc, added, dupes) {
+  const rows = BANKTXNS.filter((t) => t.accountId === acc && !t.mergedInto);
+  if (!rows.length) return "";
+  const inSum = rows.filter((t) => t.type === "credit").reduce((a, t) => a + (t.amount || 0), 0);
+  const outSum = rows.filter((t) => t.type === "debit").reduce((a, t) => a + (t.amount || 0), 0);
+  const noBill = rows.filter((t) => t.type === "debit" && !t.matchedReceiptId &&
+    !t.billPhotoId && !twinOf(t)).length;
+  const days = rows.map((t) => String(t.date).slice(0, 10)).filter(Boolean).sort();
+  const open = pbOpening(acc);
+
+  return `
+  <div class="stSum">
+    <div class="stHead">
+      <div class="toonArt">${gfx.toon("book2", 54)}</div>
+      <div>
+        <b>${esc(accLabel(acc))}</b>
+        <small>${rows.length} entries${days.length
+          ? " · " + esc(dayLabel(days[0]) || days[0]) + " से " +
+            esc(dayLabel(days[days.length - 1]) || days[days.length - 1]) : ""}</small>
+      </div>
+    </div>
+    <div class="pbFlow" style="margin-top:10px">
+      <div class="pbIn">🟢 आया<b>${INR(inSum)}</b>
+        <small>${rows.filter((t) => t.type === "credit").length} बार</small></div>
+      <div class="pbOut">गया 🔴<b>${INR(outSum)}</b>
+        <small>${rows.filter((t) => t.type === "debit").length} बार</small></div>
+    </div>
+    <div class="stFoot">
+      ${added ? `<span class="badge ok2">🆕 ${added} नई जुड़ीं</span>` : ""}
+      ${dupes ? `<span class="badge">🔁 ${dupes} पहले से थीं</span>` : ""}
+      ${noBill ? `<span class="badge lo">📎 ${noBill} का बिल बाकी</span>` : ""}
+      ${open.value != null ? `<span class="badge">🏦 ओपनिंग ${INR(open.value)}</span>` : ""}
+    </div>
+    <button type="button" class="mini" style="width:100%;margin-top:10px"
+      onclick="goTab('pass');setPbAcc('${esc(acc)}')">🏦 पासबुक में पूरा देखें</button>
+  </div>`;
 }
 
 /**
@@ -4454,8 +4643,11 @@ const VCARD_PROMPT =
    Model IDs get retired, and which ones a key may call differs per project.
    So ask the API what it has, keep the answer, and re-ask the moment a call
    comes back 404/400 — the same self-healing the Telegram bot does. */
-let GEMINI_MODEL = null;
-try { GEMINI_MODEL = localStorage.getItem("vbeAiModel") || null; } catch (e) {}
+let GEMINI_MODEL = null, GEMINI_BIG = null;
+try {
+  GEMINI_MODEL = localStorage.getItem("vbeAiModel") || null;
+  GEMINI_BIG = localStorage.getItem("vbeAiBig") || null;
+} catch (e) {}
 
 /** Local date, not toISOString() — after 5:30am IST those two disagree. */
 function todayISO() {
@@ -4488,11 +4680,25 @@ function todayISO() {
 
    यानी सीमा तभी ख़र्च होगी जब विक्रम जी की उँगली ख़र्च करेगी।           */
 
+/* v15: कौन-सा काम कितने दिमाग़ का —
+
+   v13 में सब कुछ छोटे मॉडल पर डाल दिया गया था, क्योंकि AI नौ जगह बेकार
+   चल रहा था और सीमा भर जाती थी। अब वह बंद है, यानी बचत हो चुकी है।
+
+   विक्रम जी की बात सही है: ⚡ फास्ट एंट्री ही वह जगह है जहाँ **असली दिमाग़**
+   चाहिए — वहाँ चार तरह की फोटो एक साथ आती हैं, ग्रुप की चैट में किसने कहा
+   यह पढ़ना होता है, चेक की छपी हुई लिखाई और हाथ से भरी बैंक की पर्ची भी।
+   यह छोटे मॉडल का काम नहीं है, और वहीं «₹420 सामने लिखा है फिर भी ₹0»
+   जैसी मूर्खता होती थी।
+
+   बाक़ी चारों बटन आसान काम हैं (एक साफ़ बिल, एक साफ़ रसीद, एक कार्ड) —
+   उनके लिए छोटा मॉडल काफ़ी है और सस्ता भी।                              */
+
 const AI_USES = {
-  fast: { auto: true  },   // ⚡ फास्ट एंट्री — फोटो डालते ही
-  bill: { click: true },   // 📎 बिल की फोटो — सिर्फ़ बटन से
-  pay:  { click: true },   // 🧾 रसीद       — सिर्फ़ बटन से
-  card: { click: true }    // 📇 पार्टी कार्ड — सिर्फ़ बटन से
+  fast: { auto: true,  big: true  },   // ⚡ फास्ट एंट्री — पूरा दिमाग़
+  bill: { click: true, big: false },   // 📎 बिल की फोटो — सिर्फ़ बटन से
+  pay:  { click: true, big: false },   // 🧾 रसीद       — सिर्फ़ बटन से
+  card: { click: true, big: false }    // 📇 पार्टी कार्ड — सिर्फ़ बटन से
 };
 
 let AI_CLICK = null;       // अभी किस बटन का दबाव चल रहा है
@@ -4541,6 +4747,16 @@ function modelRank(name) {
   return [0, 0];
 }
 
+/** बड़े मॉडल की चुनाई — उल्टा क्रम: सादा flash पहले, lite आख़िरी सहारा। */
+function bigRank(name) {
+  let m = name.match(/^gemini-(\d+(?:\.\d+)?)-flash$/);
+  if (m) return [3, Number(m[1])];       // सबसे अच्छा flash
+  m = name.match(/^gemini-(\d+(?:\.\d+)?)-flash-lite$/);
+  if (m) return [2, Number(m[1])];
+  if (name.indexOf("flash") >= 0) return [1, 0];
+  return [0, 0];
+}
+
 async function geminiDiscoverModel() {
   await aiGap();
   aiCount({ calls: 1 });
@@ -4556,13 +4772,20 @@ async function geminiDiscoverModel() {
     .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
     .map(m => m.name.slice(7));          // "models/" हटाकर
 
-  let best = null, bestR = [-1, -1];
-  models.forEach(n => {
-    const r = modelRank(n);
-    if (r[0] > bestR[0] || (r[0] === bestR[0] && r[1] > bestR[1])) { bestR = r; best = n; }
-  });
+  const pick = (rank) => {
+    let best = null, bestR = [-1, -1];
+    models.forEach(n => {
+      const r = rank(n);
+      if (r[0] > bestR[0] || (r[0] === bestR[0] && r[1] > bestR[1])) { bestR = r; best = n; }
+    });
+    return best;
+  };
+  let best = pick(modelRank);
   if (!best) best = models[0];
   if (!best) throw new Error("इस चाबी के लिए कोई AI मॉडल नहीं मिला");
+  // ⚡ के लिए बड़ा वाला अलग से चुन लो — दोनों एक ही खोज में मिल जाते हैं
+  GEMINI_BIG = pick(bigRank) || best;
+  try { localStorage.setItem("vbeAiBig", GEMINI_BIG); } catch (e) {}
   GEMINI_MODEL = best;
   // 🔑 सँभालने की जगह का नाम v13 में बदला गया है, ताकि फ़ोन में पड़ा हुआ
   //    पुराना (बड़ा) मॉडल अपने-आप छूट जाए — विक्रम जी को कुछ न करना पड़े।
@@ -4684,7 +4907,9 @@ async function askGemini(use, prompt, dataUrl, extraText, onWait) {
     (extraText ? "\n\n" + extraText : "") }];
   if (dataUrl) parts.push({ inline_data: { mime_type: "image/jpeg", data: dataUrl.split(",")[1] } });
 
-  let model = GEMINI_MODEL || await geminiDiscoverModel();
+  if (!GEMINI_MODEL) await geminiDiscoverModel();
+  // ⚡ को बड़ा दिमाग़, बाक़ी को छोटा
+  let model = (u.big && GEMINI_BIG) || GEMINI_MODEL;
   await aiGap();
   aiCount({ calls: 1 });
   let res = await geminiPost(model, parts);
@@ -5890,6 +6115,573 @@ function reSearch(id, v) {
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+/* ══════════ 🔑 UTR ही सच है ═══════════════════════════════════════
+
+   ⚠️ यहाँ एक बहुत महँगी ग़लती पकड़ी गई, इसलिए यह टिप्पणी लंबी है।
+
+   मदनलाल धनाराम की एक ही ₹5,001 की entry दो बार दिख रही थी — एक बार बिल
+   से (WEB/26-27/999861), एक बार बैंक की statement से। दोनों का UTR एक ही
+   था: 657085241092।
+
+   हुआ यह था: buildParties() जोड़ का हिसाब तो एक बार करता था, पर **पंक्ति
+   दोनों बार दिखा देता था**। और जोड़ने की कुंजी «बिल नंबर» थी — यानी जब तक
+   app ने ख़ुद जोड़ न दिया हो, वही UTR दो जगह पड़ा रहता और किसी को पता न
+   चलता। UTR का इस्तेमाल हो ही नहीं रहा था।
+
+   किसी भी हिसाब-किताब वाले app की यह सबसे बड़ी ग़लती है: एक बार कोई entry
+   दो बार गिन ली जाए, तो बाक़ी सारे जोड़ झूठे हो जाते हैं।
+
+   अब नियम एक, और वह सबसे ऊपर:
+
+       🔑 एक UTR = एक पैसा। चाहे वह बिल से आया हो या statement से।
+          कहीं भी, किसी भी सूची में — एक ही पंक्ति।                     */
+
+/** UTR को एक ही शक्ल में लाओ — बड़े अक्षर, बिना जगह/डैश के। */
+function utrKey(v) {
+  const u = String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return u.length >= 6 ? u : "";
+}
+
+/**
+ * इस बैंक-पंक्ति का UTR — अपने ख़ाने में न हो तो narration के अंदर से।
+ * `UPI/DR/657085241092/MADAN LAL SO DHANA RAM/...` → `657085241092`
+ */
+function txnUtr(t) {
+  if (!t) return "";
+  const own = utrKey(t.utr);
+  if (own) return own;
+  return utrKey(t.narration ? utrOf(t.narration) : "");
+}
+
+/** इस बिल के सारे UTR (एक बिल के कई पेमेंट हो सकते हैं) + चेक नंबर। */
+function expKeys(e) {
+  const out = [];
+  (e.payments || []).forEach((x) => {
+    const u = utrKey(x.utr);
+    if (u) out.push(u);
+  });
+  const u0 = utrKey(e.utr);
+  if (u0) out.push(u0);
+  const cq = String(e.chequeNo || "").replace(/\D/g, "");
+  if (cq.length >= 5) out.push("CHQ" + cq);
+  return [...new Set(out)];
+}
+
+/** इस बैंक-पंक्ति की कुंजियाँ — वही रूप, ताकि सीधे मिलान हो सके। */
+function txnKeys(t) {
+  const out = [];
+  const u = txnUtr(t);
+  if (u) out.push(u);
+  const cq = String(t.chequeNo || "").replace(/\D/g, "");
+  if (cq.length >= 5) out.push("CHQ" + cq);
+  return out;
+}
+
+/**
+ * हर बिल के लिए उसकी कुंजियाँ — एक बार बनाकर रख ली जाती हैं, वरना हर
+ * पंक्ति पर पूरी EXP छानना पड़ता और सूची अटकने लगती।
+ */
+let EXP_BY_KEY = {};
+function rebuildKeyIndex() {
+  EXP_BY_KEY = {};
+  EXP.forEach((e) => expKeys(e).forEach((k) => {
+    if (!EXP_BY_KEY[k]) EXP_BY_KEY[k] = e;
+  }));
+}
+
+/**
+ * यह बैंक-पंक्ति किस बिल का ही पैसा है?
+ * क्रम जान-बूझकर यही है: UTR → चेक नंबर → बिल नंबर। UTR सबसे ऊपर, क्योंकि
+ * वही अकेली चीज़ है जो कभी झूठ नहीं बोलती।
+ * @returns {null|{exp, by:string}}
+ */
+function twinOf(t) {
+  const keys = txnKeys(t);
+  for (const k of keys) {
+    const e = EXP_BY_KEY[k];
+    if (e) return { exp: e, by: k.indexOf("CHQ") === 0 ? "चेक नं." : "UTR" };
+  }
+  if (t.matchedReceiptId) {
+    const e = EXP.filter((x) => x.receiptId === t.matchedReceiptId)[0];
+    if (e) return { exp: e, by: "बिल नं." };
+  }
+  return null;
+}
+
+/**
+ * 🧹 दोहरी entry ढूँढो।
+ * दो तरह के जोड़े: (1) जिनका UTR/चेक एक है — यह पक्का है;
+ * (2) जिनकी रकम + तारीख़ + पार्टी तीनों एक हैं — यह सिर्फ़ शक है, इसलिए
+ *     इस पर «पक्का» का ठप्पा नहीं लगता, विक्रम जी ख़ुद देखकर तय करेंगे।
+ */
+function findDupes() {
+  rebuildKeyIndex();
+  const out = [];
+  const seen = {};
+
+  BANKTXNS.forEach((t) => {
+    if (t.mergedInto || t.type !== "debit") return;
+    const tw = twinOf(t);
+    if (!tw) return;
+    const id = t._id + "|" + tw.exp._id;
+    if (seen[id]) return;
+    seen[id] = 1;
+    out.push({ sure: tw.by !== "बिल नं.", by: tw.by, txn: t, exp: tw.exp,
+      amount: t.amount, date: t.date });
+  });
+
+  // शक वाले: वही रकम, वही दिन, वही पार्टी — पर कोई UTR नहीं
+  BANKTXNS.forEach((t) => {
+    if (t.mergedInto || t.type !== "debit" || txnUtr(t)) return;
+    const day = String(t.date || "").slice(0, 10);
+    EXP.forEach((e) => {
+      const id = t._id + "|" + e._id;
+      if (seen[id]) return;
+      if (Math.abs((Number(e.billTotal) || 0) - (t.amount || 0)) > 1) return;
+      if (String(e.billDate || "").slice(0, 10) !== day) return;
+      if (!sameParty(e.vendor && e.vendor.name, t.party)) return;
+      seen[id] = 1;
+      out.push({ sure: false, by: "रकम+दिन+नाम", txn: t, exp: e,
+        amount: t.amount, date: t.date });
+    });
+  });
+
+  return out.sort((a, b) => (b.sure - a.sure) || (b.amount - a.amount));
+}
+
+/**
+ * दोनों को एक कर दो। **कुछ मिटता नहीं** — बैंक की पंक्ति सिर्फ़ बिल की तरफ़
+ * इशारा करने लगती है, और उसका narration/UTR बिल में जुड़ जाता है।
+ */
+async function mergeDupe(txnId, expId) {
+  const t = BANKTXNS.filter((x) => x._id === txnId)[0];
+  const e = EXP.filter((x) => x._id === expId)[0];
+  if (!t || !e) return false;
+
+  const u = txnUtr(t);
+  const patch = {
+    matched: true, matchedReceiptId: e.receiptId || null,
+    mergedInto: e._id, matchConfidence: "utr"
+  };
+  if (u && !t.utr) patch.utr = u;
+
+  // बिल की तरफ़: बैंक से पक्का हो गया
+  const pays = (e.payments || []).slice();
+  const i = pays.findIndex((x) => utrKey(x.utr) === u);
+  if (i >= 0) pays[i] = Object.assign({}, pays[i], { bankTxnId: t._id });
+  const up = { payments: pays, needsUtr: false, reconciled: true,
+    matchedBankTxnId: t._id,
+    paidFromAccountId: t.accountId || e.paidFromAccountId || null };
+
+  try {
+    await db.collection("vbe_bank_txns").doc(t._id).set(patch, { merge: true });
+    await db.collection("vbe_expenses").doc(e._id).update(up);
+    await auditLog("merge_duplicate", null,
+      { receiptId: e.receiptId, txnId: t._id, utr: u || null, amount: t.amount });
+  } catch (err) { return false; }
+
+  Object.assign(t, patch);
+  Object.assign(e, up);
+  saveCache();
+  return true;
+}
+
+/* ══════════ 🏦 पासबुक — ओपनिंग बैलेंस से आज तक ═══════════════════════
+
+   विक्रम जी की माँग: «जब भी किसी बैंक अकाउंट का statement देखना हो कि इस
+   खाते का ओपनिंग बैलेंस क्या था और उसके बाद क्या बहाव हुआ, किस तारीख़ को
+   क्या रहा — ताकि बैंक का चक्कर न निकालना पड़े।»
+
+   तीन बातें जो इसे असली पासबुक बनाती हैं:
+
+     1. **ओपनिंग बैलेंस** — statement में मिले तो वहीं से (सबसे पुरानी
+        पंक्ति का balance घटा-जोड़कर), वरना विक्रम जी ख़ुद भर देंगे।
+     2. **आया बाएँ, गया दाएँ** — दो दिशाएँ, दो रंग। एक ही लकीर में मिलाकर
+        नहीं, क्योंकि तब आँख को कुछ समझ नहीं आता।
+     3. **हर दिन का जोड़ और उस दिन के अंत का बैलेंस** — यही वह अंक है जिसके
+        लिए आदमी बैंक जाता है।
+
+   🔒 यह पूरा हिस्सा सिर्फ़ कोड से बनता है। statement, खाता नंबर और मिलान
+      AI को कभी नहीं जाते — v13 की वह दीवार यहाँ भी जस की तस है।         */
+
+let PB_ACC = "", PB_MONTH = "";
+
+/** इस खाते की सारी पंक्तियाँ, पुरानी से नई। */
+function pbTxns(acc) {
+  return BANKTXNS.filter((t) => t.accountId === acc && !t.mergedInto)
+    .sort((a, b) => String(a.date + (a.time || "")).localeCompare(String(b.date + (b.time || ""))));
+}
+
+/**
+ * ओपनिंग बैलेंस। सबसे पुरानी पंक्ति पर बैंक का लिखा हुआ balance मिल जाए तो
+ * उसी से उल्टा गिनकर निकाल लो — यही सबसे भरोसेमंद है। न मिले तो जो विक्रम
+ * जी ने भर दिया, वह।
+ */
+function pbOpening(acc) {
+  const rows = pbTxns(acc);
+  const first = rows.filter((t) => t.balance != null)[0];
+  if (first) {
+    const d = (first.type === "credit" ? 1 : -1) * (Number(first.amount) || 0);
+    return { value: Number(first.balance) - d, from: "बैंक की statement से" };
+  }
+  const a = ACCOUNTS[acc] || {};
+  if (a.openingBalance != null) return { value: Number(a.openingBalance), from: "आपका भरा हुआ" };
+  return { value: null, from: null };
+}
+
+/** हर पंक्ति पर चलता हुआ बैलेंस — ओपनिंग से आगे बढ़ते हुए। */
+function pbFlow(acc) {
+  const open = pbOpening(acc);
+  let run = open.value;
+  return pbTxns(acc).map((t) => {
+    const d = (t.type === "credit" ? 1 : -1) * (Number(t.amount) || 0);
+    if (run != null) run += d;
+    // बैंक ने ख़ुद balance लिखा हो तो वही सच — बहाव उसी पर सध जाए
+    if (t.balance != null) run = Number(t.balance);
+    return { t, bal: run };
+  });
+}
+
+/** महीने-वार बाँटो, नया महीना ऊपर। */
+function pbMonths(acc) {
+  const m = {};
+  pbTxns(acc).forEach((t) => { m[String(t.date).slice(0, 7)] = 1; });
+  return Object.keys(m).sort().reverse();
+}
+
+const monthLabel = (ym) => {
+  const [y, mo] = String(ym).split("-");
+  const names = ["जन", "फ़र", "मार्च", "अप्रैल", "मई", "जून", "जुल", "अग", "सित", "अक्तू", "नव", "दिस"];
+  return (names[Number(mo) - 1] || mo) + " " + y;
+};
+
+function initPass() {
+  const accs = Object.keys(ACCOUNTS);
+  if (!accs.length) {
+    $("pbHead").innerHTML = gfx.empty("think", "अभी कोई खाता दर्ज नहीं",
+      "पहले 🏦 मिलान वाले पन्ने से खाता जोड़ दीजिए, फिर statement डालिए।");
+    $("pbDays").innerHTML = "";
+    return;
+  }
+  if (!PB_ACC || !ACCOUNTS[PB_ACC]) PB_ACC = accs[0];
+  $("pbAccount").innerHTML = accs.map((id) =>
+    `<option value="${esc(id)}"${id === PB_ACC ? " selected" : ""}>${esc(accLabel(id))}</option>`).join("");
+  const ms = pbMonths(PB_ACC);
+  if (!PB_MONTH || ms.indexOf(PB_MONTH) < 0) PB_MONTH = ms[0] || "";
+  $("pbMonth").innerHTML = `<option value="">पूरा हिसाब</option>` + ms.map((m) =>
+    `<option value="${esc(m)}"${m === PB_MONTH ? " selected" : ""}>${esc(monthLabel(m))}</option>`).join("");
+  renderPass();
+}
+
+function setPbAcc(v) { PB_ACC = v; PB_MONTH = ""; initPass(); }
+function setPbMonth(v) { PB_MONTH = v; renderPass(); }
+
+function renderPass() {
+  if (!PB_ACC) return;
+  const open = pbOpening(PB_ACC);
+  const flow = pbFlow(PB_ACC);
+  const shown = PB_MONTH ? flow.filter((r) => String(r.t.date).slice(0, 7) === PB_MONTH) : flow;
+  const inSum = shown.filter((r) => r.t.type === "credit").reduce((a, r) => a + (r.t.amount || 0), 0);
+  const outSum = shown.filter((r) => r.t.type === "debit").reduce((a, r) => a + (r.t.amount || 0), 0);
+  const last = flow.length ? flow[flow.length - 1].bal : open.value;
+  const startBal = shown.length ? (shown[0].bal != null
+    ? shown[0].bal - (shown[0].t.type === "credit" ? 1 : -1) * (shown[0].t.amount || 0) : null)
+    : open.value;
+
+  // ── ऊपर का सिरा: कहाँ से चला, कहाँ पहुँचा ────────────────────────
+  $("pbHead").innerHTML = `
+    <div class="pbBar">
+      <div class="pbSide open">
+        <span>${PB_MONTH ? "महीने की शुरुआत" : "ओपनिंग बैलेंस"}</span>
+        <b>${startBal == null ? "—" : INR(startBal)}</b>
+        ${!PB_MONTH && open.from ? `<small>${esc(open.from)}</small>` : ""}
+      </div>
+      <div class="pbArrow">→</div>
+      <div class="pbSide now">
+        <span>${PB_MONTH ? "महीने के अंत में" : "आज की हालत"}</span>
+        <b>${(shown.length ? shown[shown.length - 1].bal : last) == null ? "—"
+          : INR(shown.length ? shown[shown.length - 1].bal : last)}</b>
+        <small>${shown.length} entries</small>
+      </div>
+    </div>
+    <div class="pbFlow">
+      <div class="pbIn">🟢 आया<b>${INR(inSum)}</b>
+        <small>${shown.filter((r) => r.t.type === "credit").length} बार</small></div>
+      <div class="pbOut">गया 🔴<b>${INR(outSum)}</b>
+        <small>${shown.filter((r) => r.t.type === "debit").length} बार</small></div>
+    </div>
+    ${gfx.spark(flow.map((r) => r.bal).filter((x) => x != null).slice(-40),
+      last != null && last < 0 ? gfx.C.out : gfx.C.in, 40)}`;
+
+  // ── ओपनिंग बैलेंस न पता हो तो पूछ लो, एक बार ────────────────────
+  $("pbOpenAsk").innerHTML = open.value == null ? `
+    <div class="card">
+      <div class="toonBox tight">
+        <div class="toonArt">${gfx.toon("book2", 60)}</div>
+        <div class="toonSay"><b>ओपनिंग बैलेंस भर दीजिए</b>
+          <p>इस खाते की सबसे पुरानी statement से पहले जितना पैसा था — एक बार
+            भर दीजिए, फिर हर दिन का बैलेंस अपने-आप बनता जाएगा।</p></div>
+      </div>
+      <div class="uFill" style="margin-top:10px">
+        <input id="pbOpenBox" inputmode="decimal" placeholder="जैसे: 125000">
+        <button type="button" class="mini primary" onclick="savePbOpening()">✅ भर दें</button>
+      </div>
+    </div>` : "";
+
+  // ── दिन-दर-दिन, नया दिन ऊपर ─────────────────────────────────────
+  const byDay = {};
+  shown.forEach((r) => {
+    const d = String(r.t.date).slice(0, 10);
+    (byDay[d] = byDay[d] || []).push(r);
+  });
+  const days = Object.keys(byDay).sort().reverse();
+
+  $("pbDays").innerHTML = days.length ? days.map((d) => {
+    const rows = byDay[d];
+    const din = rows.filter((r) => r.t.type === "credit");
+    const dout = rows.filter((r) => r.t.type === "debit");
+    const dinSum = din.reduce((a, r) => a + (r.t.amount || 0), 0);
+    const doutSum = dout.reduce((a, r) => a + (r.t.amount || 0), 0);
+    const endBal = rows[rows.length - 1].bal;
+    return `
+    <div class="pbDay">
+      <div class="pbDayHead">
+        <b>${esc(dayLabel(d) || d)}</b>
+        <span>${endBal == null ? "" : "दिन के अंत में <b>" + INR(endBal) + "</b>"}</span>
+      </div>
+      <div class="pbCols">
+        <div class="pbCol in">
+          ${din.length ? din.map((r) => pbRow(r, "in")).join("")
+            : '<div class="pbNone">—</div>'}
+        </div>
+        <div class="pbCol out">
+          ${dout.length ? dout.map((r) => pbRow(r, "out")).join("")
+            : '<div class="pbNone">—</div>'}
+        </div>
+      </div>
+      <div class="pbDayFoot">
+        <span class="i">🟢 +${INR(dinSum)}</span>
+        <span class="o">🔴 −${INR(doutSum)}</span>
+      </div>
+    </div>`;
+  }).join("") : gfx.empty("book2", "इस महीने कुछ नहीं",
+      "दूसरा महीना चुनकर देखिए, या इस खाते की statement डाल दीजिए।",
+      `<button type="button" class="mini" onclick="goTab('recon')">🏦 statement डालें</button>`);
+}
+
+/** पासबुक की एक पंक्ति — आया हो या गया, बनावट एक ही। */
+function pbRow(r, dir) {
+  const t = r.t;
+  const tw = dir === "out" ? twinOf(t) : null;
+  const bill = tw || t.matchedReceiptId || t.billPhotoId;
+  return `
+  <div class="pbTxn ${dir}">
+    <div class="pbAmt">${dir === "in" ? "+" : "−"}${INR(t.amount)}</div>
+    <div class="pbWho">${esc(t.party || partyOf(t.narration || "") || "—")}</div>
+    <div class="pbSub">${t.time ? esc(t.time) + " · " : ""}${
+      txnUtr(t) ? "UTR " + esc(txnUtr(t)) : t.chequeNo ? "चेक " + esc(t.chequeNo) : ""}</div>
+    ${dir === "out" ? (bill
+      ? `<span class="badge ok2">${tw ? "🔗 " + esc(tw.exp.receiptId || "बिल लगा")
+          : "✅ बिल लगा"}</span>`
+      : `<button type="button" class="mini" onclick="openBillFor('${esc(t._id)}')">📎 बिल जोड़ें</button>`)
+      : ""}
+  </div>`;
+}
+
+async function savePbOpening() {
+  const v = Number(String($("pbOpenBox").value || "").replace(/[^\d.-]/g, ""));
+  if (!isFinite(v)) { toast("अंक ठीक नहीं लग रहा"); return; }
+  try {
+    await db.collection("vbe_accounts").doc(PB_ACC)
+      .set({ openingBalance: v }, { merge: true });
+    await auditLog("opening_balance", null, { accountId: PB_ACC, value: v });
+  } catch (e) { toast("सहेजा नहीं गया"); return; }
+  ACCOUNTS[PB_ACC] = Object.assign({}, ACCOUNTS[PB_ACC], { openingBalance: v });
+  saveCache();
+  toast("✅ ओपनिंग बैलेंस लग गया");
+  renderPass();
+}
+
+/* ══════════ 🚨 आज रोकने लायक दो चीज़ें ═══════════════════════════════
+   ये दोनों चिप्पियाँ तभी दिखती हैं जब सचमुच कुछ रुका हो। कुछ न हो तो
+   Overview पहले जैसा ही साफ़ रहता है — रोज़ एक लाल पट्टी देखने से आदमी
+   उसे देखना ही बंद कर देता है।                                       */
+
+function renderAlerts() {
+  const box = $("ovAlerts");
+  if (!box) return;
+  const dup = findDupes().filter((d) => d.sure).length;
+  const need = needUtr();
+  const needSum = need.reduce((a, e) => a + (Number(e.billTotal) || 0), 0);
+  if (!dup && !need.length) { box.innerHTML = ""; return; }
+
+  box.innerHTML = `<div class="alerts">
+    ${dup ? `<button type="button" class="alert bad" onclick="openDupes()">
+      <span class="aIco">🧹</span>
+      <span class="aTxt"><b>${dup} entry दो बार दर्ज है</b>
+        <small>एक ही UTR, दो पंक्तियाँ — एक टैप में जोड़ दीजिए</small></span>
+      <span class="aGo">›</span></button>` : ""}
+    ${need.length ? `<button type="button" class="alert warn" onclick="openNeedUtr()">
+      <span class="aIco">⏳</span>
+      <span class="aTxt"><b>${need.length} पेमेंट का UTR बाकी</b>
+        <small>कुल ${INR(needSum)} · UTR के बिना बैंक से नहीं जुड़ेगा</small></span>
+      <span class="aGo">›</span></button>` : ""}
+  </div>`;
+}
+
+/* ── ⏳ UTR चाहिए ──────────────────────────────────────────────────────
+   विक्रम जी की बात: «बिना UTR के केवल नकद ही सेव करना, बाक़ी एक साइड में
+   रख देना और मुझसे UTR माँगना।» बिल्कुल सही — और यही सबसे बड़ी सुरक्षा है,
+   क्योंकि सिर्फ़ रकम और तारीख़ से जोड़ना ही वह ग़लती है जो दोहरी entry
+   बनाती है।
+
+   नकद का UTR होता ही नहीं, और चेक का अपना नंबर उसका UTR है। बाक़ी सब
+   (UPI/NEFT/बैंक) बिना UTR के «रुका हुआ» माना जाता है।                */
+
+const CASHY = (e) => (e.payments || []).some((x) => x.mode === "cash") ||
+  /नकद|cash/i.test(String(e.paidVia || e.note || ""));
+
+function needUtr() {
+  return EXP.filter((e) => {
+    if (e.mergedInto) return false;
+    if (CASHY(e)) return false;                       // 💵 नकद — चाहिए ही नहीं
+    if (String(e.chequeNo || "").length >= 5) return false;   // 🧾 चेक नं. ही काफ़ी
+    return !expKeys(e).length;                        // कोई UTR/चेक नहीं मिला
+  }).sort((a, b) => (Number(b.billTotal) || 0) - (Number(a.billTotal) || 0));
+}
+
+function openNeedUtr() {
+  const rows = needUtr();
+  $("utrBody").innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("alert", 74)}</div>
+      <div class="toonSay"><b>${rows.length} पेमेंट अभी अधूरे हैं</b>
+        <p>UTR के बिना बैंक की statement से जुड़ाव नहीं होता — और वहीं से
+          एक ही पैसा दो बार दर्ज होने का ख़तरा बनता है। नकद और चेक इसमें
+          नहीं आते, उनका UTR होता ही नहीं।</p></div>
+    </div>
+    ${rows.length ? rows.slice(0, 60).map((e) => `
+      <div class="utrRow">
+        <div class="uAmt">${INR(e.billTotal)}</div>
+        <div class="uMx">
+          <b>${esc((e.vendor && e.vendor.name) || "—")}</b>
+          <small>${esc(e.receiptId || "")} ·
+            ${esc(dayLabel(String(e.billDate || e.submittedAt || "").slice(0, 10)) || "")}</small>
+          <div class="uFill">
+            <input inputmode="numeric" placeholder="UTR यहाँ भरें"
+              id="uf_${esc(e._id)}">
+            <button type="button" class="mini primary"
+              onclick="saveNeedUtr('${esc(e._id)}')">✅</button>
+          </div>
+          ${firstShot(e) ? gfx.photo(firstShot(e), "रसीद") : ""}
+        </div>
+      </div>`).join("")
+      : gfx.empty("party", "सब पक्के हैं", "किसी पेमेंट का UTR बाकी नहीं।")}`;
+  openSheet("utrSheet");
+}
+
+/** इस entry की पहली फोटो — देखकर UTR उतारने के लिए। */
+function firstShot(e) {
+  const p = (e.payments || []).filter((x) => x.photoUrl)[0];
+  return (p && p.photoUrl) || e.paymentPhotoDriveUrl || e.billPhotoDriveUrl || null;
+}
+
+async function saveNeedUtr(id) {
+  const el = $("uf_" + id);
+  const u = utrKey(el && el.value);
+  if (!u) { toast("UTR ठीक नहीं लग रहा"); return; }
+  const e = EXP.filter((x) => x._id === id)[0];
+  if (!e) return;
+
+  // वही UTR पहले से किसी और entry पर हो — तो यह दोहरी entry है, नई नहीं
+  rebuildKeyIndex();
+  const clash = EXP_BY_KEY[u];
+  if (clash && clash._id !== id) {
+    toast("⚠️ यह UTR " + (clash.receiptId || "एक और entry") + " पर पहले से है");
+    return;
+  }
+
+  const pays = (e.payments || []).slice();
+  const i = pays.findIndex((x) => !utrKey(x.utr));
+  const row = Object.assign({ id: newPayId(), mode: "bank", amount: e.billTotal || null,
+    paidAt: String(e.billDate || todayISO()).slice(0, 10) }, i >= 0 ? pays[i] : {}, { utr: u });
+  if (i >= 0) pays[i] = row; else pays.push(row);
+  try {
+    await db.collection("vbe_expenses").doc(id).update({ payments: pays, needsUtr: false });
+    await auditLog("utr_filled", null, { receiptId: e.receiptId, utr: u });
+  } catch (err) { toast("सहेजा नहीं गया"); return; }
+  e.payments = pays; e.needsUtr = false;
+  saveCache();
+
+  /* 🔗 UTR लगते ही जुड़ाव भी यहीं कर दो।
+     वरना अगली स्क्रीन पर यही entry «दोहरी» बनकर दिखती — जबकि विक्रम जी ने
+     अभी-अभी उसे पूरा किया है। जो अपने-आप हो सकता है, वह पूछा न जाए।     */
+  rebuildKeyIndex();
+  const t = BANKTXNS.filter((x) => !x.mergedInto && txnUtr(x) === u)[0];
+  let joined = false;
+  if (t) joined = await mergeDupe(t._id, id);
+
+  toast(joined ? "✅ UTR लगा — बैंक की entry से भी जुड़ गया" : "✅ UTR लग गया");
+  openNeedUtr();
+  renderAlerts();
+  if (joined) refreshAll();
+}
+
+/* ── 🧹 दोहरी entry ─────────────────────────────────────────────────── */
+
+function openDupes() {
+  const rows = findDupes();
+  const sure = rows.filter((d) => d.sure);
+  $("dupeBody").innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("sweep", 74)}</div>
+      <div class="toonSay"><b>${sure.length} entry पक्के तौर पर दो बार है</b>
+        <p>एक ही UTR या चेक नंबर दो जगह मिला — यानी वह एक ही पैसा है।
+          जोड़ने पर कुछ मिटेगा नहीं: बैंक वाली पंक्ति बस बिल की तरफ़ इशारा
+          करने लगेगी।</p></div>
+    </div>
+    ${sure.length ? `<button type="button" class="primary" style="width:100%;margin-bottom:12px"
+      onclick="mergeAllDupes(this)">🧹 सब ${sure.length} जोड़ दीजिए</button>` : ""}
+    ${rows.length ? rows.slice(0, 40).map((d) => `
+      <div class="dupe${d.sure ? " sure" : ""}">
+        <div class="dHead">
+          <b>${INR(d.amount)}</b>
+          <span class="badge ${d.sure ? "ok2" : "warn2"}">${d.sure ? "✅ पक्का" : "⚠️ शक"} · ${esc(d.by)}</span>
+        </div>
+        <div class="dSide">🧾 ${esc(d.exp.receiptId || "बिल")} ·
+          ${esc((d.exp.vendor && d.exp.vendor.name) || "—")}</div>
+        <div class="dSide">🏦 ${esc(d.date)} · ${esc(accLabel(d.txn.accountId))}
+          <br><span class="muted">${esc(String(d.txn.narration || "").slice(0, 64))}</span></div>
+        <button type="button" class="mini primary"
+          onclick="mergeOne('${esc(d.txn._id)}','${esc(d.exp._id)}',this)">🔗 एक कर दें</button>
+      </div>`).join("")
+      : gfx.empty("party", "कोई दोहरी entry नहीं",
+          "हर पैसा एक ही बार दर्ज है। हिसाब साफ़ है।")}`;
+  openSheet("dupeSheet");
+}
+
+async function mergeOne(txnId, expId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "…"; }
+  const ok = await mergeDupe(txnId, expId);
+  if (!ok) { if (btn) { btn.disabled = false; btn.textContent = "🔗 एक कर दें"; } return; }
+  toast("🔗 एक कर दिया");
+  openDupes();
+  refreshAll();
+}
+
+async function mergeAllDupes(btn) {
+  const rows = findDupes().filter((d) => d.sure);
+  if (btn) { btn.disabled = true; }
+  let n = 0;
+  for (const d of rows) {
+    if (btn) btn.innerHTML = `<span class="thinking"></span> ${n + 1} / ${rows.length}`;
+    if (await mergeDupe(d.txn._id, d.exp._id)) n++;
+  }
+  toast("🧹 " + n + " entry एक कर दीं");
+  openDupes();
+  refreshAll();
+}
+
 /* ══════════ 📜 हिसाब — हर पैसा, समय के हिसाब से ══════════ */
 
 function ledgerRows() {
@@ -5898,6 +6690,9 @@ function ledgerRows() {
   const sq = parseQuery($("lSearch").value);
 
   return BANKTXNS.filter((t) => {
+    // 🔑 जो पंक्ति अपने बिल में समा चुकी है, वह यहाँ दुबारा नहीं दिखेगी —
+    //    एक UTR = एक पैसा, हर सूची में
+    if (t.mergedInto) return false;
     if (acc && t.accountId !== acc) return false;
     if (type && t.type !== type) return false;
     // तारीख़ से खोजा है तो ऊपर की अवधि आड़े न आए — माँगा हुआ दिन ही दिखे
@@ -5945,7 +6740,8 @@ function renderLedger() {
 
   $("ledgerRows").innerHTML = rows.length ? rows.slice(0, 300).map((t) => {
     const paid = t.type === "debit";
-    const hasBill = t.matchedReceiptId || t.billPhotoId;
+    const tw = twinOf(t);
+    const hasBill = tw || t.matchedReceiptId || t.billPhotoId;
     return `
     <div class="mrow txn ${paid ? "out" : "in"}">
       <div class="amt ${paid ? "out" : "in"}">${paid ? "−" : "+"}${INR(t.amount)}</div>
@@ -6170,6 +6966,7 @@ function renderPair() {
 }
 
 function buildParties() {
+  rebuildKeyIndex();          // 🔑 पहले कुंजियाँ, फिर सूची
   const map = {};
   // जिन नामों को विक्रम जी «एक ही» कह चुके हैं, उन्हें एक ही खाते में रखो।
   // नाम मिटता नहीं — सबसे लंबा नाम आगे दिखता है, बाक़ी उसी के नीचे।
@@ -6223,17 +7020,31 @@ function buildParties() {
         ref: t.utr ? "UTR " + t.utr : "", status: "आया", narration: t.narration });
       return;
     }
-    // A matched debit is the same money as its bill — count it once.
-    const dup = t.matchedReceiptId &&
-      p.rows.some((r) => r.kind === "bill" && r.ref === t.matchedReceiptId);
-    if (!dup) {
-      p.total += t.amount || 0; p.count++;
-      if (t.accountId) p.accounts[t.accountId] = (p.accounts[t.accountId] || 0) + (t.amount || 0);
+    /* 🔑 यही वह जगह है जहाँ दोहरी entry बनती थी।
+
+       पहले: जोड़ एक बार होता था, पर पंक्ति दोनों बार दिखती थी — और मिलान
+       सिर्फ़ बिल नंबर से होता था। अब मिलान UTR से होता है (narration के
+       अंदर छिपे UTR से भी), और जुड़ी हुई पंक्ति अलग से दिखती ही नहीं —
+       वह बिल की अपनी पंक्ति में समा जाती है।                          */
+    const tw = twinOf(t);
+    if (tw) {
+      const row = p.rows.filter((r) => r.kind === "bill" && r.id === tw.exp._id)[0];
+      if (row) {
+        row.bank = true;                       // 🔗 बैंक से भी पक्का
+        row.by = tw.by;
+        row.narration = row.narration || t.narration;
+        row.utr = row.utr || txnUtr(t);
+        if (!row.account) row.account = t.accountId;
+        if (String(t.date) > p.last) p.last = String(t.date);
+        return;                                // दूसरी पंक्ति बनेगी ही नहीं
+      }
     }
+    p.total += t.amount || 0; p.count++;
+    if (t.accountId) p.accounts[t.accountId] = (p.accounts[t.accountId] || 0) + (t.amount || 0);
     if (String(t.date) > p.last) p.last = String(t.date);
     p.rows.push({ kind: "bank", dir: "out", date: t.date, amount: t.amount,
       account: t.accountId, time: t.time || null, app: t.app || null,
-      ref: t.matchedReceiptId || (t.utr ? "UTR " + t.utr : ""),
+      ref: t.matchedReceiptId || (txnUtr(t) ? "UTR " + txnUtr(t) : ""),
       status: t.matched ? "मिला" : "बिल नहीं", narration: t.narration });
   });
 
@@ -6350,8 +7161,11 @@ function showParty(key) {
         <div class="amt ${r.dir === "in" ? "in" : "out"}">${r.dir === "in" ? "+" : "−"}${INR(r.amount)}</div>
         <div class="mx">
           <b>${esc(dayLabel(String(r.date || "").slice(0, 10)) || "—")}</b>${r.time ? " · " + esc(r.time) : ""}
-          · ${r.kind === "bill" ? "🧾 बिल" : r.dir === "in" ? "🟢 आया" : "🏦 बैंक"}
+          · ${r.kind === "bill" ? (r.bank ? "🔗 बिल + बैंक" : "🧾 बिल")
+              : r.dir === "in" ? "🟢 आया" : "🏦 बैंक"}
           ${r.ref ? " · " + esc(r.ref) : ""}
+          ${r.bank ? `<br><span class="badge ok2">🔗 बैंक से मिला हुआ${
+            r.by ? " (" + esc(r.by) + ")" : ""}${r.utr ? " · " + esc(r.utr) : ""}</span>` : ""}
           <br><span class="muted">${esc(accLabel(r.account))}${r.unit ? " · " + esc(r.unit) : ""}
             ${r.status ? " · " + esc(r.status) : ""}</span>
           ${r.narration ? '<br><span class="muted">' + esc(String(r.narration).slice(0, 70)) + "</span>" : ""}
@@ -7735,12 +8549,19 @@ const gfx = {
     seek:  { brow: "M36 37 q4-4 8-1 M52 39 q4-2 8 2", eye: "wide",
              mouth: "M43 61 q5 3 10 0",  prop: "lens"  },   // 🔍 कुछ न मिले तब
     card:  { brow: "M36 40 q4-3 8-1 M52 39 q4-2 8 1", eye: "open",
-             mouth: "M41 60 q7 5 14 0",  prop: "vcard" }    // 💳 कार्ड पढ़ते वक़्त
+             mouth: "M41 60 q7 5 14 0",  prop: "vcard" },   // 💳 कार्ड पढ़ते वक़्त
+
+    // v15 के दो नए रूप
+    sweep: { brow: "M36 37 q4-4 8-1 M52 38 q4-3 8 1", eye: "open",
+             mouth: "M42 61 q6 3 12 0",  prop: "broom" },   // 🧹 सफ़ाई करते
+    book2: { brow: "M36 40 q4-3 8-1 M52 39 q4-2 8 1", eye: "happy",
+             mouth: "M41 60 q7 6 14 0",  prop: "pass"  }    // 🏦 पासबुक खोले
   },
 
   /**
    * @param {string} mood hello · think · alert · party · sleep · money ·
-   *   wave (👋 नमस्ते) · seek (🔍 खोजते) · card (💳 कार्ड पकड़े)
+   *   wave (👋 नमस्ते) · seek (🔍 खोजते) · card (💳 कार्ड पकड़े) ·
+   *   sweep (🧹 सफ़ाई) · book2 (🏦 पासबुक खोले)
    * @param {number} size px (48–140 के बीच सबसे अच्छा लगता है)
    */
   toon(mood, size) {
@@ -7829,6 +8650,33 @@ const gfx = {
         <circle cx="36" cy="85" r="4" fill="#d0c6b2"/>
         <path d="M43 82 h19 M43 86 h15 M43 90 h11" stroke="#b6ab95"
           stroke-width="1.6" stroke-linecap="round"/></g>`,
+      // 🧹 झाड़ू — दोहरी entry की सफ़ाई
+      broom: `<g>
+        <ellipse cx="28" cy="79" rx="5.5" ry="4.5" fill="#e0aa7d"/>
+        <path d="M70 92 q10-8 9-22" stroke="#e6e0d0" stroke-width="7"
+          fill="none" stroke-linecap="round"/>
+        <ellipse cx="79" cy="68" rx="6.5" ry="6" fill="#e0aa7d"/>
+        <path d="M79 66 L83 32" stroke="#a9762f" stroke-width="3.4" stroke-linecap="round"/>
+        <path d="M77 34 q6-5 12-1 l-3 12 q-6 3-12-1z" fill="#d8a441"/>
+        <path d="M79 36 v10 M83 35 v11 M87 36 v10" stroke="#b07f22"
+          stroke-width="1.2" stroke-linecap="round"/>
+        <g fill="#8ab4e8" opacity=".7"><circle cx="20" cy="42" r="1.8"/>
+          <circle cx="14" cy="52" r="1.4"/><circle cx="24" cy="33" r="1.3"/></g></g>`,
+      // 🏦 पासबुक — दोनों हाथों में खुली हुई, हरा और लाल पन्ना
+      pass: `<g>
+        <ellipse cx="27" cy="80" rx="5.5" ry="4.5" fill="#e0aa7d"/>
+        <ellipse cx="69" cy="80" rx="5.5" ry="4.5" fill="#e0aa7d"/>
+        <path d="M29 74 h17 v18 h-17 z" fill="#125c2f"/>
+        <path d="M50 74 h17 v18 h-17 z" fill="#7d2020"/>
+        <path d="M46 73 q1 1.5 0 3 v18 q1-1.5 2-1.5 v-18 q-1 0-2-1.5z" fill="#f0ece2"/>
+        <path d="M32 79 h9 M32 83 h7 M32 87 h8" stroke="#8ce0a8"
+          stroke-width="1.3" stroke-linecap="round" opacity=".85"/>
+        <path d="M53 79 h9 M53 83 h6 M53 87 h8" stroke="#ffb0b0"
+          stroke-width="1.3" stroke-linecap="round" opacity=".85"/>
+        <path d="M35 70 l3-4 3 4" stroke="#0ca30c" stroke-width="2"
+          fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M56 66 l3 4 3-4" stroke="#d03b3b" stroke-width="2"
+          fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>`,
       // 💤 सो रहे हैं
       zzz: `<g fill="#8ab4e8" opacity=".9" font-family="system-ui"
           font-weight="700" text-anchor="middle">
@@ -8254,7 +9102,7 @@ const FAST_PROMPT =
   'phone. First decide WHICH KIND of photo it is, then extract that kind\'s ' +
   'fields. Photos of phone screens have glare, tilt and moiré — read through them.\n' +
   'Return STRICT JSON only:\n' +
-  '{"kind":"payment"|"cheque"|"request"|"bill"|"qr"|"other",\n' +
+  '{"kind":"payment"|"cheque"|"request"|"slip"|"bill"|"qr"|"other",\n' +
   ' "amount":number|null,"date":"YYYY-MM-DD"|null,"time":"HH:MM"|null,\n' +
   ' "utr":string|null,"appTxnId":string|null,"app":string|null,\n' +
   ' "fromBank":string|null,"fromLast4":string|null,"fromName":string|null,\n' +
@@ -8262,6 +9110,8 @@ const FAST_PROMPT =
   ' "askedBy":string|null,"askedPhone":string|null,"askedNote":string|null,\n' +
   ' "askedByAvatar":string|null,\n' +
   ' "chequeNo":string|null,"bank":string|null,"payeeName":string|null,\n' +
+  ' "fromAccountNo":string|null,"toAccountNo":string|null,"ifsc":string|null,\n' +
+  ' "groupName":string|null,\n' +
   ' "vendor":string|null,"invoiceNo":string|null,\n' +
   ' "items":[{"name":string,"qty":number|null,"unit":string|null,' +
   '"rate":number|null,"amount":number|null}],\n' +
@@ -8270,8 +9120,11 @@ const FAST_PROMPT =
   '- "payment": a UPI/bank receipt — Google Pay, PhonePe, Paytm, BHIM. Shows ' +
   '"Completed"/"Paid", a UPI transaction ID, and a bank name.\n' +
   '- "request": a WhatsApp/SMS CHAT screenshot where someone ASKED for money. ' +
-  'Shows a contact name at the top, chat bubbles, and usually a bare number ' +
-  'like "1300" plus a QR photo. This is NOT proof of payment.\n' +
+  'Shows chat bubbles and usually a bare number like "1300", a QR photo, or ' +
+  'forwarded bank details. This is NOT proof of payment.\n' +
+  '- "slip": a BANK COUNTER FORM filled in by hand — "Application for ' +
+  'RTGS/NEFT Remittance", a deposit slip, or a pay-in slip. It has printed ' +
+  'field labels with handwriting in the blanks.\n' +
   '- "cheque": a photo of a BANK CHEQUE leaf — has "PAY", "RUPEES", a bank ' +
   'name, an account number, and a printed MICR strip along the bottom.\n' +
   '- "bill": a shop bill / invoice / kaccha parcha on paper.\n' +
@@ -8284,8 +9137,23 @@ const FAST_PROMPT =
   '- utr: ONLY from a payment receipt — the "UPI transaction ID"/UTR/RRN, ' +
   'usually 12 digits. Never guess it; null if not printed.\n' +
   '- appTxnId: the app\'s own id ("Google transaction ID") — NOT the UTR.\n' +
-  '- askedBy: for a chat, the contact name written at the very top of the ' +
-  'screen, copied exactly as shown.\n' +
+  '- askedBy: WHO ASKED for the money. Read this very carefully, it is the ' +
+  'most important field on a chat screenshot:\n' +
+  '  * ONE-TO-ONE chat (the header shows one person, and the bubbles on the ' +
+  'left have NO name above them): askedBy = the name in the header.\n' +
+  '  * GROUP chat (the header shows a group name with a member list under it ' +
+  'like "Dinesh, JJ, 2314…", and each incoming bubble carries a small ' +
+  'COLOURED NAME above its text): askedBy = that COLOURED SENDER NAME above ' +
+  'the bubble that names the amount — NOT the group name in the header. ' +
+  'Example: header "आज की सम्पू…", bubble labelled "Swroop Ji Amul Marwar ' +
+  'Rasoi Ok" with "420" under it → askedBy = "Swroop Ji Amul Marwar Rasoi ' +
+  'Ok". Copy it exactly, including any trailing words.\n' +
+  '  * If several people wrote, pick the one whose message carries the ' +
+  'amount or the payment instruction.\n' +
+  '  * Messages on the RIGHT (green, sent by the owner himself) are never ' +
+  'the asker.\n' +
+  '- groupName: if it IS a group chat, the group name from the header. null ' +
+  'for a one-to-one chat.\n' +
   '- askedNote: any short instruction in the chat, e.g. "जल्दी करना".\n' +
   '- toVpa: the UPI id (…@ybl, …@okicici). On a QR standee it is printed ' +
   'under the code as "UPI ID". Copy it exactly, lowercase.\n' +
@@ -8300,12 +9168,28 @@ const FAST_PROMPT =
   'above "Please sign above".\n' +
   '- askedPhone: a 10-digit Indian mobile number visible in a chat header or ' +
   'printed on a bill. Digits only, no +91.\n' +
-  '- askedByAvatar: for a chat, describe the small ROUND PROFILE PICTURE at ' +
-  'the top of the screen in 3-6 plain words, e.g. "नीली टी-शर्ट में छोटा ' +
+  '- askedByAvatar: for a chat, describe the small ROUND PROFILE PICTURE of ' +
+  'the ASKER (in a group that is the little circle next to their bubble; in ' +
+  'a one-to-one chat it is the one in the header) in 3-6 plain words, e.g. "नीली टी-शर्ट में छोटा ' +
   'बच्चा" or "सफ़ेद कुर्ते में मूँछों वाला आदमी" or "दुकान का बोर्ड". This ' +
   'is only a description of what the picture shows — do NOT try to identify ' +
   'who the person is. null if there is no picture or it is the default grey ' +
   'silhouette.\n' +
+  '- fromAccountNo: the account the money LEAVES. On a cheque it is the ' +
+  '"A/c No." printed on the leaf (e.g. "43362997445"). On a bank remittance ' +
+  'slip it is the handwritten number after "By debiting my/our account No.". ' +
+  'Digits only. This is how the app knows which of the owner\'s own accounts ' +
+  'was used — never leave it null if a number is visible.\n' +
+  '- toAccountNo: the account the money GOES TO. On a remittance slip it is ' +
+  'the "Beneficiary Account Number" (also re-written in boxes below it — use ' +
+  'both to check each other). In a chat it is the account number someone ' +
+  'sent, e.g. "A/c no. - 0326104000157940". Digits only.\n' +
+  '- ifsc: the 11-character IFSC code if written (e.g. "IBKL0000326", ' +
+  '"SBIN0004678"). Uppercase.\n' +
+  '- For a "slip": amount = the "Remittance Amount (in figures)", NOT the ' +
+  'total-including-charges; payeeName/toName = "Name of Beneficiary"; ' +
+  'chequeNo = the "using Cheque No." if written; bank = "Beneficiary Bank & ' +
+  'Branch"; date = the date at the top right.\n' +
   '- items: for a bill; [] otherwise.\n' +
   '- summary: ONE short Hindi line.\n' +
   'null for anything you cannot actually read. Return only the JSON object.';
@@ -8848,35 +9732,69 @@ async function runOneJob(job) {
 }
 
 /** सब फोटो मिलाकर एक entry — जिससे जो मिले, वही लो। */
+/**
+ * कई फोटो → एक entry।
+ *
+ * v15 में यहाँ वही «दिमाग़» जोड़ा गया जो एक आदमी लगाता: काग़ज़ों को आपस में
+ * मिलाकर देखना। WhatsApp पर संतोष जी ने जो खाता नंबर भेजा और NEFT की पर्ची
+ * पर जो beneficiary खाता लिखा है — वे एक ही हैं। इससे पक्का हो जाता है कि
+ * पैसा किसे गया और किसके कहने पर।
+ */
 function mergeShots(shots) {
   const get = (kind) => shots.map((x) => x.r).filter((r) => r && r.kind === kind);
   const pay = get("payment")[0] || null;
   const chq = get("cheque")[0] || null;
   const req = get("request")[0] || null;
+  const slip = get("slip")[0] || null;
   const bill = get("bill")[0] || null;
   const qr = get("qr")[0] || null;
 
+  const digits = (v) => String(v || "").replace(/\D/g, "");
+
   const party = (pay && pay.toName) || (chq && chq.payeeName) ||
+                (slip && (slip.payeeName || slip.toName)) ||
                 (bill && bill.vendor) || (req && req.askedBy) || null;
   const amount = (pay && pay.amount) != null ? pay.amount
     : (chq && chq.amount) != null ? chq.amount
+    : (slip && slip.amount) != null ? slip.amount
     : (bill && bill.amount) != null ? bill.amount
     : (req && req.amount) != null ? req.amount : null;
   const vpa = (pay && pay.toVpa) || (qr && qr.toVpa) || null;
   const vpaMatch = !!(pay && pay.toVpa && qr && qr.toVpa &&
     String(pay.toVpa).toLowerCase() === String(qr.toVpa).toLowerCase());
 
+  /* 🔗 खाता नंबर से काग़ज़ आपस में जुड़ते हैं।
+     चैट में लिखा beneficiary खाता == पर्ची पर लिखा beneficiary खाता
+     → यानी यह वही पेमेंट है, उसी आदमी के कहने पर।                     */
+  const toNos = [slip && slip.toAccountNo, req && req.toAccountNo, pay && pay.toAccountNo]
+    .map(digits).filter((x) => x.length >= 6);
+  const acctMatch = toNos.length > 1 &&
+    toNos.every((x) => x.slice(-8) === toNos[0].slice(-8));
+  const toAccountNo = toNos[0] || null;
+
+  // 🏦 अपना कौन-सा खाता — चेक/पर्ची पर छपा नंबर सबसे ऊपर
+  const fromNo = digits((chq && chq.fromAccountNo) || (slip && slip.fromAccountNo) ||
+    (pay && pay.fromAccountNo));
+  const firm = (chq && chq.fromName) || (slip && slip.fromName) || null;
+  const accountId = matchAccount(
+    (pay && pay.fromBank) || (chq && chq.bank) || "",
+    (pay && pay.fromLast4) || "", fromNo, firm);
+
   return {
-    party, amount, vpa, vpaMatch, pay, req, bill, qr, chq,
-    mode: chq && !pay ? "cheque" : "bank",
-    chequeNo: (chq && String(chq.chequeNo || "").replace(/\D/g, "")) || null,
+    party, amount, vpa, vpaMatch, pay, req, bill, qr, chq, slip,
+    mode: (chq || slip) && !pay ? (chq ? "cheque" : "bank") : "bank",
+    chequeNo: digits((chq && chq.chequeNo) || (slip && slip.chequeNo)) || null,
     phone: (req && req.askedPhone) || (bill && bill.askedPhone) || null,
     avatar: (req && req.askedByAvatar) || null,
-    date: (pay && pay.date) || (chq && chq.date) ||
+    group: (req && req.groupName) || null,
+    fromAccountNo: fromNo || null,
+    toAccountNo, ifsc: (slip && slip.ifsc) || (req && req.ifsc) || null,
+    acctMatch,
+    date: (pay && pay.date) || (chq && chq.date) || (slip && slip.date) ||
           (bill && bill.date) || (req && req.date) || todayISO(),
     time: (pay && pay.time) || (req && req.time) || null,
     utr: (pay && pay.utr) || null,
-    accountId: pay ? matchAccount(pay.fromBank, pay.fromLast4) : "",
+    accountId,
     items: (bill && bill.items) || []
   };
 }
@@ -8919,6 +9837,12 @@ async function saveFastRecord(m, job) {
     requestedAt: (m.req && m.req.time) || null,
     requestedNote: (m.req && m.req.askedNote) || null,
     requestedAvatar: m.avatar || null,
+    requestedGroup: m.group || null,          // 👥 किस ग्रुप में कहा गया
+    // 🔗 काग़ज़ों के खाता नंबर — आगे statement से जुड़ाव इन्हीं पर टिकेगा
+    fromAccountNo: m.fromAccountNo || null,
+    toAccountNo: m.toAccountNo || null,
+    beneficiaryIfsc: m.ifsc || null,
+    accountsAgree: !!m.acctMatch,
     // 🖼️ नंबर न मिला हो तो हुलिये से सुझाव — जोड़ता नहीं, सिर्फ़ सुझाता है
     avatarGuessPhone: (() => {
       const g = avatarGuess(m.avatar, m.phone);
@@ -8964,6 +9888,8 @@ async function saveFastRecord(m, job) {
 
 /* क़तार को धक्का — app खुलते ही, और हर मिनट एक नज़र (कोई काम बाकी हो तभी) */
 addEventListener("load", () => {
+  if ($("pbAccount")) $("pbAccount").addEventListener("change", (e) => setPbAcc(e.target.value));
+  if ($("pbMonth")) $("pbMonth").addEventListener("change", (e) => setPbMonth(e.target.value));
   wireAllPhones();          // 👤 «यह नंबर किसका है» — शुरू से ही
   loadJobs(); renderFab();
   setTimeout(runJobs, 2500);
@@ -9276,14 +10202,30 @@ function utrCandidate(t) {
   const day = String(t.date || "").slice(0, 10);
   let best = null;
 
+  /* 🔑 सबसे पहले UTR — narration के अंदर छिपा हुआ भी।
+     यही वह जगह है जहाँ मदनलाल धनाराम वाली दोहरी entry बनी थी: बिल पर UTR
+     657085241092 पड़ा था और बैंक की पंक्ति के narration में भी वही, पर
+     मिलान सिर्फ़ रकम-और-तारीख़ से हो रहा था। अब UTR पहले देखा जाता है और
+     मिलते ही बात ख़त्म — कोई अंदाज़ा नहीं।                               */
+  const u = txnUtr(t);
+  if (u) {
+    rebuildKeyIndex();
+    const byUtr = EXP_BY_KEY[u];
+    if (byUtr) return { exp: byUtr, sure: true, why: "UTR " + u, rank: 1000 };
+  }
+
   // 🧾 चेक नंबर दोनों तरफ़ हूबहू एक ही छपता है — इससे पक्का जोड़ कोई नहीं
   const cn = String(t.chequeNo || "").replace(/\D/g, "");
   if (cn) {
-    const byChq = pendingUtr().filter((e) =>
+    const byChq = EXP.filter((e) =>
       String(e.chequeNo || "").replace(/\D/g, "") === cn)[0];
     if (byChq) return { exp: byChq, sure: true, why: "चेक नं. " + cn, rank: 999 };
   }
 
+  /* ⚠️ यहाँ से नीचे सिर्फ़ **अंदाज़ा** है — रकम और तारीख़ का मेल।
+     विक्रम जी की साफ़ हिदायत: «बिना UTR के केवल नकद ही सेव करना, बाक़ी एक
+     साइड में रख देना।» इसलिए यह अंदाज़ा कभी अपने-आप नहीं जुड़ता — sure कभी
+     true नहीं होता, और वे ख़ुद देखकर हाँ कहते हैं।                        */
   pendingUtr().forEach((e) => {
     const s = paySummary(e);
     if (Math.abs((s.paid || e.billTotal || 0) - (t.amount || 0)) > 1) return;
@@ -9293,8 +10235,10 @@ function utrCandidate(t) {
     const pay = (e.payments || [])[0] || {};
     const gm = timeGap(pay.time, t.time);
     const sameName = sameParty(e.vendor && e.vendor.name, t.party);
-    // पक्का: वही दिन, और या तो समय 30 मिनट के अंदर या नाम भी वही
-    const sure = gapDays < 1 && ((gm != null && gm <= 30) || sameName);
+    // 🔒 «पक्का» सिर्फ़ UTR या चेक नंबर से होता है (ऊपर)। रकम-तारीख़ का मेल
+    //    चाहे कितना भी अच्छा लगे, वह अपने-आप नहीं जुड़ेगा — यही दोहरी entry
+    //    की जड़ थी। यहाँ हमेशा पूछा जाएगा।
+    const sure = false;
     const why = (gm != null && gm <= 30) ? `समय ${gm} मिनट के अंदर`
       : sameName ? "नाम भी वही"
       : gapDays < 1 ? "उसी दिन, रकम भी वही"
@@ -9401,7 +10345,45 @@ function renderAsk() {
 }
 
 /** रसीद पर लिखा बैंक हमारे किस खाते का है — आख़िरी 4 अंक से पहचानो। */
-function matchAccount(bank, last4) {
+/**
+ * पूरा खाता नंबर मिल जाए तो कोई अंदाज़ा लगाने की ज़रूरत ही नहीं।
+ *
+ * ⚠️ यह v15 में इसलिए जोड़ा गया कि चेक पर खाता नंबर **छपा हुआ** होने के
+ *    बावजूद app «खाता नहीं पता» लिख रहा था। नंबर सामने हो तो पूछना
+ *    मूर्खता है।
+ *
+ * मिलान तीन तरह से: पूरा नंबर → आख़िरी 6 अंक → आख़िरी 4 अंक। बीच के अंक
+ * हाथ की लिखाई में अक्सर ग़लत पढ़े जाते हैं, पर आख़िरी अंक साफ़ होते हैं।
+ */
+function accountByNumber(no) {
+  const d = String(no || "").replace(/\D/g, "");
+  if (d.length < 4) return "";
+  const ids = Object.keys(ACCOUNTS);
+  const num = (id) => String((ACCOUNTS[id] || {}).accountNumber || "").replace(/\D/g, "");
+  let hit = ids.filter((id) => num(id) && num(id) === d)[0];
+  if (hit) return hit;
+  if (d.length >= 6) {
+    hit = ids.filter((id) => num(id).length >= 6 && num(id).slice(-6) === d.slice(-6))[0];
+    if (hit) return hit;
+  }
+  return ids.filter((id) => num(id).length >= 4 && num(id).slice(-4) === d.slice(-4))[0] || "";
+}
+
+/** फर्म के नाम से — चेक पर फर्म का नाम छपा होता है। */
+function accountByFirm(name) {
+  const k = pKey(name);
+  if (k.length < 4) return "";
+  return Object.keys(ACCOUNTS).filter((id) => {
+    const a = ACCOUNTS[id] || {};
+    const hay = pKey([a.label, a.firm, a.holder].filter(Boolean).join(" "));
+    return hay && (hay.includes(k) || k.includes(hay));
+  })[0] || "";
+}
+
+function matchAccount(bank, last4, accountNo, firm) {
+  // पूरा नंबर सबसे भरोसेमंद — पहले वही
+  const byNo = accountByNumber(accountNo);
+  if (byNo) return byNo;
   const l4 = String(last4 || "").replace(/\D/g, "").slice(-4);
   const ids = Object.keys(ACCOUNTS);
   if (l4) {
@@ -9412,6 +10394,8 @@ function matchAccount(bank, last4) {
     })[0];
     if (byNum) return byNum;
   }
+  const byFirm = accountByFirm(firm);
+  if (byFirm) return byFirm;
   const b = pKey(bank);
   if (!b) return "";
   return ids.filter((id) => {
