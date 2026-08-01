@@ -278,6 +278,24 @@
   .toonBox.tight { padding: 10px 11px; gap: 10px; }
   .toonBox.tight .toonSay p { font-size: 12px; }
 
+  /* 🗺️ खाते का नक़्शा */
+  .accMap { margin-bottom: 12px; }
+  .amRow { border: 1px solid var(--border); border-radius: 13px; padding: 10px 11px;
+    margin-top: 9px; background: var(--surface-2); }
+  .amRow.ok { border-color: rgba(12,163,12,.4);
+    background: linear-gradient(100deg, rgba(12,163,12,.10), transparent 70%); }
+  .amRow.ask { border-color: rgba(201,133,0,.55);
+    background: linear-gradient(100deg, rgba(201,133,0,.13), transparent 70%); }
+  .toonSay .hot { color: #ffc46b; font-weight: 800; }
+  .amHead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .amHead > div { flex: 1; min-width: 0; }
+  .amHead b { display: block; font-size: 13px; }
+  .amHead small { display: block; font-size: 11px; color: var(--muted); }
+  .amTick { font-size: 16px; flex: 0 0 auto; }
+  .amRow select { width: 100%; font: inherit; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 10px; }
+
   /* 📊 statement का सार */
   .stSum { margin-top: 12px; padding: 12px; border-radius: 15px;
     border: 1px solid var(--border); background: var(--surface-2); }
@@ -1407,9 +1425,9 @@
       <div class="card tilt" id="dropZone">
         <div class="drop">
           <div class="dicon">🏦</div>
-          <h3>बैंक / PhonePe की statement यहाँ डालें</h3>
+          <h3>बैंक · GPay · Paytm · PhonePe — statement यहाँ डालें</h3>
           <p class="muted">PDF या CSV — यहीं आपके फ़ोन में पढ़ी जाएगी, कहीं नहीं जाती।<br>
-            <b>PhonePe की statement</b> से पार्टी का नाम, समय, UTR और Transaction ID —
+            <b>Google Pay · Paytm · PhonePe</b> की statement से पार्टी का नाम, समय, UTR और Transaction ID —
             सब अपने-आप जुड़ जाएगा।<br>
             जो entry पहले से है वह मिटेगी नहीं, सिर्फ़ छूटी जानकारी भरेगी।</p>
           <div class="frow" style="max-width:420px;margin:14px auto 0">
@@ -1453,12 +1471,13 @@
       </div>
 
       <div id="rResult" hidden>
+        <div id="rAccMap"></div>
         <div id="rVerify"></div>
         <div class="tiles" id="rTiles"></div>
         <div class="card" style="margin-bottom:12px">
           <div class="itemsHead" style="margin-top:0">
             <span>🤔 शायद यही हैं — देखकर जोड़ें</span>
-            <button type="button" id="rSaveBtn" class="primary" onclick="commitRecon()">💾 मिलान पक्का करें</button>
+            <button type="button" id="rSave" class="primary" onclick="commitRecon()">💾 मिलान पक्का करें</button>
           </div>
           <div id="rMaybe"></div>
         </div>
@@ -3614,7 +3633,7 @@ function parseStatement(text) {
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     const low = rows[i].map(x => String(x).toLowerCase().trim());
     const f = { date: -1, time: -1, party: -1, narr: -1, utr: -1, chq: -1,
-      debit: -1, credit: -1, amount: -1, type: -1, bal: -1 };
+      debit: -1, credit: -1, amount: -1, type: -1, bal: -1, acc: -1 };
     low.forEach((v, j) => {
       if (f.date < 0 && /^(post\s*)?date|दिनांक|तारीख/.test(v)) f.date = j;
       if (f.time < 0 && /^time$|समय/.test(v)) f.time = j;
@@ -3627,6 +3646,8 @@ function parseStatement(text) {
       if (f.bal < 0 && /balance|शेष|बची/.test(v)) f.bal = j;
       if (f.amount < 0 && /amount|रकम/.test(v) && !/debit|credit/.test(v)) f.amount = j;
       if (f.type < 0 && /^type$|dr\/cr|cr\/dr|direction/.test(v)) f.type = j;
+      // 🗺️ v16: पंक्ति किस खाते की है — CSV वाले रास्ते पर भी
+      if (f.acc < 0 && /^account$|खाता|a\/c/.test(v)) f.acc = j;
     });
     if (f.date >= 0 && (f.debit >= 0 || f.credit >= 0 || f.amount >= 0)) { head = i; c = f; break; }
   }
@@ -3639,6 +3660,7 @@ function parseStatement(text) {
     const date = parseDay(cell(row, c.date));
     if (!date) continue;
     const narration = cell(row, c.narr);
+    const accCell = cell(row, c.acc);
     let amount = null, type = null;
     if (c.debit >= 0 || c.credit >= 0) {
       const d = money(cell(row, c.debit)), cr = money(cell(row, c.credit));
@@ -3664,6 +3686,11 @@ function parseStatement(text) {
       balance: c.bal >= 0 ? money(cell(row, c.bal)) : null,
       // खाने का नाम «Party» लिखा है तो वह पूरा नाम है; «चेक 917568» नहीं
       partyTruncated: !party,
+      /* 🗺️ «Account» का खाना — «SBI 0499» / «State Bank Of India - 89»।
+         बैंक का नाम और अंक अलग करके रखो, ताकि नक़्शे वाली स्क्रीन उन्हें
+         वैसे ही पहचाने जैसे PDF से आई पंक्तियों को।                    */
+      bank: accCell ? accCell.replace(/[-\s]*\d{2,6}\s*$/, "").trim() || null : null,
+      accountTail: accCell ? ((accCell.match(/(\d{2,6})\s*$/) || [])[1] || null) : null,
       source: "csv_statement"
     });
   }
@@ -3789,9 +3816,259 @@ async function readPdfStatement(file, onProgress, password) {
   }
   // PhonePe की statement बैंक वाली से बिल्कुल अलग बनती है — इसलिए पहले
   // पहचानो कि यह किसकी है, फिर उसी का पढ़ने वाला चलाओ।
+  if (isGPay(pages)) return parseGPay(pages);
+  if (isPaytm(pages)) return parsePaytm(pages);
   if (isPhonePe(pages)) return parsePhonePe(pages);
   if (isSBI(pages)) return parseSBI(pages);
   return parsePdfStatement(pages);
+}
+
+/* ══════════ 📄 Google Pay और Paytm की PDF — सीधे ═══════════════════
+
+   विक्रम जी की माँग: «इसी को ही सीधा डालने से ही काम बन जाए।» — यानी न
+   AI, न CSV, बस फ़ाइल।
+
+   दोनों पढ़ने वाले **असली फ़ाइलों पर** बनाए और जाँचे गए हैं, और जाँच का
+   पैमाना छपा हुआ जोड़ ही है:
+
+     Google Pay (जुलाई'26, 49 पन्ने) — 438 सौदे · गया ₹19,23,893.15 ·
+       आया ₹6  →  दोनों छपे हुए जोड़ से **पैसे तक** मिले
+     Paytm (अप्रैल–जुलाई'26, 23 पन्ने) — 150 सौदे · गया ₹4,46,725 ·
+       आया ₹3,20,875  →  दोनों छपे हुए जोड़ से **रुपये तक** मिले
+       (3 «Transferred to Self» अलग रखे — Paytm भी उन्हें जोड़ में नहीं गिनता)
+
+   🔒 और सबसे ज़रूरी: हर पंक्ति अपना **अपना खाता** साथ लेकर आती है
+      (बैंक का नाम + आख़िरी अंक)। ऊपर चुना हुआ खाता उस पर कभी नहीं थोपा
+      जाता — नीचे «खाते का नक़्शा» देखें।                                */
+
+/** एक पन्ने के टुकड़ों को y के हिसाब से पंक्तियों में बाँटो। */
+function upiRows(items) {
+  const byY = {};
+  items.forEach((i) => {
+    const t = String(i.str).replace(/\s+/g, " ").trim();
+    if (!t) return;
+    const y = Math.round(i.transform[5]);
+    (byY[y] = byY[y] || []).push({ x: Math.round(i.transform[4]), s: t });
+  });
+  return Object.keys(byY).map(Number).sort((a, b) => b - a)
+    .map((y) => ({ y, cells: byY[y].sort((a, b) => a.x - b.x) }));
+}
+
+/** "- Rs.3,600" · "₹19,23,893.15" · "+ Rs.1,500" → सादा अंक */
+const upiNum = (s) => {
+  const t = String(s).replace(/[₹,\s]/g, "")
+    .replace(/^[-+]/, "").replace(/^(?:Rs\.?|INR)/i, "");
+  return /^\d+(\.\d+)?$/.test(t) ? Number(t) : null;
+};
+
+const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+                 jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+
+/** "01:06 AM" → "01:06" · "6:18 PM" → "18:18" */
+function upiTime(s) {
+  const m = String(s).match(/(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const ap = (m[3] || "").toLowerCase();
+  if (ap === "pm" && h !== 12) h += 12;
+  if (ap === "am" && h === 12) h = 0;
+  return p2(h) + ":" + m[2];
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   📄 Google Pay — हर सौदा हूबहू तीन पंक्तियों में
+   ══════════════════════════════════════════════════════════════════════ */
+
+function isGPay(pages) {
+  const head = (pages[0] || []).map((i) => String(i.str)).join(" ");
+  return /Transaction statement/i.test(head) &&
+    /Google Pay/i.test(pages.map((p) => p.map((i) => String(i.str)).join(" ")).join(" "));
+}
+
+/** "01 Jul, 2026" → "2026-07-01" */
+function gpayDate(s) {
+  const m = String(s).match(/^(\d{1,2})\s+([A-Za-z]{3})[a-z]*,?\s+(\d{4})$/);
+  if (!m) return null;
+  const mo = MONTHS[m[2].toLowerCase()];
+  return mo ? m[3] + "-" + p2(mo) + "-" + p2(Number(m[1])) : null;
+}
+
+function parseGPay(pages) {
+  const out = [];
+  let cur = null;
+  const push = () => {
+    if (cur && cur.date && cur.amount != null) out.push(cur);
+    cur = null;
+  };
+
+  pages.forEach((items) => {
+    upiRows(items).forEach(({ cells }) => {
+      const first = cells[0];
+      const txt = cells.map((c) => c.s).join(" ");
+      if (/^(Transaction statement|Date & time|Note:|received\.|Page \d)/i.test(txt)) return;
+
+      const d = gpayDate(first.s);
+      if (d) {
+        // नई पंक्ति शुरू — पिछली पूरी हो चुकी
+        push();
+        const det = cells.filter((c) => c.x > 100 && c.x < 400).map((c) => c.s).join(" ");
+        const amt = cells.filter((c) => c.x >= 400).map((c) => c.s).join(" ");
+        const credit = /^Received from/i.test(det);
+        cur = {
+          date: d, time: null, amount: upiNum(amt),
+          type: credit ? "credit" : "debit",
+          party: det.replace(/^(Paid to|Received from)\s*/i, "").trim() || null,
+          utr: null, bank: null, accountTail: null,
+          app: "Google Pay", source: "gpay_statement"
+        };
+        return;
+      }
+      if (!cur) return;
+
+      // दूसरी पंक्ति: समय + UPI Transaction ID
+      const t = upiTime(first.s);
+      if (t && !cur.time) cur.time = t;
+      const utr = txt.match(/UPI Transaction ID:\s*([A-Za-z0-9]+)/i);
+      if (utr) cur.utr = utr[1];
+
+      /* तीसरी पंक्ति: किस खाते से / किस खाते में।
+         ⚠️ यहाँ Google Pay उल्टा लिखता है — आया हुआ पैसा «Paid to <बैंक>»
+            कहलाता है। इसलिए दिशा कभी इस पंक्ति से नहीं ली जाती, वह ऊपर
+            पहली पंक्ति से ही तय हो चुकी है। यह पंक्ति सिर्फ़ खाता बताती है। */
+      const acc = txt.match(/^(?:Paid by|Paid to|Credited to|Debited from)\s+(.+?)\s+(\d{2,6})$/i);
+      if (acc) { cur.bank = acc[1].trim(); cur.accountTail = acc[2]; }
+    });
+    push();
+  });
+  push();
+
+  out.forEach((r) => {
+    r.narration = [r.type === "credit" ? "Received from" : "Paid to", r.party,
+      r.utr ? "· UPI " + r.utr : "",
+      r.accountTail ? "· A/c ****" + r.accountTail : ""]
+      .filter(Boolean).join(" ").slice(0, 200);
+  });
+  return out;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   📄 Paytm — खाने वाली बनावट, और साल पंक्ति में नहीं होता
+   ══════════════════════════════════════════════════════════════════════ */
+
+function isPaytm(pages) {
+  const head = (pages[0] || []).map((i) => String(i.str)).join(" ");
+  return /Paytm Statement for/i.test(head) || /Passbook Payments History/i.test(head);
+}
+
+/**
+ * statement की अवधि — «1 APR'26 - 31 JUL'26»। साल पंक्तियों में नहीं छपता,
+ * इसलिए यही अकेला सहारा है। महीना पलटने पर साल भी बदलना पड़ता है।
+ */
+function paytmPeriod(pages) {
+  const head = (pages[0] || []).map((i) => String(i.str)).join(" ");
+  const m = head.match(/(\d{1,2})\s*([A-Za-z]{3})'?(\d{2,4})\s*-\s*(\d{1,2})\s*([A-Za-z]{3})'?(\d{2,4})/);
+  if (!m) return null;
+  const yr = (v) => (String(v).length === 2 ? 2000 + Number(v) : Number(v));
+  return { fromMo: MONTHS[m[2].toLowerCase()], fromYr: yr(m[3]),
+           toMo: MONTHS[m[5].toLowerCase()], toYr: yr(m[6]) };
+}
+
+function parsePaytm(pages) {
+  const per = paytmPeriod(pages) || { fromMo: 1, fromYr: new Date().getFullYear(),
+                                      toMo: 12, toYr: new Date().getFullYear() };
+  const out = [];
+  let cur = null, accBuf = "", detBuf = [];
+
+  const KIND = /^(Money sent to|Paid to|Received from|Transferred to|Automatic payment)/i;
+
+  const finish = () => {
+    if (!cur) { accBuf = ""; detBuf = []; return; }
+
+    /* नाम **अगली** पंक्ति में शुरू होता है, तारीख़ वाली में नहीं — Paytm
+       तारीख़ को ब्योरे से दो-तीन बिंदु ऊपर छापता है। इसलिए ब्योरे की सारी
+       पंक्तियाँ इकट्ठी करके यहाँ पढ़ी जाती हैं।
+
+       और नाम कई पंक्तियों में फैल सकता है:
+         «Money sent to Santosh Kumar So»
+         «Dungra Ram Jangid»
+       इसलिए «UPI ID:» या «UPI Ref No:» आते ही नाम पूरा मान लिया जाता है। */
+    let name = "", started = false;
+    for (const d of detBuf) {
+      if (/^UPI (ID|Ref)/i.test(d)) break;
+      if (!started) {
+        if (!KIND.test(d)) continue;
+        started = true;
+        cur.self = /^Transferred to Self/i.test(d);
+        name = d.replace(KIND, "").replace(/^[,\s]+/, "").trim();
+      } else {
+        if (/^#/.test(d) || /^Tag:/i.test(d)) break;
+        name += " " + d;
+      }
+    }
+    name = name.replace(/\s+on$/i, "").replace(/\s+/g, " ").trim();
+    cur.party = name || null;
+
+    // «State Bank» + «Of India - 89» दो पंक्तियों में आता है — जोड़कर पढ़ो
+    const a = accBuf.replace(/\s+/g, " ").trim();
+    const m = a.match(/^(.*?)[\s-]+(\d{2,6})$/);
+    if (m) { cur.bank = m[1].replace(/[-\s]+$/, "").trim(); cur.accountTail = m[2]; }
+    else if (a) cur.bank = a;
+
+    if (cur.date && cur.amount != null) out.push(cur);
+    cur = null; accBuf = ""; detBuf = [];
+  };
+
+  pages.forEach((items) => {
+    upiRows(items).forEach(({ cells }) => {
+      const txt = cells.map((c) => c.s).join(" ");
+      if (/^(Passbook Payments History|All payments done|Date &|Time$|Page |For any queries|Contact Us)/i.test(txt)) return;
+
+      const at = (lo, hi) => cells.filter((c) => c.x >= lo && c.x < hi).map((c) => c.s).join(" ");
+      const left = at(0, 80), det = at(80, 285), acc = at(380, 470), amt = at(470, 600);
+
+      // «30 Jul» — नई पंक्ति की शुरुआत
+      const dm = left.match(/^(\d{1,2})\s+([A-Za-z]{3})$/);
+      if (dm && MONTHS[dm[2].toLowerCase()]) {
+        finish();
+        const mo = MONTHS[dm[2].toLowerCase()];
+        /* साल पंक्ति में छपता ही नहीं। अवधि «1 APR'26 - 31 JUL'26» से लो:
+           जो महीना शुरू वाले महीने से आगे या बराबर है वह पहले साल का,
+           बाक़ी अगले साल का (जैसे दिसंबर-से-मार्च वाली statement में)। */
+        const yr = per.fromYr === per.toYr ? per.fromYr
+          : (mo >= per.fromMo ? per.fromYr : per.toYr);
+        cur = {
+          date: yr + "-" + p2(mo) + "-" + p2(Number(dm[1])),
+          time: null, amount: upiNum(amt),
+          type: /^\+/.test(amt.trim()) ? "credit" : "debit",
+          party: null, self: false, utr: null, bank: null, accountTail: null,
+          app: "Paytm", source: "paytm_statement"
+        };
+        accBuf = acc;
+        if (det) detBuf.push(det);
+        return;
+      }
+      if (!cur) return;
+
+      const t = upiTime(left);
+      if (t && !cur.time) cur.time = t;
+      if (det) detBuf.push(det);
+      const ref = det.match(/UPI Ref No:\s*([A-Za-z0-9]+)/i);
+      if (ref) cur.utr = ref[1];
+      const vpa = det.match(/UPI ID:\s*([^\s]+)/i);
+      if (vpa && !cur.toVpa) cur.toVpa = vpa[1].replace(/\s*on$/i, "").replace(/[.,]$/, "");
+      if (acc) accBuf += " " + acc;
+    });
+    finish();
+  });
+  finish();
+
+  out.forEach((r) => {
+    r.narration = [r.type === "credit" ? "Received from" : "Paid to", r.party,
+      r.utr ? "· UPI " + r.utr : "", r.toVpa ? "· " + r.toVpa : "",
+      r.accountTail ? "· A/c ****" + r.accountTail : "",
+      r.self ? "· अपना ही खाता" : ""].filter(Boolean).join(" ").slice(0, 200);
+  });
+  return out;
 }
 
 /* ── 🏦 SBI की statement ──────────────────────────────────────────────
@@ -4133,6 +4410,175 @@ function parsePhonePe(pages) {
   return out;
 }
 
+/* ══════════ 🗺️ खाते का नक़्शा ══════════════════════════════════════
+
+   ⚠️ यह v16 का सबसे ज़रूरी पहरा है। विक्रम जी के शब्दों में:
+
+       «सबसे महत्वपूर्ण है कि कोई भी entry सही खाते के अनुसार उसमें जाए…
+        अगर सही बैंक अकाउंट के अंदर वह कनेक्ट नहीं हुई तो आने वाले टाइम
+        में बहुत बड़ी दिक्कत हो जाएगी।»
+
+   पहले पंक्ति का खाता न पहचाना जाए तो app **ऊपर चुने हुए खाते** में डाल
+   देता था। यानी GPay की फ़ाइल में «0499» वाली पंक्तियाँ चुपचाप «0628» में
+   जा सकती थीं, और महीनों बाद पता चलता।
+
+   अब नियम एक: **जिस पंक्ति का खाता पक्का न हो, वह सहेजी ही नहीं जाएगी।**
+   कोई अंदाज़ा नहीं।                                                     */
+
+/**
+ * इन अंकों और इस बैंक का कौन-सा खाता?
+ * @param {string} bank  «State Bank of India» / «AU Small Finance Bank»
+ * @param {string} tail  «0499» (GPay) या «89» (Paytm) — लंबाई अलग-अलग
+ */
+/**
+ * बैंक का नाम एक ही शक्ल में। «SBI», «State Bank of India», «STATE BANK» —
+ * तीनों एक ही बैंक हैं, पर अक्षर मिलाने से कभी नहीं मिलते। इसलिए हर बड़े
+ * बैंक का एक छोटा नाम तय कर दिया गया है।
+ */
+function bankKey(v) {
+  const k = pKey(v);
+  if (!k) return "";
+  const T = [
+    [/STATEBANK|^SBI/, "SBI"],
+    [/AUSMALL|^AUBANK|^AU$/, "AU"],
+    [/^IDBI/, "IDBI"],
+    [/^HDFC/, "HDFC"],
+    [/^ICICI/, "ICICI"],
+    [/^AXIS/, "AXIS"],
+    [/^KOTAK/, "KOTAK"],
+    [/PUNJABNATIONAL|^PNB/, "PNB"],
+    [/BANKOFBARODA|^BOB/, "BOB"],
+    [/BANKOFINDIA(?!A)|^BOI/, "BOI"],
+    [/UNIONBANK/, "UNION"],
+    [/CANARA/, "CANARA"],
+    [/INDUSIND/, "INDUSIND"],
+    [/YESBANK/, "YES"],
+    [/RAJASTHANMARUDHARA|MARUDHARA/, "RMGB"],
+    [/BARODARAJASTHAN|BRKGB/, "BRKGB"]
+  ];
+  for (const [re, name] of T) if (re.test(k)) return name;
+  return k.slice(0, 6);
+}
+
+function accountByTail(bank, tail) {
+  const d = String(tail || "").replace(/\D/g, "");
+  const b = bankKey(bank);
+  const ids = Object.keys(ACCOUNTS);
+  const num = (id) => String((ACCOUNTS[id] || {}).accountNumber || "").replace(/\D/g, "");
+  const bankOf = (id) => {
+    const a = ACCOUNTS[id] || {};
+    return bankKey(a.bank) || bankKey(a.label);
+  };
+  /* दोनों तरफ़ बैंक का नाम हो और वे अलग निकलें — तो कभी नहीं मिलाना, चाहे
+     अंक कितने भी मिलते हों। किसी एक तरफ़ नाम न हो तभी अंकों पर भरोसा। */
+  const bankOk = (id) => !b || !bankOf(id) || bankOf(id) === b;
+
+  if (d) {
+    const tailOk = ids.filter((id) => num(id).length >= d.length &&
+      num(id).slice(-d.length) === d);
+    /* दो अंक अकेले कभी काफ़ी नहीं — «- 99» और «- 89» दोनों SBI हैं, और
+       यहीं सबसे बड़ी ग़लती हो सकती थी। इसलिए बैंक का नाम भी मिलाना पड़ता
+       है, और उसके बाद भी अगर एक से ज़्यादा बचें तो कुछ नहीं लौटाते —
+       विक्रम जी ख़ुद चुनेंगे।                                          */
+    const both = tailOk.filter(bankOk);
+    return both.length === 1 ? both[0] : "";
+  }
+  // अंक ही न हों तो सिर्फ़ तभी, जब उस बैंक का एक ही खाता दर्ज हो
+  if (!b) return "";
+  const byBank = ids.filter((id) => bankOf(id) === b);
+  return byBank.length === 1 ? byBank[0] : "";
+}
+
+/** इस statement में कौन-कौन से खाते मिले, और हर एक की कितनी पंक्तियाँ। */
+function accountMap(txns) {
+  const map = {};
+  (txns || []).forEach((t) => {
+    if (!t.bank && !t.accountTail) return;
+    const key = (t.bank || "?") + "|" + (t.accountTail || "");
+    if (!map[key]) map[key] = { key, bank: t.bank || "", tail: t.accountTail || "",
+      n: 0, pick: accountByTail(t.bank, t.accountTail), auto: false };
+    map[key].n++;
+  });
+  Object.values(map).forEach((m) => { m.auto = !!m.pick; });
+  return Object.values(map).sort((a, b) => b.n - a.n);
+}
+
+let ACCMAP = [];
+
+/** सब खाते चुने जा चुके? — «सहेजें» इसी पर टिका है। */
+const accMapReady = () => ACCMAP.every((m) => !!m.pick);
+
+function setAccMap(key, v) {
+  const m = ACCMAP.filter((x) => x.key === key)[0];
+  if (m) m.pick = v;
+  renderAccMap();
+}
+
+function renderAccMap() {
+  const box = $("rAccMap");
+  if (!box) return;
+  if (!ACCMAP.length) { box.innerHTML = ""; return; }
+  const left = ACCMAP.filter((m) => !m.pick).length;
+  const opts = (sel) => '<option value="">— चुनिए —</option>' +
+    Object.keys(ACCOUNTS).map((id) =>
+      `<option value="${esc(id)}"${id === sel ? " selected" : ""}>${esc(accLabel(id))}</option>`).join("");
+
+  box.innerHTML = `
+  <div class="card accMap">
+    <div class="toonBox tight">
+      <div class="toonArt">${gfx.toon("seek", 58)}</div>
+      <div class="toonSay"><b>🗺️ इस statement में ${ACCMAP.length} खाते मिले</b>
+        <p>${left ? `इनमें से <span class="hot">${left}</span> का पता नहीं चला —
+             नीचे चुन दीजिए। जब तक हर पंक्ति का खाता पक्का न हो, कुछ सहेजा
+             नहीं जाएगा।`
+          : "सब पहचान लिए गए — अब सहेज सकते हैं।"}</p></div>
+    </div>
+    ${ACCMAP.map((m) => `
+      <div class="amRow${m.pick ? " ok" : " ask"}">
+        <div class="amHead">
+          ${gfx.avatar(m.bank || "?", 34)}
+          <div>
+            <b>${esc(m.bank || "बैंक नहीं लिखा")}${m.tail ? " · " + esc(m.tail) : ""}</b>
+            <small>${m.n} ${m.n === 1 ? "पंक्ति" : "पंक्तियाँ"}${
+              m.auto ? " · अपने-आप पहचाना" : ""}</small>
+          </div>
+          <span class="amTick">${m.pick ? "✅" : "⚠️"}</span>
+        </div>
+        <select onchange="setAccMap('${esc(m.key)}', this.value)">${opts(m.pick)}</select>
+      </div>`).join("")}
+    <button type="button" class="mini" style="width:100%;margin-top:8px"
+      onclick="openNewAccount()">➕ नया खाता बनाएँ</button>
+  </div>`;
+  const btn = $("rSave");
+  if (btn) {
+    btn.disabled = !accMapReady();
+    btn.textContent = accMapReady() ? "💾 सहेजें"
+      : `🔒 पहले ${left} खाते चुनिए`;
+  }
+}
+
+/** ➕ नया खाता — वहीं से, बिना पन्ना छोड़े। */
+async function openNewAccount() {
+  const label = prompt("खाते का नाम (जैसे: Vikram Charan SBI)");
+  if (!label) return;
+  const bank = prompt("बैंक का नाम (जैसे: State Bank of India)") || "";
+  const no = prompt("पूरा खाता नंबर — इसी से आगे पहचान होगी") || "";
+  const id = pKey(label).slice(0, 20).toLowerCase() || ("acc" + Date.now());
+  const doc = { accountId: id, label: label.trim(), bank: bank.trim(),
+    accountNumber: String(no).replace(/\s/g, "") || null, ledger: [] };
+  try {
+    await db.collection("vbe_accounts").doc(id).set(doc, { merge: true });
+    await auditLog("account_add", null, { accountId: id, label: doc.label });
+  } catch (e) { toast("सहेजा नहीं गया"); return; }
+  ACCOUNTS[id] = doc;
+  saveCache();
+  rebuildAccountPickers();
+  // जो खाते अब पहचाने जा सकते हैं, उन्हें अपने-आप भर दो
+  ACCMAP.forEach((m) => { if (!m.pick) { m.pick = accountByTail(m.bank, m.tail); m.auto = !!m.pick; } });
+  renderAccMap();
+  toast("🏦 खाता जुड़ गया");
+}
+
 let PENDING_FILE = null;
 
 async function handleStatementFile(file, password) {
@@ -4155,7 +4601,10 @@ async function handleStatementFile(file, password) {
     }
     const res = matchStatement(txns, accountId);
     RECON = Object.assign({ account: accountId, txns }, res);
+    // 🗺️ हर पंक्ति का अपना खाता — पहले नक़्शा, फिर बाक़ी सब
+    ACCMAP = accountMap(txns);
     renderRecon(txns.length, txns);
+    renderAccMap();
     $("rPassBox").hidden = true;
     $("rPass").value = "";
     status.className = "ok";
@@ -4273,16 +4722,34 @@ function renderRecon(total, allRows) {
  * जाते थे, और entry फिर से "बिल बाकी" हो जाती थी। जो पहले से भरा है वह जस का
  * तस रहे; statement सिर्फ़ छूटी हुई जगहें भरे।
  */
+/**
+ * इस पंक्ति का खाता — पंक्ति ख़ुद जो बताती है, वही।
+ *
+ * 🔒 v16: पहले यह «न मिले तो ऊपर चुना हुआ» पर गिर जाता था। वही सबसे बड़ा
+ *    ख़तरा था — 0499 वाली पंक्तियाँ चुपचाप 0628 में जा सकती थीं। अब पंक्ति
+ *    अपना खाता बताए तो उसी का नक़्शा देखा जाता है; न बताए तभी ऊपर वाला।
+ */
+function txnAccount(t, chosen) {
+  const tail = t.accountTail || t.accountLast4;
+  if (t.bank || tail) {
+    const key = (t.bank || "?") + "|" + (tail || "");
+    const m = (ACCMAP || []).filter((x) => x.key === key)[0];
+    if (m && m.pick) return m.pick;                 // विक्रम जी का तय किया
+    const auto = accountByTail(t.bank, tail);
+    if (auto) return auto;
+    return "";                                      // पक्का नहीं — रुक जाओ
+  }
+  return chosen;                                    // पंक्ति चुप है, तभी
+}
+
 function txnDoc(t, accountId, receiptId, confidence, existing) {
-  // PhonePe हर पंक्ति पर लिखता है कि पैसा किस खाते से गया ("Paid by ...0481")।
-  // वह ऊपर चुने हुए खाते से ज़्यादा भरोसे लायक है — एक ही statement में कई
-  // खाते हो सकते हैं, और ग़लत खाता चुन लेना सबसे आसान ग़लती है।
-  const rowAcc = t.accountLast4 ? matchAccount(t.bank || "", t.accountLast4) : "";
+  const rowAcc = txnAccount(t, accountId);
   // इस चेक का नाम पहले लिखा जा चुका है तो वही चले — बैंक तो नाम देता ही नहीं
   if (t.chequeNo && CHEQUES[t.chequeNo]) t = Object.assign({}, t,
     { party: CHEQUES[t.chequeNo], partyTruncated: false });
   const doc = {
     accountId: rowAcc || accountId, date: t.date,
+    app: t.app || undefined,
     amount: t.amount, type: t.type,
     partyKey: pKey(t.party || t.narration || ""),
     source: t.source || "statement",
@@ -4378,7 +4845,18 @@ function importReport(r) {
 }
 
 async function commitRecon() {
-  const btn = $("rSaveBtn"), status = $("rStatus");
+  const btn = $("rSave"), status = $("rStatus");
+  /* 🔒 v16 का पहरा: जिस पंक्ति का खाता पक्का न हो, कुछ भी नहीं सहेजा
+     जाएगा — एक भी नहीं। आधा सहेजकर बाद में सुधारना सबसे बुरा रास्ता है। */
+  if (!accMapReady()) {
+    const left = ACCMAP.filter((m) => !m.pick).length;
+    status.className = "bad";
+    status.innerHTML = `🔒 ऊपर <b>${left}</b> खाते का पता नहीं चला — पहले वह ` +
+      `चुन दीजिए। ग़लत खाते में entry जाना सबसे बड़ी ख़राबी है, इसलिए तब तक ` +
+      `कुछ नहीं सहेजा जाएगा।`;
+    renderAccMap();
+    return;
+  }
   btn.disabled = true;
   status.className = "muted"; status.textContent = "सहेज रहा हूँ…";
   try {
@@ -4388,7 +4866,7 @@ async function commitRecon() {
     for (const sel of picks) {
       const m = all[Number(sel.dataset.i)];
       if (!m) continue;
-      const id = txnId(RECON.account, m.t);
+      const id = txnId(txnAccount(m.t, RECON.account) || RECON.account, m.t);
       const keep = sel.value;                        // "" = owner said no
       const had = existingTxn(id);
       const doc = txnDoc(m.t, RECON.account, keep ? m.e.receiptId : null,
@@ -4408,7 +4886,7 @@ async function commitRecon() {
     // Unmatched debits (the बकाया list) and every credit are stored too, so the
     // timeline and party views hold the whole picture, not just matched money.
     for (const m of RECON.noBill.concat((RECON.credits || []).map((t) => ({ t })))) {
-      const id2 = txnId(RECON.account, m.t);
+      const id2 = txnId(txnAccount(m.t, RECON.account) || RECON.account, m.t);
       const had2 = existingTxn(id2);
       const doc2 = txnDoc(m.t, RECON.account, null, null, had2);
       await db.collection("vbe_bank_txns").doc(id2).set(doc2, { merge: true });
@@ -4441,9 +4919,18 @@ async function commitRecon() {
       else ask.push({ exp: c.exp, txn: t, why: c.why });
     }
 
+    const renamed = settleNames();
     recomputeMissing();
     saveCache();
     renderAll();
+    if (renamed) {
+      status.innerHTML += gfx.insight({ icon: "📝", tone: "down",
+        title: `${renamed} नाम अपने-आप पूरे हो गए`,
+        body: "बैंक की statement नाम काटकर छापती है («रवि»), पर Google Pay / " +
+          "Paytm पूरा बैंकिंग नाम देते हैं («Ravi Prakash Sindhi»)। जहाँ UTR " +
+          "एक निकला, वहाँ पूरा नाम सब जगह बैठा दिया गया — पुराना नाम मिटा " +
+          "नहीं, «और नाम» में सँभला है।" });
+    }
     if (filled || ask.length) {
       status.innerHTML += gfx.insight({ icon: "🔗", tone: filled ? "down" : "ai",
         title: `${filled} पुरानी entries का UTR अपने-आप भर गया`,
@@ -4504,6 +4991,56 @@ function statementSummary(acc, added, dupes) {
     <button type="button" class="mini" style="width:100%;margin-top:10px"
       onclick="goTab('pass');setPbAcc('${esc(acc)}')">🏦 पासबुक में पूरा देखें</button>
   </div>`;
+}
+
+/* ══════════ 📝 छोटा नाम अपने-आप पूरा ═══════════════════════════════
+
+   विक्रम जी की बात: «बैंक के statement में नाम छोटा रहता है — जैसे कोई
+   रवि प्रकाश सिंधी है तो उसमें केवल रवि लिखा आएगा, जबकि Google Pay या
+   Paytm में पूरा बैंकिंग नाम लिखा आता है।»
+
+   जोड़ने की कुंजी वही है जो v15 में तय हुई — **UTR**। दो पंक्तियों का UTR
+   एक हो तो वे एक ही सौदा हैं, चाहे किसी भी statement से आई हों। और नाम
+   सिर्फ़ **बेहतर** हो सकता है, बुरा कभी नहीं — यह नियम पहले से चला आ रहा
+   betterName() में लिखा है; यहाँ बस उसे UTR के आर-पार लगाया जाता है।     */
+
+function settleNames() {
+  const byUtr = {};
+  BANKTXNS.forEach((t) => {
+    const u = txnUtr(t);
+    if (!u) return;
+    (byUtr[u] = byUtr[u] || []).push(t);
+  });
+
+  let n = 0;
+  Object.keys(byUtr).forEach((u) => {
+    const group = byUtr[u];
+    if (group.length < 2) return;
+    // सबसे पूरा नाम जीतता है — «कटा हुआ» वाला कभी नहीं
+    let best = null;
+    group.forEach((t) => {
+      const nm = String(t.party || "").trim();
+      if (!nm || t.partyTruncated) return;
+      if (!best || nm.length > best.length) best = nm;
+    });
+    if (!best) return;
+    group.forEach((t) => {
+      const nm = String(t.party || "").trim();
+      if (pKey(nm) === pKey(best)) return;
+      t.partyAliases = [...new Set((t.partyAliases || []).concat(nm ? [nm] : []))].slice(0, 6);
+      t.party = best;
+      t.partyKey = pKey(best);
+      t.partyFull = true;
+      t.partyTruncated = false;
+      t._renamed = true;
+      n++;
+      db.collection("vbe_bank_txns").doc(t._id).set({
+        party: best, partyKey: pKey(best), partyAliases: t.partyAliases,
+        partyFull: true, partyTruncated: false
+      }, { merge: true }).catch(() => {});
+    });
+  });
+  return n;
 }
 
 /**
@@ -11951,7 +12488,7 @@ const CSV_PROMPT = [
   "",
   "पहली पंक्ति बिल्कुल यही रहे (हूबहू, इसी क्रम में):",
   "",
-  "Date,Time,Party,Description,ChequeNo,UTR,Debit,Credit,Balance",
+  "Date,Time,Party,Account,Description,ChequeNo,UTR,Debit,Credit,Balance",
   "",
   "फिर हर सौदे की एक पंक्ति। नियम — हर एक ज़रूरी है:",
   "",
@@ -11971,35 +12508,62 @@ const CSV_PROMPT = [
   '   नाम कहीं लिखा ही न हो (जैसे "REMT THRU CHQ / NEFT UTR NO: SBIN…") तो',
   "   Party खाली छोड़ दो। अंदाज़ा मत लगाओ — चेक नंबर से नाम बाद में जुड़ जाएगा।",
   "",
-  "4. Description — उस सौदे की सारी लाइनें जोड़कर, जैसी छपी हैं। एक सौदा",
+  "4. Account — यह पंक्ति किस खाते की है। **यह सबसे ज़रूरी खाना है।**",
+  "   एक ही फ़ाइल में कई खाते हो सकते हैं, और ग़लत खाते में entry चली जाए तो",
+  "   पूरा हिसाब बिगड़ जाता है। जहाँ भी लिखा हो, वहीं से उठाओ:",
+  '   • "Paid by State Bank of India 0499"   → SBI 0499',
+  '   • "Paid to AU Small Finance Bank 0628" → AU 0628',
+  '   • दाएँ खाने में "State Bank Of India - 89" → SBI 89',
+  '   • ऊपर सिरे पर लिखा "A/c No: 43362997445" → 43362997445',
+  "   बैंक का नाम और अंक, दोनों लिखो — सिर्फ़ अंक काफ़ी नहीं, क्योंकि एक ही",
+  "   बैंक के दो खाते हो सकते हैं। कहीं कुछ न लिखा हो तो खाली छोड़ दो।",
+  "",
+  "5. Description — उस सौदे की सारी लाइनें जोड़कर, जैसी छपी हैं। एक सौदा",
   "   तीन-चार लाइनों में फैला हो तो सबको एक ही खाने में डालो।",
   "",
   '5. ChequeNo — "Cheque No/Reference" खाने का नंबर (जैसे 917568)। न हो तो खाली।',
   "",
-  "6. UTR — UTR / UPI transaction ID / NEFT reference, जो भी छपा हो",
+  "7. UTR — UTR / UPI transaction ID / NEFT reference, जो भी छपा हो",
   "   (जैसे SBIN426092856383 या 032771344249)। न हो तो खाली।",
   "",
-  "7. Debit और Credit — अलग-अलग खाने। जो लागू न हो वह खाली रहे, शून्य नहीं।",
+  "8. Debit और Credit — अलग-अलग खाने। जो लागू न हो वह खाली रहे, शून्य नहीं।",
   '   कभी दोनों मत भरो। "गया" = Debit, "आया" = Credit.',
   "",
   '8. Balance — उस पंक्ति के आगे छपी बची हुई रकम। "CR"/"DR" हटा दो।',
   "   यह सबसे ज़रूरी खाना है — इसी से जाँच होगी, इसलिए एक भी मत छोड़ो।",
   "",
-  "9. सब रकम सादे अंक — ₹ नहीं, कॉमा नहीं:",
+  "10. सब रकम सादे अंक — ₹ नहीं, कॉमा नहीं:",
   '   "1,50,000.00" → 150000        "90,004.72" → 90004.72',
   "",
   '10. जिस खाने में कुछ हो ही नहीं, उसे खाली छोड़ो। किसी भी खाने में "null",',
   '    "NA", "-" मत लिखो।',
   "",
-  "11. अगर किसी खाने में कॉमा आता हो तो उस खाने को दोहरे उद्धरण में रखो।",
+  "12. अगर किसी खाने में कॉमा आता हो तो उस खाने को दोहरे उद्धरण में रखो।",
   "",
-  "12. एक भी सौदा मत छोड़ो, एक भी दुबारा मत लिखो। पन्ने के क्रम में ही लिखो।",
+  "13. एक भी सौदा मत छोड़ो, एक भी दुबारा मत लिखो। पन्ने के क्रम में ही लिखो।",
   "",
-  "13. जो अंक साफ़ न दिखे उसे अंदाज़े से मत भरो — खाली छोड़ दो। ग़लत अंक से",
+  "14. जो अंक साफ़ न दिखे उसे अंदाज़े से मत भरो — खाली छोड़ दो। ग़लत अंक से",
   "    पूरा हिसाब बिगड़ता है, खाली खाने से नहीं।",
   "",
+  "15. साल कहीं न लिखा हो — जैसे Paytm सिर्फ़ \"30 Jul\" छापता है — तो साल",
+  "    statement की अवधि से लो (जैसे \"1 APR'26 - 31 JUL'26\" → 2026)।",
+  "    अवधि दो साल में फैली हो तो महीने के हिसाब से सही साल चुनो।",
+  "    अपने मन से आज का साल कभी मत डालो।",
+  "",
+  "16. दिशा हमेशा **सौदे की पहली लाइन** से तय करो, खाते वाली लाइन से नहीं।",
+  "    Google Pay आया हुआ पैसा उल्टा लिखता है:",
+  '      "Received from Google Cloud"  ← यह आया (Credit)',
+  '      "Paid to AU Small Finance Bank 0628"  ← यह सिर्फ़ खाता है, गया नहीं',
+  "    यानी \"Paid to <बैंक का नाम>\" कभी Debit नहीं होता।",
+  "",
+  "17. आख़िर में ख़ुद जाँच लो: सब Debit जोड़कर और सब Credit जोड़कर, statement",
+  "    पर छपे कुल से मिलाओ। न मिले तो कोई पंक्ति छूटी है — दुबारा पढ़ो।",
+  "    Balance वाला खाना भी यही जाँच देता है: पिछली बची रकम − गया + आया =",
+  "    इस पंक्ति की बची रकम।",
+  "",
   "काम पूरा होने पर सिर्फ़ इतना बताओ: कितने सौदे लिखे, कौन सी तारीख़ से कौन सी",
-  "तक, और statement की आख़िरी बची रकम कितनी है।",
+  "तक, कौन-कौन से खाते मिले, कुल कितना गया और कितना आया, और statement की",
+  "आख़िरी बची रकम कितनी है।",
   "",
   "अगर तुम फ़ाइल नहीं बना सकते तो वही CSV सादे पाठ में लिख देना — मैं उसे",
   "statement.csv नाम से सहेज लूँगा।"
