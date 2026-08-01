@@ -331,6 +331,34 @@
   .pbIn b { color: #7de07d; } .pbOut b { color: #ff9d9d; }
   .pbIn small, .pbOut small { display: block; font-size: 10.5px; }
 
+  /* 📊 बैलेंस की चाल — शून्य की लकीर के साथ */
+  .pbChart { margin-top: 12px; }
+  .pbChart svg { width: 100%; height: 84px; display: block; }
+  .pbChartFoot { display: flex; justify-content: space-between; gap: 8px;
+    margin-top: 4px; font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  .pbChartFoot .lo { color: #ff9d9d; } .pbChartFoot .hi { color: #7de07d; }
+
+  /* 🏦 ओपनिंग बैलेंस का कार्ड */
+  .pbOpen { margin-bottom: 12px; }
+  .poRow { display: flex; align-items: center; gap: 11px; }
+  .poIco { flex: 0 0 auto; }
+  .poTxt { flex: 1; min-width: 0; }
+  .poTxt span { display: block; font-size: 11.5px; color: var(--muted); }
+  .poTxt b { display: block; font-size: 20px; font-variant-numeric: tabular-nums;
+    margin: 1px 0 2px; }
+  .poTxt small { display: block; font-size: 11px; color: var(--muted); line-height: 1.45; }
+  .poOk, .poBad { margin-top: 11px; padding: 10px 11px; border-radius: 12px;
+    font-size: 12.5px; line-height: 1.55; }
+  .poOk { border: 1px solid rgba(12,163,12,.4);
+    background: linear-gradient(100deg, rgba(12,163,12,.12), transparent 72%); }
+  .poBad { border: 1px solid rgba(208,59,59,.5);
+    background: linear-gradient(100deg, rgba(208,59,59,.14), transparent 72%); }
+  .poOk small, .poBad small { display: block; color: var(--muted); font-size: 11.5px;
+    margin-top: 3px; }
+  .poBreak { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--grid);
+    font-size: 12px; line-height: 1.55; }
+
+  /* 🏦 पासबुक का दिन — आया ऊपर, गया नीचे (फ़ोन पर दो खाने में नाम कटते हैं) */
   .pbDay { border: 1px solid var(--border); border-radius: 15px;
     margin-bottom: 12px; overflow: hidden; background: var(--surface); }
   .pbDayHead { display: flex; align-items: baseline; justify-content: space-between;
@@ -339,23 +367,43 @@
   .pbDayHead b { font-size: 13.5px; }
   .pbDayHead span { font-size: 11.5px; color: var(--muted);
     font-variant-numeric: tabular-nums; }
-  .pbCols { display: flex; }
-  .pbCol { flex: 1; min-width: 0; padding: 8px 10px; }
-  .pbCol.in { border-right: 1px solid var(--grid); }
-  .pbCol.out { text-align: right; }
-  .pbNone { color: var(--muted); font-size: 12px; padding: 6px 0; }
-  .pbTxn { padding: 7px 0; border-bottom: 1px solid var(--grid); }
-  .pbTxn:last-child { border-bottom: 0; }
-  .pbAmt { font-weight: 800; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+  .pbSec { padding: 4px 12px 8px; }
+  .pbSec + .pbSec { border-top: 1px solid var(--grid); }
+  .pbSec.in { background: linear-gradient(90deg, rgba(12,163,12,.07), transparent 55%); }
+  .pbSec.out { background: linear-gradient(90deg, rgba(208,59,59,.07), transparent 55%); }
+  .pbSecHead { font-size: 11px; color: var(--muted); font-weight: 700;
+    padding: 7px 0 3px; letter-spacing: .3px; }
+  .pbTxn { padding: 7px 0; border-top: 1px solid var(--grid); }
+  .pbSecHead + .pbTxn { border-top: 0; }
+  .pbLine { display: flex; align-items: baseline; gap: 9px; }
+  .pbAmt { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums;
+    flex: 0 0 auto; }
   .pbTxn.in .pbAmt { color: #7de07d; } .pbTxn.out .pbAmt { color: #ff9d9d; }
-  .pbWho { font-size: 12.5px; color: var(--ink); overflow: hidden;
-    text-overflow: ellipsis; white-space: nowrap; }
-  .pbSub { font-size: 10.5px; color: var(--muted); }
-  .pbTxn .badge, .pbTxn button { margin-top: 5px; }
-  .pbDayFoot { display: flex; justify-content: space-between; gap: 8px;
+  /* नाम कभी कटता नहीं — दो लाइनों में चला जाता है */
+  .pbWho { flex: 1; min-width: 0; font-size: 13px; color: var(--ink);
+    line-height: 1.4; word-break: break-word; }
+  .pbSub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .pbMore { color: var(--ink-2); opacity: .8; }
+  .pbTxn.open .pbMore { opacity: 1; }
+  /* बैंक की असली लिखाई — छिपी रहती है, टैप करने पर खुलती है */
+  .pbRaw { display: none; font-size: 10.5px; color: var(--muted); opacity: .8;
+    margin-top: 5px; padding: 6px 8px; border-radius: 8px;
+    background: var(--surface-2); line-height: 1.5; word-break: break-word; }
+  .pbTxn.open .pbRaw { display: block; }
+  .pbTxn { cursor: pointer; }
+  .pbTxn .pbAct { cursor: auto; }
+  .pbAct { margin-top: 6px; }
+  .pbDayFoot { display: flex; align-items: center; gap: 10px;
     padding: 8px 12px; border-top: 1px solid var(--grid); font-size: 12px;
     font-variant-numeric: tabular-nums; background: var(--surface-2); }
   .pbDayFoot .i { color: #7de07d; } .pbDayFoot .o { color: #ff9d9d; }
+  .pbMeter { flex: 1; min-width: 0; height: 6px; border-radius: 3px;
+    background: var(--grid); overflow: hidden; display: flex; }
+  .pbMeter i { display: block; height: 100%; }
+  .pbMeter i.i { background: #0ca30c; } .pbMeter i.o { background: #d03b3b; }
+
+  /* ⚡ वाले गोल बटन के लिए नीचे जगह — कोई बटन उसके नीचे न दबे */
+  #v-pass { padding-bottom: 92px; }
 
   /* 🚨 Overview की ऊपरी चिप्पियाँ */
   .alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
@@ -7052,6 +7100,65 @@ async function mergeDupe(txnId, expId) {
    🔒 यह पूरा हिस्सा सिर्फ़ कोड से बनता है। statement, खाता नंबर और मिलान
       AI को कभी नहीं जाते — v13 की वह दीवार यहाँ भी जस की तस है।         */
 
+/* ══════════ 🇮🇳 बैंक की भाषा — अपनी भाषा में ═══════════════════════
+
+   बैंक अपनी छोटी-छोटी कोड वाली भाषा में लिखता है: «SI FAIL», «ATM PENDING
+   AMC», «DEBIT IOI PAYMENT CHARGES»। यह किसी का **नाम नहीं** है — पर
+   पासबुक उसे नाम की जगह छाप रही थी, क्योंकि Party का खाना ख़ाली था।
+
+   «SI FAIL» का मतलब है «हर महीने कटने वाली किस्त इस बार नहीं कटी»। यह
+   पढ़कर किसी को कुछ समझ नहीं आएगा — और विक्रम जी ने ठीक यही कहा।
+
+   ⚠️ ध्यान: बैंक की असली लिखाई **कभी छिपाई नहीं जाती**, नीचे छोटे अक्षरों
+      में रहती है। यहाँ सिर्फ़ समझाया जा रहा है, बदला नहीं जा रहा।       */
+
+const BANK_WORDS = [
+  [/\bSI\s*FAIL/i,                    "⚠️ किस्त नहीं कटी"],
+  [/\bATM.*AMC|AMC.*ATM/i,             "🏧 ATM का सालाना शुल्क"],
+  [/PAYMENT\s*CHARGES|\bCHARGES?\b|\bCHRG/i, "🏦 बैंक का शुल्क"],
+  [/DD\s*CANCEL/i,                     "↩️ DD रद्द — पैसा वापस"],
+  [/ITDTAX\s*REFUND|INCOME\s*TAX\s*REFUND/i, "🧾 आयकर वापसी"],
+  [/\bINT\.?\s*(PD|CREDIT|PAID)|CREDIT\s*INTEREST/i, "💹 बैंक का ब्याज मिला"],
+  [/INT\s*RECOVERY|INTEREST\s*DEBIT/i, "💸 ब्याज कटा"],
+  [/\bNEFT\b/i,                       "🏦 NEFT से"],
+  [/\bRTGS\b/i,                       "🏦 RTGS से"],
+  [/\bIMPS\b/i,                       "📲 IMPS से"],
+  [/\bUPI\b/i,                        "📲 UPI से"],
+  [/CAS\s*CHQ\s*XFER\s*WD|CHEQUE\s*TRANSFER\s*TO/i, "🧾 चेक से गया"],
+  [/CHQ\s*TRFR\s*FROM|CAS\s*PRES\s*CHQ/i, "🧾 चेक से आया"],
+  [/CAS\s*CASH\s*CHEQUE/i,            "💵 नकद चेक"],
+  [/DIRECT\s*DR/i,                     "➖ सीधी कटौती"],
+  [/\bWDL\s*TFR|WITHDRAWAL/i,          "➖ निकासी"],
+  [/\bDEP\s*TFR|DEPOSIT/i,             "➕ जमा"],
+  [/\bCREDIT\b/i,                     "➕ जमा"],
+  [/\bDEBIT\b/i,                      "➖ कटौती"]
+];
+
+/** बैंक की लिखाई का सीधा मतलब — न मिले तो कुछ नहीं (झूठ नहीं गढ़ते)। */
+function bankMeaning(text) {
+  const t = String(text || "");
+  if (!t) return "";
+  for (const [re, hi] of BANK_WORDS) if (re.test(t)) return hi;
+  return "";
+}
+
+/**
+ * पंक्ति पर सबसे ऊपर क्या लिखा जाए।
+ *
+ * क्रम: असली नाम → बैंक की भाषा का मतलब → चेक नंबर → «—»
+ * «चेक 447059» को नाम मानकर ऊपर छापना और नीचे भी दुहराना — यही पुरानी
+ * ख़राबी थी, इसलिए चेक यहाँ सबसे नीचे रखा गया है।
+ */
+function pbTitle(t) {
+  const nm = String(t.party || "").trim();
+  const isCheque = /^चेक\s*\d+$/.test(nm);
+  if (nm && !isCheque && !bankMeaning(nm)) return { name: nm, meaning: bankMeaning(t.narration) };
+  const mean = bankMeaning(nm) || bankMeaning(t.narration);
+  if (mean) return { name: mean, meaning: "" };
+  if (t.chequeNo) return { name: "🧾 चेक " + t.chequeNo, meaning: "" };
+  return { name: "—", meaning: "" };
+}
+
 let PB_ACC = "", PB_MONTH = "";
 
 /** इस खाते की सारी पंक्तियाँ, पुरानी से नई। */
@@ -7061,19 +7168,24 @@ function pbTxns(acc) {
 }
 
 /**
- * ओपनिंग बैलेंस। सबसे पुरानी पंक्ति पर बैंक का लिखा हुआ balance मिल जाए तो
- * उसी से उल्टा गिनकर निकाल लो — यही सबसे भरोसेमंद है। न मिले तो जो विक्रम
- * जी ने भर दिया, वह।
+ * ओपनिंग बैलेंस — इस खाते की सबसे पुरानी statement से **पहले** जितना पैसा था।
+ *
+ * 🏦 विक्रम जी का भरा हुआ अंक सबसे ऊपर। पहले उल्टा था: statement से निकाला
+ *    हुआ अंदाज़ा उनके अपने भरे हुए अंक पर भारी पड़ता था — यानी एक बार
+ *    statement डलने के बाद उसे सुधारने का कोई रास्ता ही नहीं बचता था।
  */
 function pbOpening(acc) {
+  const a = ACCOUNTS[acc] || {};
+  if (a.openingBalance != null && a.openingBalance !== "") {
+    return { value: Number(a.openingBalance), from: "आपका भरा हुआ", mine: true };
+  }
   const rows = pbTxns(acc);
   const first = rows.filter((t) => t.balance != null)[0];
   if (first) {
     const d = (first.type === "credit" ? 1 : -1) * (Number(first.amount) || 0);
-    return { value: Number(first.balance) - d, from: "बैंक की statement से" };
+    return { value: Number(first.balance) - d,
+             from: "statement की पहली पंक्ति से निकाला" };
   }
-  const a = ACCOUNTS[acc] || {};
-  if (a.openingBalance != null) return { value: Number(a.openingBalance), from: "आपका भरा हुआ" };
   return { value: null, from: null };
 }
 
@@ -7124,6 +7236,43 @@ function initPass() {
 function setPbAcc(v) { PB_ACC = v; PB_MONTH = ""; initPass(); }
 function setPbMonth(v) { PB_MONTH = v; renderPass(); }
 
+/**
+ * 🧮 हिसाब मिल रहा है या नहीं।
+ *
+ * ओपनिंग + आया − गया = आज। बैंक ने आख़िरी पंक्ति पर जो बची रकम लिखी है,
+ * उससे यह मिलना ही चाहिए। न मिले तो सीधा मतलब है कि **कुछ पंक्तियाँ छूटी
+ * हुई हैं** — और यही विक्रम जी के खाते में हुआ था (पुरानी नक़ली-UTR वाली
+ * ग़लती से 28 में से 10 पंक्तियाँ मिट गई थीं)।
+ */
+function pbAudit(acc) {
+  const flow = pbFlow(acc);
+  if (!flow.length) return null;
+  const open = pbOpening(acc);
+  const inSum = flow.filter((r) => r.t.type === "credit").reduce((a, r) => a + (r.t.amount || 0), 0);
+  const outSum = flow.filter((r) => r.t.type === "debit").reduce((a, r) => a + (r.t.amount || 0), 0);
+  const bankSays = [...flow].reverse().filter((r) => r.t.balance != null)[0];
+  if (open.value == null || !bankSays) return { open, inSum, outSum, ok: null };
+  const should = Math.round((open.value + inSum - outSum) * 100) / 100;
+  const gap = Math.round((bankSays.t.balance - should) * 100) / 100;
+
+  // कहाँ टूटा — पहली वह पंक्ति जहाँ बैंक की लिखी रकम अपने हिसाब से हटी
+  let broke = null;
+  if (Math.abs(gap) > 1) {
+    let run = open.value;
+    for (const r of flow) {
+      run += (r.t.type === "credit" ? 1 : -1) * (r.t.amount || 0);
+      if (r.t.balance != null && Math.abs(r.t.balance - run) > 1) {
+        broke = { row: r.t, apna: Math.round(run * 100) / 100,
+                  bank: r.t.balance, gap: Math.round((r.t.balance - run) * 100) / 100 };
+        break;
+      }
+      if (r.t.balance != null) run = r.t.balance;
+    }
+  }
+  return { open, inSum, outSum, should, bank: bankSays.t.balance, gap,
+           ok: Math.abs(gap) <= 1, broke };
+}
+
 function renderPass() {
   if (!PB_ACC) return;
   const open = pbOpening(PB_ACC);
@@ -7132,11 +7281,12 @@ function renderPass() {
   const inSum = shown.filter((r) => r.t.type === "credit").reduce((a, r) => a + (r.t.amount || 0), 0);
   const outSum = shown.filter((r) => r.t.type === "debit").reduce((a, r) => a + (r.t.amount || 0), 0);
   const last = flow.length ? flow[flow.length - 1].bal : open.value;
+  const endBal = shown.length ? shown[shown.length - 1].bal : last;
   const startBal = shown.length ? (shown[0].bal != null
     ? shown[0].bal - (shown[0].t.type === "credit" ? 1 : -1) * (shown[0].t.amount || 0) : null)
     : open.value;
 
-  // ── ऊपर का सिरा: कहाँ से चला, कहाँ पहुँचा ────────────────────────
+  // ── ऊपर का सिरा ──────────────────────────────────────────────────
   $("pbHead").innerHTML = `
     <div class="pbBar">
       <div class="pbSide open">
@@ -7147,42 +7297,65 @@ function renderPass() {
       <div class="pbArrow">→</div>
       <div class="pbSide now">
         <span>${PB_MONTH ? "महीने के अंत में" : "आज की हालत"}</span>
-        <b>${(shown.length ? shown[shown.length - 1].bal : last) == null ? "—"
-          : INR(shown.length ? shown[shown.length - 1].bal : last)}</b>
-        <small>${shown.length} entries</small>
+        <b>${endBal == null ? "—" : INR(endBal)}</b>
+        <small>${plural(shown.length, "सौदा", "सौदे")}</small>
       </div>
     </div>
     <div class="pbFlow">
       <div class="pbIn">🟢 आया<b>${INR(inSum)}</b>
-        <small>${shown.filter((r) => r.t.type === "credit").length} बार</small></div>
+        <small>${plural(shown.filter((r) => r.t.type === "credit").length, "बार", "बार")}</small></div>
       <div class="pbOut">गया 🔴<b>${INR(outSum)}</b>
-        <small>${shown.filter((r) => r.t.type === "debit").length} बार</small></div>
+        <small>${plural(shown.filter((r) => r.t.type === "debit").length, "बार", "बार")}</small></div>
     </div>
-    ${gfx.spark(flow.map((r) => r.bal).filter((x) => x != null).slice(-40),
-      last != null && last < 0 ? gfx.C.out : gfx.C.in, 40)}`;
+    ${pbChart(shown)}`;
 
-  // ── ओपनिंग बैलेंस न पता हो तो पूछ लो, एक बार ────────────────────
-  $("pbOpenAsk").innerHTML = open.value == null ? `
-    <div class="card">
-      <div class="toonBox tight">
-        <div class="toonArt">${gfx.toon("book2", 60)}</div>
-        <div class="toonSay"><b>ओपनिंग बैलेंस भर दीजिए</b>
-          <p>इस खाते की सबसे पुरानी statement से पहले जितना पैसा था — एक बार
-            भर दीजिए, फिर हर दिन का बैलेंस अपने-आप बनता जाएगा।</p></div>
+  // ── 🏦 ओपनिंग बैलेंस — हमेशा दिखे, हमेशा बदला जा सके ─────────────
+  const aud = pbAudit(PB_ACC);
+  $("pbOpenAsk").innerHTML = `
+    <div class="card pbOpen">
+      <div class="poRow">
+        <div class="poIco">${gfx.toon("book2", 52)}</div>
+        <div class="poTxt">
+          <span>🏦 ओपनिंग बैलेंस</span>
+          <b>${open.value == null ? "अभी भरा नहीं" : INR(open.value)}</b>
+          <small>${open.value == null
+            ? "इस खाते की सबसे पुरानी statement से पहले जितना पैसा था"
+            : esc(open.from || "") + (flow.length
+              ? " · " + esc(dayLabel(String(flow[0].t.date).slice(0, 10)) || "") + " से पहले" : "")}</small>
+        </div>
+        <button type="button" class="mini" onclick="askPbOpening()">✏️</button>
       </div>
-      <div class="uFill" style="margin-top:10px">
-        <input id="pbOpenBox" inputmode="decimal" placeholder="जैसे: 125000">
-        <button type="button" class="mini primary" onclick="savePbOpening()">✅ भर दें</button>
-      </div>
-    </div>` : "";
+      <div id="pbOpenEdit"></div>
+      ${aud && aud.ok === true ? `
+        <div class="poOk">✅ <b>हिसाब मिल रहा है</b>
+          <small>${INR(aud.open.value)} + ${INR(aud.inSum)} आया − ${INR(aud.outSum)} गया
+            = <b>${INR(aud.should)}</b>, और बैंक ने भी ${INR(aud.bank)} ही लिखा है।</small>
+        </div>` : ""}
+      ${aud && aud.ok === false ? `
+        <div class="poBad">🚨 <b>हिसाब ${INR(Math.abs(aud.gap))} से नहीं मिल रहा</b>
+          <small>यानी इस खाते की कुछ पंक्तियाँ छूटी हुई हैं। अपना हिसाब
+            ${INR(aud.should)} कहता है, बैंक ${INR(aud.bank)}।</small>
+          ${aud.broke ? `<div class="poBreak">🔍 <b>${
+            esc(dayLabel(String(aud.broke.row.date).slice(0, 10)) || aud.broke.row.date)}</b> वाली
+            पंक्ति (${esc(pbTitle(aud.broke.row).name)} · ${INR(aud.broke.row.amount)})
+            <b>से पहले</b> कहीं एक पंक्ति छूटी हुई है।
+            <br><span class="muted">वहाँ तक अपना हिसाब ${INR(aud.broke.apna)} बनता है,
+              पर बैंक ने उसी पंक्ति पर ${INR(aud.broke.bank)} लिखा है — यानी बीच में
+              <b>${INR(Math.abs(aud.broke.gap))}</b> की एक entry दर्ज ही नहीं हुई।</span></div>` : ""}
+          <div style="margin-top:9px"><button type="button" class="mini primary"
+            onclick="goTab('recon')">📄 statement दुबारा डालें</button></div>
+        </div>` : ""}
+    </div>`;
 
-  // ── दिन-दर-दिन, नया दिन ऊपर ─────────────────────────────────────
+  // ── दिन-दर-दिन ───────────────────────────────────────────────────
   const byDay = {};
   shown.forEach((r) => {
     const d = String(r.t.date).slice(0, 10);
     (byDay[d] = byDay[d] || []).push(r);
   });
   const days = Object.keys(byDay).sort().reverse();
+  const biggest = Math.max(1, ...days.map((d) =>
+    byDay[d].reduce((a, r) => a + (r.t.amount || 0), 0)));
 
   $("pbDays").innerHTML = days.length ? days.map((d) => {
     const rows = byDay[d];
@@ -7190,26 +7363,24 @@ function renderPass() {
     const dout = rows.filter((r) => r.t.type === "debit");
     const dinSum = din.reduce((a, r) => a + (r.t.amount || 0), 0);
     const doutSum = dout.reduce((a, r) => a + (r.t.amount || 0), 0);
-    const endBal = rows[rows.length - 1].bal;
+    const endB = rows[rows.length - 1].bal;
+    const net = dinSum - doutSum;
     return `
     <div class="pbDay">
       <div class="pbDayHead">
         <b>${esc(dayLabel(d) || d)}</b>
-        <span>${endBal == null ? "" : "दिन के अंत में <b>" + INR(endBal) + "</b>"}</span>
+        ${endB == null ? "" : `<span>दिन के अंत में <b>${INR(endB)}</b></span>`}
       </div>
-      <div class="pbCols">
-        <div class="pbCol in">
-          ${din.length ? din.map((r) => pbRow(r, "in")).join("")
-            : '<div class="pbNone">—</div>'}
-        </div>
-        <div class="pbCol out">
-          ${dout.length ? dout.map((r) => pbRow(r, "out")).join("")
-            : '<div class="pbNone">—</div>'}
-        </div>
-      </div>
+      ${din.length ? `<div class="pbSec in"><div class="pbSecHead">🟢 आया</div>
+        ${din.map((r) => pbRow(r, "in")).join("")}</div>` : ""}
+      ${dout.length ? `<div class="pbSec out"><div class="pbSecHead">🔴 गया</div>
+        ${dout.map((r) => pbRow(r, "out")).join("")}</div>` : ""}
       <div class="pbDayFoot">
-        <span class="i">🟢 +${INR(dinSum)}</span>
-        <span class="o">🔴 −${INR(doutSum)}</span>
+        <div class="pbMeter">
+          ${dinSum ? `<i class="i" style="width:${(dinSum / biggest) * 100}%"></i>` : ""}
+          ${doutSum ? `<i class="o" style="width:${(doutSum / biggest) * 100}%"></i>` : ""}
+        </div>
+        <span class="${net >= 0 ? "i" : "o"}">दिन में ${net >= 0 ? "+" : "−"}${INR(Math.abs(net))}</span>
       </div>
     </div>`;
   }).join("") : gfx.empty("book2", "इस महीने कुछ नहीं",
@@ -7217,23 +7388,110 @@ function renderPass() {
       `<button type="button" class="mini" onclick="goTab('recon')">🏦 statement डालें</button>`);
 }
 
-/** पासबुक की एक पंक्ति — आया हो या गया, बनावट एक ही। */
+/**
+ * 📊 बैलेंस की चाल — शून्य की लकीर के साथ।
+ *
+ * पहले यहाँ एक बड़ा हरा भरा हुआ पहाड़ था, जो देखने में तो भारी लगता था पर
+ * बताता कुछ नहीं था — और हरा रंग «आया» का होता है, इसलिए आँख को उल्टा
+ * संदेश जाता था। अब एक ही लकीर, और वह वही बताती है जो सचमुच काम की है:
+ * खाता कब ख़ाली होने के क़रीब आया।
+ */
+function pbChart(rows) {
+  const v = rows.map((r) => r.bal).filter((x) => x != null);
+  if (v.length < 2) return "";
+  const W = 300, H = 84, PAD = 6;
+  const lo = Math.min(0, ...v), hi = Math.max(0, ...v), span = (hi - lo) || 1;
+  const x = (i) => PAD + (i / (v.length - 1)) * (W - PAD * 2);
+  const y = (n) => H - PAD - ((n - lo) / span) * (H - PAD * 2);
+  const line = v.map((n, i) => `${x(i).toFixed(1)},${y(n).toFixed(1)}`).join(" ");
+  const up = v[v.length - 1] >= v[0];
+  const col = up ? "#0ca30c" : "#d03b3b";
+  const u = "pb" + Math.random().toString(36).slice(2, 7);
+  const zero = y(0);
+  const loI = v.indexOf(Math.min(...v)), hiI = v.indexOf(Math.max(...v));
+
+  return `<div class="pbChart">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id="${u}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${col}" stop-opacity=".28"/>
+        <stop offset="1" stop-color="${col}" stop-opacity="0"/>
+      </linearGradient></defs>
+      <polygon points="${x(0)},${zero} ${line} ${x(v.length - 1)},${zero}" fill="url(#${u})"/>
+      <line x1="0" y1="${zero}" x2="${W}" y2="${zero}" stroke="#7a7a72"
+        stroke-width="1" stroke-dasharray="3 3" opacity=".7"/>
+      <polyline points="${line}" fill="none" stroke="${col}" stroke-width="2"
+        stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${x(hiI)}" cy="${y(v[hiI])}" r="2.6" fill="#0ca30c"/>
+      <circle cx="${x(loI)}" cy="${y(v[loI])}" r="2.6" fill="#d03b3b"/>
+    </svg>
+    <div class="pbChartFoot">
+      <span class="lo">सबसे नीचे ${INR(Math.min(...v))}</span>
+      <span class="muted">बैलेंस की चाल</span>
+      <span class="hi">सबसे ऊपर ${INR(Math.max(...v))}</span>
+    </div>
+  </div>`;
+}
+
+/**
+ * पासबुक की एक पंक्ति।
+ *
+ * ⚠️ पुरानी ख़राबियाँ जो यहाँ थीं: «चेक 447059» ऊपर नाम की जगह और नीचे
+ *    दुबारा; नाम कटा हुआ («SHREE HINGLAJ INFRAT…»); और बैंक की कोड वाली
+ *    भाषा नाम की जगह। तीनों यहाँ ठीक हैं — नाम पूरा दिखता है, चेक नंबर
+ *    एक ही बार नीचे, और बैंक की भाषा का सीधा मतलब।
+ */
 function pbRow(r, dir) {
   const t = r.t;
   const tw = dir === "out" ? twinOf(t) : null;
   const bill = tw || t.matchedReceiptId || t.billPhotoId;
+  const head = pbTitle(t);
+  const bits = [];
+  if (t.time) bits.push(esc(t.time));
+  if (head.meaning) bits.push(esc(head.meaning));
+  if (t.chequeNo) bits.push("🧾 चेक " + esc(t.chequeNo));
+  const u = txnUtr(t);
+  if (u) bits.push("UTR " + esc(u));
+
+  /* बैंक की असली लिखाई छिपी रहती है, पर मिटती नहीं — पंक्ति पर उँगली
+     रखते ही खुल जाती है। विक्रम जी की शिकायत ठीक थी: रोज़ की नज़र में
+     आधी स्क्रीन अंग्रेज़ी नहीं होनी चाहिए। पर ज़रूरत पड़ने पर पूरी बात एक
+     टैप दूर रहे — छिपाना और मिटाना एक बात नहीं है।                    */
   return `
-  <div class="pbTxn ${dir}">
-    <div class="pbAmt">${dir === "in" ? "+" : "−"}${INR(t.amount)}</div>
-    <div class="pbWho">${esc(t.party || partyOf(t.narration || "") || "—")}</div>
-    <div class="pbSub">${t.time ? esc(t.time) + " · " : ""}${
-      txnUtr(t) ? "UTR " + esc(txnUtr(t)) : t.chequeNo ? "चेक " + esc(t.chequeNo) : ""}</div>
-    ${dir === "out" ? (bill
+  <div class="pbTxn ${dir}" onclick="this.classList.toggle('open')">
+    <div class="pbLine">
+      <span class="pbAmt">${dir === "in" ? "+" : "−"}${INR(t.amount)}</span>
+      <span class="pbWho">${esc(head.name)}</span>
+    </div>
+    ${bits.length || t.narration
+      ? `<div class="pbSub">${bits.join(" · ")}${
+          t.narration ? (bits.length ? " · " : "") + '<span class="pbMore">बैंक की लिखाई ⌄</span>' : ""}</div>`
+      : ""}
+    ${t.narration && head.name !== t.narration
+      ? `<div class="pbRaw">${esc(t.narration)}</div>` : ""}
+    ${dir === "out" ? `<div class="pbAct">${bill
       ? `<span class="badge ok2">${tw ? "🔗 " + esc(tw.exp.receiptId || "बिल लगा")
           : "✅ बिल लगा"}</span>`
-      : `<button type="button" class="mini" onclick="openBillFor('${esc(t._id)}')">📎 बिल जोड़ें</button>`)
-      : ""}
+      : `<button type="button" class="mini" onclick="openBillFor('${esc(t._id)}')">📎 बिल जोड़ें</button>`
+    }</div>` : ""}
   </div>`;
+}
+
+/** ✏️ ओपनिंग बैलेंस — कभी भी बदला जा सके, सिर्फ़ ख़ाली होने पर नहीं। */
+function askPbOpening() {
+  const box = $("pbOpenEdit");
+  if (!box) return;
+  if (box.innerHTML) { box.innerHTML = ""; return; }
+  const cur = pbOpening(PB_ACC);
+  box.innerHTML = `
+    <div class="uFill" style="margin-top:10px">
+      <input id="pbOpenBox" inputmode="decimal" placeholder="जैसे: 36499.31"
+        value="${cur.value == null ? "" : cur.value}">
+      <button type="button" class="mini primary" onclick="savePbOpening()">✅ भर दें</button>
+    </div>
+    <div class="muted" style="margin-top:6px;font-size:11.5px">
+      यह वह रकम है जो इस खाते की सबसे पुरानी statement से <b>पहले</b> पड़ी थी।
+      आपका भरा हुआ अंक statement से निकाले हुए पर भारी पड़ेगा।</div>`;
+  $("pbOpenBox").focus();
 }
 
 async function savePbOpening() {
