@@ -3414,13 +3414,53 @@ const num = (v) => {
 const toISO = (v) => parseDay(v);
 
 /** UTR / reference — the key that stops one payment being counted twice. */
+/* ⚠️⚠️ यहाँ एक बहुत ख़तरनाक ग़लती पकड़ी गई — पूरी टिप्पणी ज़रूरी है।
+
+   पहले इस function के आख़िर में एक «आख़िरी सहारा» था:
+
+       s.match(/\b(\d{12,22})\b/)      ← जो भी 12+ अंकों का नंबर मिले, वही UTR
+
+   पर बैंक की narration में 12+ अंकों के नंबर **खाता नंबर** भी होते हैं:
+
+       "DIRECT DR INT TRF FRM 42033283908 TO 44396283308
+        0044396283308 OF SHREE HINGLAJ INFRATEC"
+
+   यहाँ 0044396283308 सामने वाले का **खाता नंबर** है, UTR नहीं। और चूँकि
+   हर पंक्ति का दस्तावेज़-नंबर UTR से बनता है («utr-0044396283308»), उस
+   खाते के साथ हुए **आठों सौदे एक ही दस्तावेज़ में जा गिरते** — यानी सात
+   चुपचाप मिट जाते।
+
+   विक्रम जी की एक असली statement (28 पंक्तियाँ) पर जाँचने पर: 13 पंक्तियाँ
+   सिर्फ़ 3 दस्तावेज़ों में सिमट रही थीं — **10 सौदे ग़ायब**।
+
+   अब बिना निशानी वाला नंबर UTR माना ही नहीं जाता। असली UTR के साथ हमेशा
+   कोई न कोई निशानी होती है:
+       UPI/DR/657085241092/…      NEFT UTR NO: SBIN426092856383
+       UPI Ref No: 311420032638   RRN: 032771344249
+
+   और अगर किसी statement में सचमुच बिना निशानी का UTR हो, तो वह न मिलने से
+   सिर्फ़ इतना होगा कि जुड़ाव अपने-आप नहीं होगा — कुछ मिटेगा नहीं। ग़लत UTR
+   से डेटा मिटता है, न मिलने से नहीं। इसलिए यही सुरक्षित है।            */
+
 function utrOf(text) {
-  let m = String(text).match(/\b(?:UPI|IMPS|NEFT|RTGS)\/[A-Z]{2}\/(\d{9,22})/i);
-  if (m) return m[1];
-  m = String(text).match(/\b(?:UTR|RRN|REF)[:\s#-]*([A-Za-z0-9]{9,22})\b/i);
+  const s = String(text || "");
+
+  // 1. UPI/IMPS/NEFT/RTGS का अपना ढाँचा — सबसे पक्का
+  let m = s.match(/\b(?:UPI|IMPS|NEFT|RTGS)\/[A-Z]{2}\/(\d{9,22})/i);
   if (m) return m[1].toUpperCase();
-  m = String(text).match(/\b(\d{12,22})\b/);
-  return m ? m[1] : null;
+
+  // 2. साफ़ लिखा हुआ — "UTR NO:", "Ref No:", "RRN", "Transaction ID"
+  m = s.match(/\b(?:UTR|RRN|REF|TXN|TRANSACTION\s*ID)\s*(?:NO\.?|NUMBER)?\s*[:#-]?\s*([A-Za-z0-9]{8,22})\b/i);
+  if (m) return m[1].toUpperCase();
+
+  /* 3. बिना निशानी वाला नंबर — सिर्फ़ तभी, जब पूरे पाठ में कहीं UPI/NEFT
+        जैसी बात हो **और** नंबर ठीक 12 अंकों का हो (UPI का UTR हमेशा 12
+        अंकों का होता है; खाता नंबर 9–18 अंकों का, अक्सर 0 से शुरू)।       */
+  if (/\b(?:UPI|IMPS|NEFT|RTGS|UTR|RRN)\b/i.test(s)) {
+    m = s.match(/(?<![\d])([1-9]\d{11})(?![\d])/);
+    if (m) return m[1];
+  }
+  return null;
 }
 
 /** Party name out of a UPI/NEFT narration. */
@@ -3611,11 +3651,7 @@ function parseDay(s) {
 const p2 = (n) => String(n).padStart(2, "0");
 
 /** UTR / UPI reference — the master key against double counting. */
-function utrOf(text) {
-  const s = String(text || "");
-  const m = s.match(/\b(?:UTR|RRN|REF|TXN)[:\s#-]*([A-Za-z0-9]{8,22})\b/i) || s.match(/\b(\d{12,22})\b/);
-  return m ? m[1].toUpperCase() : null;
-}
+/* utrOf ऊपर एक ही जगह लिखा है — दो परिभाषाएँ रखना ही आधी ग़लती थी। */
 
 /** Bank / PhonePe / GPay CSV → [{date, amount, type, narration, utr}] */
 /**
@@ -3689,8 +3725,11 @@ function parseStatement(text) {
       /* 🗺️ «Account» का खाना — «SBI 0499» / «State Bank Of India - 89»।
          बैंक का नाम और अंक अलग करके रखो, ताकि नक़्शे वाली स्क्रीन उन्हें
          वैसे ही पहचाने जैसे PDF से आई पंक्तियों को।                    */
-      bank: accCell ? accCell.replace(/[-\s]*\d{2,6}\s*$/, "").trim() || null : null,
-      accountTail: accCell ? ((accCell.match(/(\d{2,6})\s*$/) || [])[1] || null) : null,
+      /* आख़िर में जितने भी अंक हों, सब लो — «SBI 42033283908» में पूरा
+         नंबर 42033283908 है, सिर्फ़ आख़िरी छह 283908 नहीं। पूरा नंबर मिलने
+         पर पहचान हूबहू होती है, अंदाज़े से नहीं।                        */
+      bank: accCell ? accCell.replace(/[-\s]*\d+\s*$/, "").trim() || null : null,
+      accountTail: accCell ? ((accCell.match(/(\d{2,})\s*$/) || [])[1] || null) : null,
       source: "csv_statement"
     });
   }
@@ -3710,10 +3749,52 @@ function hash36(s) {
  * the same file, or the same period from a second source, therefore changes
  * nothing.
  */
+/**
+ * हर पंक्ति का अपना पक्का नंबर।
+ *
+ * 🔒 UTR से बनाना सही है — वही दो statement की एक ही पंक्ति को जोड़ता है।
+ *    पर तभी, जब वह सचमुच UTR हो। एक ही «UTR» दो अलग सौदों पर लग जाए तो
+ *    दूसरा पहले को **मिटा** देता है, और यह चुपचाप होता है।
+ *
+ *    असली पहरा दो जगह है: utrOf() अब बिना निशानी वाला नंबर उठाता ही नहीं,
+ *    और dropFakeUtrs() एक ही file में दुहराए गए «UTR» को हटा देता है।
+ *    यहाँ बस इतना कि वह ख़ाली या बहुत छोटा न हो।
+ */
 function txnId(accountId, t) {
-  if (t.utr) return "utr-" + String(t.utr).toUpperCase();
+  const u = String(t.utr || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (u.length >= 8) return "utr-" + u;
   return accountId + "-" + t.date + "-" + Math.round(t.amount * 100) + "-" +
     hash36(pKey(t.party || t.narration || "") + "|" + (t.type || ""));
+}
+
+/**
+ * 🚨 एक ही file में वही «UTR» कई पंक्तियों पर — तो वह UTR है ही नहीं।
+ *
+ * विक्रम जी की एक असली CSV में «0044396283308» आठ पंक्तियों पर था। वह
+ * सामने वाले का **खाता नंबर** था, और उसी खाते में हर महीने पैसा जाता है।
+ * चूँकि दस्तावेज़-नंबर UTR से बनता है, आठों एक ही दस्तावेज़ में जा गिरतीं —
+ * सात सौदे चुपचाप मिट जाते।
+ *
+ * एक file में एक UTR एक ही बार आ सकता है — यह बैंक की अपनी बनावट है।
+ * इसलिए जो दुहराया गया, वह हटा दिया जाता है (पंक्ति नहीं, सिर्फ़ उसका
+ * UTR — पंक्ति अपने आप में सही है और तारीख़+रकम से सँभल जाती है)।
+ *
+ * @returns {{rows:Array, dropped:Object}} हटाए गए «UTR» और उनकी गिनती
+ */
+function dropFakeUtrs(rows) {
+  const seen = {};
+  (rows || []).forEach((t) => {
+    const u = utrKey(t.utr);
+    if (u) seen[u] = (seen[u] || 0) + 1;
+  });
+  const bad = {};
+  Object.keys(seen).forEach((u) => { if (seen[u] > 1) bad[u] = seen[u]; });
+  if (Object.keys(bad).length) {
+    rows.forEach((t) => {
+      if (bad[utrKey(t.utr)]) { t.fakeUtr = t.utr; t.utr = null; }
+    });
+  }
+  return { rows, dropped: bad };
 }
 
 /**
@@ -4599,8 +4680,10 @@ async function handleStatementFile(file, password) {
       status.textContent = "यह file समझ नहीं आई — उसमें तारीख़ और रकम वाले column होने चाहिए।";
       return;
     }
+    // 🚨 पहले नक़ली UTR हटाओ — वरना कई सौदे एक ही दस्तावेज़ में जा गिरेंगे
+    const fake = dropFakeUtrs(txns);
     const res = matchStatement(txns, accountId);
-    RECON = Object.assign({ account: accountId, txns }, res);
+    RECON = Object.assign({ account: accountId, txns, fakeUtrs: fake.dropped }, res);
     // 🗺️ हर पंक्ति का अपना खाता — पहले नक़्शा, फिर बाक़ी सब
     ACCMAP = accountMap(txns);
     renderRecon(txns.length, txns);
@@ -4608,7 +4691,16 @@ async function handleStatementFile(file, password) {
     $("rPassBox").hidden = true;
     $("rPass").value = "";
     status.className = "ok";
-    status.textContent = `✅ ${txns.length} entries पढ़ीं — नीचे नतीजा देखें`;
+    const nBad = Object.keys(fake.dropped).length;
+    status.innerHTML = `✅ ${txns.length} entries पढ़ीं — नीचे नतीजा देखें` +
+      (nBad ? gfx.insight({ icon: "🛡️", tone: "warn",
+        title: `${nBad} नक़ली UTR पकड़े और हटाए`,
+        body: Object.keys(fake.dropped).slice(0, 3).map((u) =>
+          `<b>${esc(u)}</b> ${fake.dropped[u]} पंक्तियों पर था`).join(" · ") +
+          `<br><span class="muted">एक file में एक UTR एक ही बार आ सकता है।
+           जो दुहराया गया वह असल में खाता नंबर था — उसे UTR मानने पर वे सारे
+           सौदे एक ही दस्तावेज़ में जा गिरते और सिर्फ़ आख़िरी बचता। पंक्तियाँ
+           सब सुरक्षित हैं, बस उनका UTR हटा दिया गया।</span>` }) : "");
   } catch (err) {
     const needsPass = err && (err.name === "PasswordException" ||
       /password/i.test(err.message || ""));
@@ -4749,7 +4841,6 @@ function txnDoc(t, accountId, receiptId, confidence, existing) {
     { party: CHEQUES[t.chequeNo], partyTruncated: false });
   const doc = {
     accountId: rowAcc || accountId, date: t.date,
-    app: t.app || undefined,
     amount: t.amount, type: t.type,
     partyKey: pKey(t.party || t.narration || ""),
     source: t.source || "statement",
@@ -6676,7 +6767,7 @@ function reSearch(id, v) {
 /** UTR को एक ही शक्ल में लाओ — बड़े अक्षर, बिना जगह/डैश के। */
 function utrKey(v) {
   const u = String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  return u.length >= 6 ? u : "";
+  return u.length >= 8 ? u : "";
 }
 
 /**
@@ -12482,9 +12573,9 @@ function renderCheques() {
 const CSV_PROMPT = [
   "तुम भारतीय बैंक statement पढ़ने वाले सहायक हो।",
   "",
-  'साथ लगी statement की फ़ोटो पढ़ो और एक CSV फ़ाइल बनाकर दो, जिसका नाम',
-  '"statement.csv" हो और जो डाउनलोड की जा सके। कोई समझाइश मत लिखो, कोई',
-  "भूमिका मत बाँधो — बस फ़ाइल।",
+  'साथ लगी statement (फ़ोटो या PDF) पढ़ो और एक CSV फ़ाइल बनाकर दो, जिसका',
+  'नाम "statement.csv" हो और जो डाउनलोड की जा सके। कोई समझाइश मत लिखो,',
+  "कोई भूमिका मत बाँधो — बस फ़ाइल।",
   "",
   "पहली पंक्ति बिल्कुल यही रहे (हूबहू, इसी क्रम में):",
   "",
@@ -12492,51 +12583,64 @@ const CSV_PROMPT = [
   "",
   "फिर हर सौदे की एक पंक्ति। नियम — हर एक ज़रूरी है:",
   "",
-  '1. Date — "YYYY-MM-DD". Post Date वाली तारीख़ लो।',
+  '1. Date — "YYYY-MM-DD"। Post Date वाली तारीख़ लो।',
   '   "02-04-2026" → 2026-04-02',
   "",
-  '2. Time — "HH:MM" 24 घंटे में। statement में समय न हो तो खाली छोड़ दो।',
+  '2. Time — "HH:MM" 24 घंटे में। समय न छपा हो तो खाली छोड़ दो।',
   '   "09:14 pm" → 21:14',
   "",
   "3. Party — जिसे पैसा गया या जिससे आया, उसका नाम। इन रूपों को पहचानो:",
   '   • "CHEQUE TRANSFER TO 0039867691276 OF Miss. SHIVANI ." → SHIVANI',
   '   • "CAS CASH CHEQUE / MANOJ DAN"                        → MANOJ DAN',
   '   • "Chq 917586 Sess 2 BALAJI TIMBER 000907701"          → BALAJI TIMBER',
-  '   • "CAS PRES CHQ / MINAXI AGENCY"                       → MINAXI AGENCY',
   '   • "UPI/CR/032771344249/MANISH"                         → MANISH',
-  '   • "NEFT*UBIN0918628*0107144631 72*KV JALIPA PM SHRI*B" → 72 KV JALIPA PM SHRI B',
+  '   • "CHQ TRFR FROM 0043467096532 OF STN HQ JALIPA"       → STN HQ JALIPA',
   '   नाम कहीं लिखा ही न हो (जैसे "REMT THRU CHQ / NEFT UTR NO: SBIN…") तो',
   "   Party खाली छोड़ दो। अंदाज़ा मत लगाओ — चेक नंबर से नाम बाद में जुड़ जाएगा।",
   "",
   "4. Account — यह पंक्ति किस खाते की है। **यह सबसे ज़रूरी खाना है।**",
   "   एक ही फ़ाइल में कई खाते हो सकते हैं, और ग़लत खाते में entry चली जाए तो",
   "   पूरा हिसाब बिगड़ जाता है। जहाँ भी लिखा हो, वहीं से उठाओ:",
-  '   • "Paid by State Bank of India 0499"   → SBI 0499',
-  '   • "Paid to AU Small Finance Bank 0628" → AU 0628',
+  '   • "Paid by State Bank of India 0499"      → SBI 0499',
+  '   • "Paid to AU Small Finance Bank 0628"    → AU 0628',
   '   • दाएँ खाने में "State Bank Of India - 89" → SBI 89',
-  '   • ऊपर सिरे पर लिखा "A/c No: 43362997445" → 43362997445',
-  "   बैंक का नाम और अंक, दोनों लिखो — सिर्फ़ अंक काफ़ी नहीं, क्योंकि एक ही",
-  "   बैंक के दो खाते हो सकते हैं। कहीं कुछ न लिखा हो तो खाली छोड़ दो।",
+  '   • ऊपर सिरे पर लिखा "A/c No: 42033283908"  → SBI 42033283908',
+  "   बैंक का छोटा नाम पहले, फिर नंबर — «SBI 42033283908» की तरह। सिर्फ़ अंक",
+  "   काफ़ी नहीं, क्योंकि एक ही बैंक के दो खाते हो सकते हैं।",
+  "   पूरी statement एक ही खाते की हो तो हर पंक्ति में वही खाता लिखो।",
   "",
   "5. Description — उस सौदे की सारी लाइनें जोड़कर, जैसी छपी हैं। एक सौदा",
   "   तीन-चार लाइनों में फैला हो तो सबको एक ही खाने में डालो।",
   "",
-  '5. ChequeNo — "Cheque No/Reference" खाने का नंबर (जैसे 917568)। न हो तो खाली।',
+  '6. ChequeNo — "Cheque No/Reference" खाने का नंबर (जैसे 917568)। न हो तो खाली।',
   "",
-  "7. UTR — UTR / UPI transaction ID / NEFT reference, जो भी छपा हो",
-  "   (जैसे SBIN426092856383 या 032771344249)। न हो तो खाली।",
+  "7. UTR — ⚠️ यहाँ सबसे ज़्यादा सावधानी चाहिए।",
+  "   UTR वही है जो साफ़ निशानी के साथ छपा हो:",
+  '     • "UPI/DR/657085241092/…"        → 657085241092',
+  '     • "NEFT UTR NO: SBIN426092856383" → SBIN426092856383',
+  '     • "UPI Ref No: 311420032638"      → 311420032638',
+  "   **narration में पड़ा हर लंबा नंबर UTR नहीं होता।** बैंक उसमें सामने",
+  "   वाले का खाता नंबर भी छापता है:",
+  '     "DIRECT DR INT TRF FRM 42033283908 TO 44396283308 0044396283308',
+  '      OF SHREE HINGLAJ INFRATEC"',
+  "   यहाँ कोई UTR नहीं है — तीनों नंबर खाता नंबर हैं। UTR खाली छोड़ दो।",
+  "   पहचान का आसान तरीक़ा: निशानी है या नहीं। «UPI/CR/…», «UTR NO:»,",
+  "   «Ref No:» — इनके साथ लिखा नंबर ही UTR है। «FRM 42033283908 TO",
+  "   44396283308» जैसे नंबर खाता नंबर हैं, चाहे कितने भी लंबे हों।",
+  "   ग़लत UTR डालने से दो अलग सौदे एक ही मान लिए जाते हैं और एक मिट जाता",
+  "   है। शक हो तो खाली छोड़ना हमेशा बेहतर है।",
   "",
   "8. Debit और Credit — अलग-अलग खाने। जो लागू न हो वह खाली रहे, शून्य नहीं।",
   '   कभी दोनों मत भरो। "गया" = Debit, "आया" = Credit.',
   "",
-  '8. Balance — उस पंक्ति के आगे छपी बची हुई रकम। "CR"/"DR" हटा दो।',
-  "   यह सबसे ज़रूरी खाना है — इसी से जाँच होगी, इसलिए एक भी मत छोड़ो।",
+  '9. Balance — उस पंक्ति के आगे छपी बची हुई रकम। "CR"/"DR" हटा दो।',
+  "   यह सबसे ज़रूरी जाँच का खाना है — एक भी मत छोड़ो।",
   "",
   "10. सब रकम सादे अंक — ₹ नहीं, कॉमा नहीं:",
-  '   "1,50,000.00" → 150000        "90,004.72" → 90004.72',
+  '    "1,50,000.00" → 150000        "90,004.72" → 90004.72',
   "",
-  '10. जिस खाने में कुछ हो ही नहीं, उसे खाली छोड़ो। किसी भी खाने में "null",',
-  '    "NA", "-" मत लिखो।',
+  '11. जिस खाने में कुछ हो ही नहीं, उसे खाली छोड़ो। किसी भी खाने में "null",',
+  '    "NA", "-", "0" मत लिखो।',
   "",
   "12. अगर किसी खाने में कॉमा आता हो तो उस खाने को दोहरे उद्धरण में रखो।",
   "",
@@ -12545,24 +12649,25 @@ const CSV_PROMPT = [
   "14. जो अंक साफ़ न दिखे उसे अंदाज़े से मत भरो — खाली छोड़ दो। ग़लत अंक से",
   "    पूरा हिसाब बिगड़ता है, खाली खाने से नहीं।",
   "",
-  "15. साल कहीं न लिखा हो — जैसे Paytm सिर्फ़ \"30 Jul\" छापता है — तो साल",
+  '15. साल कहीं न लिखा हो — जैसे Paytm सिर्फ़ "30 Jul" छापता है — तो साल',
   "    statement की अवधि से लो (जैसे \"1 APR'26 - 31 JUL'26\" → 2026)।",
   "    अवधि दो साल में फैली हो तो महीने के हिसाब से सही साल चुनो।",
   "    अपने मन से आज का साल कभी मत डालो।",
   "",
   "16. दिशा हमेशा **सौदे की पहली लाइन** से तय करो, खाते वाली लाइन से नहीं।",
   "    Google Pay आया हुआ पैसा उल्टा लिखता है:",
-  '      "Received from Google Cloud"  ← यह आया (Credit)',
+  '      "Received from Google Cloud"          ← यह आया (Credit)',
   '      "Paid to AU Small Finance Bank 0628"  ← यह सिर्फ़ खाता है, गया नहीं',
-  "    यानी \"Paid to <बैंक का नाम>\" कभी Debit नहीं होता।",
+  '    यानी "Paid to <बैंक का नाम>" कभी Debit नहीं होता।',
   "",
-  "17. आख़िर में ख़ुद जाँच लो: सब Debit जोड़कर और सब Credit जोड़कर, statement",
-  "    पर छपे कुल से मिलाओ। न मिले तो कोई पंक्ति छूटी है — दुबारा पढ़ो।",
-  "    Balance वाला खाना भी यही जाँच देता है: पिछली बची रकम − गया + आया =",
-  "    इस पंक्ति की बची रकम।",
+  "17. आख़िर में ख़ुद जाँच लो — दो तरह से:",
+  "    (क) सब Debit का जोड़ और सब Credit का जोड़, statement पर छपे कुल से",
+  "        मिलाओ।",
+  "    (ख) पिछली बची रकम − गया + आया = इस पंक्ति की बची रकम।",
+  "    न मिले तो कोई पंक्ति छूटी या दुबारा लिखी गई है — दुबारा पढ़ो।",
   "",
-  "काम पूरा होने पर सिर्फ़ इतना बताओ: कितने सौदे लिखे, कौन सी तारीख़ से कौन सी",
-  "तक, कौन-कौन से खाते मिले, कुल कितना गया और कितना आया, और statement की",
+  "काम पूरा होने पर सिर्फ़ इतना बताओ: कितने सौदे लिखे, कौन सी तारीख़ से कौन",
+  "सी तक, कौन-कौन से खाते मिले, कुल कितना गया और कितना आया, और statement की",
   "आख़िरी बची रकम कितनी है।",
   "",
   "अगर तुम फ़ाइल नहीं बना सकते तो वही CSV सादे पाठ में लिख देना — मैं उसे",
