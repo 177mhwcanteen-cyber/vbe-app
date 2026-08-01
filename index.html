@@ -3304,10 +3304,11 @@ async function saveEntry() {
     const user = auth.currentUser;
     const when = new Date($("aDate").value + "T12:00:00+05:30");
     // Web receipts carry their own series so they can never collide with the
-    // bot's lock-protected EXP counter.
-    const seq = Date.now().toString().slice(-6);
-    const receiptId = `WEB/${fyLabel(when)}/${seq}`;
-    const docId = receiptId.replace(/\//g, "-");
+    // bot's lock-protected EXP counter — और आपस में भी नहीं (freeDocId देखें)
+    const { receiptId, docId } = await freeDocId("vbe_expenses", () => {
+      const r = `WEB/${fyLabel(when)}/${idTail()}`;
+      return { receiptId: r, docId: r.replace(/\//g, "-") };
+    });
     const vendorName = $("aVendor").value.trim();
     const vendorKey = vendorName ? vendorName.toLowerCase().replace(/[^a-z0-9ऀ-ॿ]/g, "") : null;
 
@@ -3736,6 +3737,53 @@ function parseStatement(text) {
   return out;
 }
 
+/* ══════════ 🔐 दस्तावेज़ का नंबर — टकराना नामुमकिन हो ═══════════════
+
+   ⚠️ ऑडिट में पकड़ी गई ग़लती, और यह बहुत महँगी थी।
+
+   रसीद का नंबर ऐसे बनता था:
+
+       const seq = Date.now().toString().slice(-6);      // WEB/26-27/999861
+
+   यानी सिर्फ़ **दस लाख** अलग नंबर, और वे हर **16 मिनट 40 सेकंड** में
+   दुहरा जाते हैं। साल में 2000 entries पर किसी न किसी जोड़े के टकराने की
+   संभावना **86%** निकली। और चूँकि लिखाई `.set(rec)` से होती थी — बिना
+   merge के — टकराने पर नई entry पुरानी को **पूरा मिटा** देती।
+
+   अब दो पहरे:
+     1. नंबर बहुत बड़े दायरे से बनता है (समय + बेतरतीब अक्षर)
+     2. लिखने से पहले **देख लिया जाता है कि वह नंबर ख़ाली है या नहीं** —
+        भरा मिले तो नया बनता है। यही असली सुरक्षा है; अकेला बड़ा दायरा
+        «शायद नहीं टकराएगा» है, यह «टकरा ही नहीं सकता» है।              */
+
+/** बेतरतीब पर छोटा — समय के आगे लगने पर दायरा 2 अरब से ऊपर हो जाता है। */
+function idTail() {
+  const t = Date.now().toString(36).slice(-4);
+  // बेतरतीब हिस्सा 5 अक्षरों का — अकेले उसी में 6 करोड़ से ज़्यादा
+  // संभावनाएँ, ताकि एक ही सेकंड में बनी entries भी न टकराएँ
+  const r = Math.random().toString(36).slice(2, 7).padEnd(5, "0");
+  return (t + r).toUpperCase();
+}
+
+/**
+ * ख़ाली दस्तावेज़-नंबर लौटाता है — भरा मिले तो नया बनाकर फिर देखता है।
+ * @param {string} col  संग्रह का नाम
+ * @param {function(): {receiptId:string, docId:string}} make
+ */
+async function freeDocId(col, make) {
+  for (let i = 0; i < 6; i++) {
+    const cand = make();
+    try {
+      const d = await db.collection(col).doc(cand.docId).get();
+      readCount(1);
+      if (!d.exists) return cand;
+    } catch (e) {
+      return cand;            // नेट न हो तो रोको मत — दायरा वैसे ही बड़ा है
+    }
+  }
+  throw new Error("नंबर नहीं बन पाया — दुबारा कोशिश करें");
+}
+
 function hash36(s) {
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
@@ -3760,11 +3808,56 @@ function hash36(s) {
  *    और dropFakeUtrs() एक ही file में दुहराए गए «UTR» को हटा देता है।
  *    यहाँ बस इतना कि वह ख़ाली या बहुत छोटा न हो।
  */
+/* UTR न हो तब का नंबर — यहाँ भी एक ग़लती पकड़ी गई।
+
+   पहले सिर्फ़ इतना जुड़ता था: खाता + तारीख़ + रकम + (पार्टी|दिशा)।
+
+   पर उसी दिन, उसी दुकान को, वही रकम दो बार जा सकती है — और सचमुच जाती है।
+   विक्रम जी की statement में एक ही दिन HQ 110 ARMD BDE के तीन चेक थे।
+   ऐसे दो सौदों का नंबर एक ही बनता, यानी **एक चुपचाप मिट जाता**।
+
+   ⚠️ और यह ख़तरा मेरे अपने पिछले सुधार से **बढ़ गया** था: नक़ली UTR हटाने
+      के बाद ज़्यादा पंक्तियाँ इसी रास्ते से गुज़रने लगीं।
+
+   अब चेक नंबर, समय और पूरा narration भी जुड़ते हैं — इन्हीं से दो सचमुच
+   अलग सौदे अलग रहते हैं। और वही statement दुबारा डालने पर narration वही
+   रहता है, इसलिए दुहराव अब भी नहीं होता।                               */
+function txnKeyBits(t) {
+  return [pKey(t.party || t.narration || ""), t.type || "",
+          String(t.chequeNo || "").replace(/\D/g, ""),
+          t.time || "", pKey(t.narration || "")].join("|");
+}
+
 function txnId(accountId, t) {
   const u = String(t.utr || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (u.length >= 8) return "utr-" + u;
   return accountId + "-" + t.date + "-" + Math.round(t.amount * 100) + "-" +
+    hash36(txnKeyBits(t));
+}
+
+/**
+ * v18 से पहले वाला नंबर।
+ *
+ * पहले सहेजी हुई पंक्तियाँ पुराने नंबर से पड़ी हैं। नया नियम लगाते ही वही
+ * statement दुबारा डालने पर वे **नई** मान ली जातीं और सब कुछ दुगुना हो
+ * जाता — यानी एक ग़लती सुधारते हुए दूसरी बन जाती।
+ *
+ * इसलिए सहेजने से पहले पुराना नंबर भी देखा जाता है: वहाँ पंक्ति पहले से
+ * बैठी हो तो उसी में जोड़ा जाता है, नई नहीं बनाई जाती।
+ */
+function txnIdLegacy(accountId, t) {
+  const u = String(t.utr || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (u.length >= 8) return "utr-" + u;
+  return accountId + "-" + t.date + "-" + Math.round(t.amount * 100) + "-" +
     hash36(pKey(t.party || t.narration || "") + "|" + (t.type || ""));
+}
+
+/** नया नंबर — पर पुराना पहले से भरा हो तो वही, ताकि कुछ दुगुना न हो। */
+function txnIdSafe(accountId, t) {
+  const now = txnId(accountId, t);
+  if (existingTxn(now)) return now;
+  const old = txnIdLegacy(accountId, t);
+  return existingTxn(old) ? old : now;
 }
 
 /**
@@ -3805,7 +3898,8 @@ function dropFakeUtrs(rows) {
  *  - same date + time + amount      → same money, party spelled differently
  */
 function findExisting(t, accountId) {
-  const id = txnId(accountId, t);
+  // 🔐 नया और पुराना, दोनों नंबर देखो — देखें txnIdSafe()
+  const id = txnIdSafe(accountId, t);
   const byId = BANKTXNS.filter((b) => b._id === id)[0];
   if (byId) return { row: byId, why: t.utr ? "वही UTR" : "वही तारीख़-रकम-पार्टी" };
 
@@ -4638,16 +4732,35 @@ function renderAccMap() {
   }
 }
 
-/** ➕ नया खाता — वहीं से, बिना पन्ना छोड़े। */
+/* ➕ नया खाता — वहीं से, बिना पन्ना छोड़े।
+
+   ⚠️ ऑडिट में यहाँ दो ग़लतियाँ मिलीं, दोनों मेरी ही लिखी हुई:
+
+     1. नंबर नाम से बनता था — «Vikram Charan SBI» और «Vikram Charan SBI 2»
+        दोनों का pKey कट-छँटकर एक ही हो सकता था।
+     2. उससे भी बुरा: `ledger: []` merge के साथ लिखा जाता था। merge सूची
+        को **जोड़ता नहीं, बदल देता है** — यानी पहले से बने खाते का पूरा
+        लेखा (कौन-सा बिल किस खाते से चुकाया) एक झटके में मिट जाता।
+
+   अब: नंबर टकराए तो अपने-आप आगे बढ़ता है, और `ledger` सिर्फ़ तभी लिखा
+   जाता है जब खाता सचमुच नया हो।                                        */
 async function openNewAccount() {
   const label = prompt("खाते का नाम (जैसे: Vikram Charan SBI)");
   if (!label) return;
   const bank = prompt("बैंक का नाम (जैसे: State Bank of India)") || "";
   const no = prompt("पूरा खाता नंबर — इसी से आगे पहचान होगी") || "";
-  const id = pKey(label).slice(0, 20).toLowerCase() || ("acc" + Date.now());
+
+  let id = pKey(label).slice(0, 20).toLowerCase() || ("acc" + Date.now());
+  const base = id;
+  for (let i = 2; ACCOUNTS[id]; i++) id = base + i;   // टकराए तो आगे बढ़ो
+
   const doc = { accountId: id, label: label.trim(), bank: bank.trim(),
-    accountNumber: String(no).replace(/\s/g, "") || null, ledger: [] };
+    accountNumber: String(no).replace(/\s/g, "") || null };
   try {
+    // 🔒 पहले देख लो कि यह नंबर सचमुच ख़ाली है — लेखा किसी हाल में न मिटे
+    const had = await db.collection("vbe_accounts").doc(id).get();
+    readCount(1);
+    if (!had.exists) doc.ledger = [];                 // सिर्फ़ नए खाते पर
     await db.collection("vbe_accounts").doc(id).set(doc, { merge: true });
     await auditLog("account_add", null, { accountId: id, label: doc.label });
   } catch (e) { toast("सहेजा नहीं गया"); return; }
@@ -4957,7 +5070,7 @@ async function commitRecon() {
     for (const sel of picks) {
       const m = all[Number(sel.dataset.i)];
       if (!m) continue;
-      const id = txnId(txnAccount(m.t, RECON.account) || RECON.account, m.t);
+      const id = txnIdSafe(txnAccount(m.t, RECON.account) || RECON.account, m.t);
       const keep = sel.value;                        // "" = owner said no
       const had = existingTxn(id);
       const doc = txnDoc(m.t, RECON.account, keep ? m.e.receiptId : null,
@@ -4977,7 +5090,7 @@ async function commitRecon() {
     // Unmatched debits (the बकाया list) and every credit are stored too, so the
     // timeline and party views hold the whole picture, not just matched money.
     for (const m of RECON.noBill.concat((RECON.credits || []).map((t) => ({ t })))) {
-      const id2 = txnId(txnAccount(m.t, RECON.account) || RECON.account, m.t);
+      const id2 = txnIdSafe(txnAccount(m.t, RECON.account) || RECON.account, m.t);
       const had2 = existingTxn(id2);
       const doc2 = txnDoc(m.t, RECON.account, null, null, had2);
       await db.collection("vbe_bank_txns").doc(id2).set(doc2, { merge: true });
@@ -6192,11 +6305,18 @@ function openShortName(name) {
 async function saveShortName() {
   const v = $("vyNameShort").value.trim();
   if (!v || !SHORT_FOR) return;
+  const was = SHORTNAME[pKey(SHORT_FOR)];
   SHORTNAME[pKey(SHORT_FOR)] = v;
   try {
     await db.collection("vbe_meta").doc("unit_names").set({ map: SHORTNAME }, { merge: true });
     await auditLog("short_name", null, { full: SHORT_FOR, short: v });
-  } catch (e) {}
+  } catch (e) {
+    // सहेजा न गया तो याद भी वापस पुरानी — वरना स्क्रीन और डेटा अलग-अलग
+    if (was === undefined) delete SHORTNAME[pKey(SHORT_FOR)];
+    else SHORTNAME[pKey(SHORT_FOR)] = was;
+    toast("सहेजा नहीं गया — " + (e.message || "नेट देखिए"));
+    return;
+  }
   saveCache();
   closeSheet("vyNameSheet");
   renderVyapar();
@@ -8793,8 +8913,10 @@ async function saveBillSheet() {
          नहीं दिखा और Pricebook लगभग ख़ाली रहा। अब असली बिल बनता है, दोनों
          तरफ़ से जुड़ता है, और pricebook/flags उसी रास्ते से भरते हैं। */
       const when = new Date(String(BILL_TXN.date).slice(0, 10) + "T12:00:00+05:30");
-      const receiptId = `WEB/${fyLabel(when)}/${Date.now().toString().slice(-6)}`;
-      const docId = receiptId.replace(/\//g, "-");
+      const { receiptId, docId } = await freeDocId("vbe_expenses", () => {
+        const r = `WEB/${fyLabel(when)}/${idTail()}`;
+        return { receiptId: r, docId: r.replace(/\//g, "-") };
+      });
       const rec = Object.assign({
         receiptId,
         submittedBy: { telegramId: "dashboard",
@@ -10430,6 +10552,10 @@ function mergeShots(shots) {
 /** Firestore में रिकॉर्ड — फोटो के बिना, ताकि यह तुरंत हो जाए। */
 async function saveFastRecord(m, job) {
   const when = new Date((m.date || todayISO()) + "T12:00:00+05:30");
+  /* job.id का दायरा पहले से बड़ा है, पर एक ही job दुबारा चले (app बंद
+     होकर खुले) तो वही नंबर बनना **ज़रूरी** है — वरना वही entry दो बार बन
+     जाएगी। इसलिए यहाँ freeDocId नहीं: यही तय-नंबर होना ही सही है, और
+     job.docId सँभला हुआ होने से दुबारा लिखा भी नहीं जाता।              */
   const receiptId = `FST/${fyLabel(when)}/${String(job.id).slice(-6).toUpperCase()}`;
   const docId = receiptId.replace(/\//g, "-");
 
@@ -10552,7 +10678,10 @@ async function verifyOne(ok) {
       await db.collection("vbe_expenses").doc(e._id).update({ unverified: false });
       await auditLog("verify", null, { receiptId: e.receiptId });
       e.unverified = false;
-    } catch (err) {}
+    } catch (err) {
+      // «देख लिया» का निशान न लगा हो तो वह entry दुबारा पूछी जाए — यही सही
+      toast("यह निशान सहेजा नहीं गया — अगली बार फिर पूछूँगा");
+    }
   }
   VER_AT++;
   if (!ok && e) { closeSheet("verifySheet"); editExpense(e._id); saveCache(); refreshAll(); return; }
@@ -10761,11 +10890,21 @@ async function saveAsked(nobody, nameIn, phoneIn) {
     ? { askedNobody: true }
     : { requestedBy: name || (CONTACTS[ph] && CONTACTS[ph].name) || null,
         requestedPhone: ph || null };
+  /* ⚠️ पहले यहाँ `catch (err) {}` था — यानी लिखाई फ़ेल हो जाए तो भी app
+     «🙋 लिख दिया» कह देता और अपनी याद में डाल लेता। अगली बार ताज़ा डेटा
+     आते ही वह जवाब ग़ायब मिलता, और पता ही न चलता कि हुआ क्या।
+
+     जो सहेजा न गया हो, उसे «हो गया» कहना सबसे बुरा झूठ है।            */
   try {
     await db.collection("vbe_expenses").doc(e._id).update(patch);
     await auditLog("who_asked", null, Object.assign({ receiptId: e.receiptId }, patch));
     if (ph) await touchContact(ph, name, {}).catch(() => {});
-  } catch (err) {}
+  } catch (err) {
+    $("akMsg").className = "bad";
+    $("akMsg").textContent = "सहेजा नहीं गया — " + (err.message || "नेट देखिए") +
+      "। दुबारा दबाइए।";
+    return;
+  }
   Object.assign(e, patch);
   saveCache();
   closeSheet("askedSheet");
@@ -12944,7 +13083,7 @@ async function savePastedStatement() {
         }
         continue;
       }
-      const id = txnId(acc, t);
+      const id = txnIdSafe(acc, t);
       const doc = txnDoc(t, acc, null, null, null);
       await db.collection("vbe_bank_txns").doc(id).set(doc, { merge: true });
       BANKTXNS.push(Object.assign({ _id: id }, doc));
