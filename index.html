@@ -855,9 +855,17 @@
   .aiBtn .aiTxt { flex: 1; min-width: 0; }
   .aiBtn small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 3px; }
   /* Camera vs gallery — both offered, never one forced. */
-  .pick { display: flex; gap: 8px; margin-top: 10px; }
+  .pick { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .pick button { flex: 1; padding: 8px 6px; font-size: 12.5px; border-radius: 10px;
     background: rgba(255,255,255,.07); white-space: nowrap; }
+  /* फ़ाइलों की सूची में लिंक भी बटन जैसे दिखें और लपेटें — लंबे नाम कार्ड
+     से बाहर न निकलें (मेल से आने वाले नाम बहुत लंबे होते हैं) */
+  .pick a.mini { flex: 0 1 auto; display: inline-flex; align-items: center;
+    padding: 6px 12px; font-size: 12px; border-radius: 9px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.05);
+    color: var(--ink); text-decoration: none; white-space: nowrap; }
+  .pick button.mini { flex: 0 1 auto; }
+  .mrow .pname { word-break: break-word; }
   .aiBtn.bill { background: linear-gradient(160deg, rgba(57,135,229,.28), rgba(57,135,229,.08)); border-color: rgba(57,135,229,.45); }
   .aiBtn.recv { background: linear-gradient(160deg, rgba(25,158,112,.28), rgba(25,158,112,.08)); border-color: rgba(25,158,112,.45); }
   .shots { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -1554,6 +1562,19 @@
         <p class="muted" style="margin-bottom:10px">जो खाता यहाँ जुड़ेगा वह हर जगह के
           फ़िल्टर में अपने-आप आ जाएगा। पूरा नंबर 🔒 PIN के बाद दिखेगा।</p>
         <div id="accList"></div>
+      </div>
+
+      <!-- 🔌 Google के मुफ़्त connector — Drive, Sheets, Gmail -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="itemsHead" style="margin-top:0"><span>🔌 Google से जोड़</span></div>
+        <p class="muted" style="margin-bottom:10px">तीनों मुफ़्त हैं और आपके ही
+          Google account में रहते हैं। 🔒 इनमें से कुछ भी AI को नहीं जाता।</p>
+        <div class="pick">
+          <button type="button" onclick="mailScan(this)">📧 बैंक की मेल से statement ढूँढो</button>
+          <button type="button" onclick="sheetExport(this)">📊 इस खाते का हिसाब Sheet में</button>
+        </div>
+        <div id="rConnMsg" class="muted" style="margin-top:8px"></div>
+        <div id="rMail"></div>
       </div>
 
       <div class="card" style="margin-bottom:12px"><div id="rFiles"></div></div>
@@ -6858,7 +6879,7 @@ async function keepStatementFile(file, rows, accountId, from, to) {
         mime: file.type || "application/octet-stream",
         name: `${label} ${stamp} (असली)${ext}` });
       if (up && up.ok) saved.push({ kind: "original", name: file.name,
-        url: up.url, download: up.download || up.url });
+        id: up.id || null, url: up.url, download: up.download || up.url });
       else return { ok: false, error: (up && up.error) || "Drive पर नहीं गई" };
     }
     if (rows && rows.length) {
@@ -6868,7 +6889,7 @@ async function keepStatementFile(file, rows, accountId, from, to) {
       const up2 = await botCall("upload", { dataUrl, folder, mime: "text/csv",
         name: `${label} ${stamp} (साफ़).csv` });
       if (up2 && up2.ok) saved.push({ kind: "clean", name: "साफ़ CSV",
-        url: up2.url, download: up2.download || up2.url });
+        id: up2.id || null, url: up2.url, download: up2.download || up2.url });
     }
     if (!saved.length) return { ok: false, error: "कुछ भी नहीं भेजा जा सका" };
     // 📇 पता दर्ज कर दो — ताकि सूची में हमेशा मिलती रहे
@@ -6883,6 +6904,128 @@ async function keepStatementFile(file, rows, accountId, from, to) {
     return { ok: true, saved };
   } catch (e) {
     return { ok: false, error: e.message };
+  }
+}
+
+/* ══════════ 🔌 Google के मुफ़्त connector ═══════════════════════════
+
+   तीनों काम bot के ज़रिए होते हैं, क्योंकि Drive/Sheets/Gmail तक पहुँच
+   सिर्फ़ उसी के पास है (ऐप तो बस एक static पन्ना है)।
+
+     📧 मेल से statement — बैंक की भेजी हुई PDF/CSV ढूँढकर Drive पर
+     📊 Sheet में हिसाब  — CA को भेजने लायक़, वही दस खाने
+     📥 Drive से पढ़ो    — वहीं रखी फ़ाइल वापस उठाकर, बिना दुबारा डाउनलोड
+
+   🔒 इनमें से कुछ भी Gemini को नहीं जाता — privacy की लकीर वहीं है।    */
+
+/** 📧 बैंक की मेल में पड़ी statement — ढूँढकर Drive पर रख दो। */
+async function mailScan(btn) {
+  const msg = $("rConnMsg");
+  if (btn) { btn.disabled = true; btn.textContent = "… मेल देख रहा हूँ"; }
+  msg.className = "muted"; msg.textContent = "बैंक की मेल ढूँढ रहा हूँ…";
+  try {
+    const r = await botCall("mailscan", { days: 180 });
+    if (!r || !r.ok) {
+      msg.className = "bad";
+      msg.innerHTML = `📧 ${esc((r && r.error) || "मेल नहीं पढ़ी जा सकी")}` +
+        `<br><small class="muted">पहली बार में यह ज़रूरी है: एक बार
+         script.google.com खोलिए → «VBE Bot» → ▶️ चलाइए → «Allow» दबाइए।
+         उसके बाद यह हर बार अपने-आप चलेगा।</small>`;
+      return;
+    }
+    MAIL_FILES = r.files || [];
+    msg.className = MAIL_FILES.length ? "ok" : "muted";
+    msg.innerHTML = MAIL_FILES.length
+      ? `📧 <b>${MAIL_FILES.length}</b> फ़ाइलें मिलीं — पिछले ${r.days} दिन की मेल में।
+         सब Drive पर रख दी गई हैं।`
+      : `📧 पिछले ${r.days} दिन की मेल में कोई statement नहीं मिली।`;
+    renderMailFiles();
+  } catch (e) {
+    msg.className = "bad"; msg.textContent = "नहीं हो पाया: " + e.message;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "📧 बैंक की मेल से statement ढूँढो"; }
+  }
+}
+
+let MAIL_FILES = [];
+
+function renderMailFiles() {
+  const box = $("rMail");
+  if (!box) return;
+  if (!MAIL_FILES.length) { box.innerHTML = ""; return; }
+  box.innerHTML = '<div class="itemsHead"><span>📧 मेल में मिली फ़ाइलें</span></div>' +
+    MAIL_FILES.slice(0, 20).map((f, i) => `
+      <div class="mrow">
+        <div class="mx">
+          <div class="pname">${esc(f.name)}</div>
+          <span class="muted">${esc(f.date)} · ${esc(String(f.from).slice(0, 40))}
+            · ${Math.round((f.size || 0) / 1024)} KB</span>
+          <div class="pick" style="margin-top:6px">
+            ${f.id ? `<button type="button" class="mini primary"
+              onclick="readFromDrive('${esc(f.id)}', this)">📥 इसे पढ़ लीजिए</button>` : ""}
+            ${f.url ? `<a class="mini" target="_blank" rel="noopener"
+              href="${esc(f.url)}">📄 Drive में खोलिए</a>` : ""}
+          </div>
+        </div>
+      </div>`).join("");
+}
+
+/** 📥 Drive पर पड़ी फ़ाइल वापस उठाकर वैसे ही पढ़ो जैसे फ़ोन से चुनी हो। */
+async function readFromDrive(id, btn) {
+  const status = $("rStatus");
+  if (!$("rAccount").value) {
+    $("rConnMsg").className = "bad";
+    $("rConnMsg").textContent = "पहले ऊपर खाता चुन लीजिए।";
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = "… ला रहा हूँ"; }
+  try {
+    const r = await botCall("fetch", { id });
+    if (!r || !r.ok) throw new Error((r && r.error) || "फ़ाइल नहीं आई");
+    const bin = atob(String(r.dataUrl).split(",")[1]);
+    const buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    const file = new File([buf], r.name, { type: r.mime || "application/octet-stream" });
+    await handleStatementFile(file);
+    $("rResult").scrollIntoView({ behavior: "smooth" });
+  } catch (e) {
+    if (status) { status.className = "bad"; status.textContent = "नहीं पढ़ी जा सकी: " + e.message; }
+  } finally { if (btn) { btn.disabled = false; btn.textContent = "📥 इसे पढ़ लीजिए"; } }
+}
+
+/** 📊 चुने हुए खाते का पूरा हिसाब एक Google Sheet में — CA को भेजने लायक़। */
+async function sheetExport(btn) {
+  const msg = $("rConnMsg");
+  const acc = $("rAccount").value || PB_ACC;
+  if (!acc) { msg.className = "bad"; msg.textContent = "पहले ऊपर खाता चुन लीजिए।"; return; }
+  const rows = pbTxns(acc);
+  if (!rows.length) { msg.className = "bad"; msg.textContent = "इस खाते की कोई पंक्ति नहीं है।"; return; }
+  if (btn) { btn.disabled = true; btn.textContent = "… Sheet बना रहा हूँ"; }
+  msg.className = "muted"; msg.textContent = `${rows.length} पंक्तियाँ भेज रहा हूँ…`;
+  try {
+    const label = accLabel(acc);
+    const aud = pbAudit(acc);
+    const out = rows.map((t) => [
+      t.date, t.time || "", pbTitle(t).name, label, t.narration || "",
+      t.chequeNo || "", t.utr || "",
+      t.type === "debit" ? t.amount : "", t.type === "credit" ? t.amount : "",
+      t.balance == null ? "" : t.balance
+    ]);
+    const note = aud
+      ? `ओपनिंग ${INR(aud.open.value)} · आया ${INR(aud.inSum)} · गया ${INR(aud.outSum)} · ` +
+        `बैंक के हिसाब से ${INR(aud.bank)} · ` + (aud.ok ? "हिसाब मिलता है ✅" : "हिसाब नहीं मिल रहा ⚠️")
+      : "";
+    const r = await botCall("sheet", { label, rows: out, note });
+    if (!r || !r.ok) throw new Error((r && r.error) || "Sheet नहीं बनी");
+    msg.className = "ok";
+    msg.innerHTML = `📊 <b>${r.rows}</b> पंक्तियाँ Sheet में चली गईं — ` +
+      `<a href="${esc(r.url)}" target="_blank" rel="noopener">खोलकर देखिए</a>` +
+      `<br><small class="muted">यही Sheet हर बार दुबारा भरती है, नई नहीं बनती।
+       Drive ▸ VBE-Bills ▸ Sheets में पड़ी रहेगी।</small>`;
+  } catch (e) {
+    msg.className = "bad"; msg.textContent = "नहीं हो पाया: " + e.message;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "📊 इस खाते का हिसाब Sheet में"; }
   }
 }
 
@@ -6919,6 +7062,9 @@ function renderStatementFiles() {
               <a class="mini" target="_blank" rel="noopener"
                  href="${esc(f.download || f.url)}">${
                  f.kind === "clean" ? "📊 साफ़ CSV" : "📄 असली फ़ाइल"}</a>`).join("")}
+            ${(e.files || []).filter((f) => f.id).slice(0, 1).map((f) => `
+              <button type="button" class="mini"
+                onclick="readFromDrive('${esc(f.id)}', this)">📥 इसे दुबारा पढ़ो</button>`).join("")}
           </div>
         </div>
       </div>`).join("");
