@@ -338,6 +338,38 @@
     margin-top: 4px; font-size: 10.5px; font-variant-numeric: tabular-nums; }
   .pbChartFoot .lo { color: #ff9d9d; } .pbChartFoot .hi { color: #7de07d; }
 
+  /* 🎯 यूनिट का बिल्ला — बड़ा, ताकि एक नज़र में दिख जाए कि लगी है या नहीं */
+  .uLine { margin-bottom: 4px; }
+  .uChip { display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 800;
+    letter-spacing: .4px; line-height: 1.5; border: 1px solid transparent;
+    white-space: normal; text-align: left; }
+  .uChip.on { color: #7de07d; border-color: rgba(12,163,12,.45);
+    background: linear-gradient(100deg, rgba(12,163,12,.18), rgba(12,163,12,.05)); }
+  .uChip.off { color: #ffb3b3; border-color: rgba(208,59,59,.55);
+    background: linear-gradient(100deg, rgba(208,59,59,.20), rgba(208,59,59,.05)); }
+
+  /* 🎯 यूनिट-वार पट्टी — कहाँ कितना गया */
+  .uBar { padding: 9px 2px; cursor: pointer; }
+  .uBar + .uBar { border-top: 1px solid var(--grid); }
+  .uBarTop { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .uBarTop b { font-size: 13px; letter-spacing: .5px; word-break: break-word; }
+  .uBarTop span { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums;
+    color: #ff9d9d; flex: 0 0 auto; }
+  .uBar i { display: block; height: 6px; border-radius: 3px; margin: 6px 0 4px;
+    background: linear-gradient(90deg, #d03b3b, rgba(208,59,59,.35)); }
+  .uBar.none .uBarTop b { color: #ffb3b3; }
+  .uBar.none i { background: linear-gradient(90deg, #e0a82a, rgba(224,168,42,.3)); }
+  .uBar small { font-size: 11px; color: var(--muted); }
+
+  /* 🎯 यूनिट चुनने का पर्दा */
+  .uPick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .uPick button { flex: 1 1 46%; padding: 12px 8px; font-size: 13px; font-weight: 700;
+    border-radius: 12px; letter-spacing: .3px; }
+  .uItems { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .uItems span { font-size: 11.5px; color: var(--muted); padding: 4px 9px;
+    border-radius: 9px; background: var(--surface-2); border: 1px solid var(--grid); }
+
   /* ⚠️ «पूरा डेटा नहीं आया» — सबसे ऊपर, छिपने की कोई जगह नहीं */
   .capWarn { border: 1px solid rgba(208,59,59,.55); border-radius: 13px;
     background: linear-gradient(100deg, rgba(208,59,59,.16), transparent 74%);
@@ -1604,12 +1636,17 @@
       <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
       <div id="unitWatch"></div>
       <div id="chWatch"></div>
-      <div class="filters">
-        <select id="uUnit" style="flex:1"></select>
-        <button type="button" onclick="addUnit()">➕ नई यूनिट</button>
-        <button type="button" class="primary" onclick="copyChallan()">📋 चालान कॉपी</button>
+      <!-- यूनिट का नाम लंबा होता है, इसलिए छन्नी अपनी पूरी लकीर लेती है —
+           «🎯 सब यूनि…» कटा हुआ दिखना सबसे बुरा था -->
+      <div class="filters" style="flex-direction:column;align-items:stretch">
+        <select id="uUnit" style="width:100%"></select>
+        <div class="pick" style="margin-top:0">
+          <button type="button" onclick="addUnit()">➕ नई यूनिट</button>
+          <button type="button" class="primary" onclick="copyChallan()">📋 चालान कॉपी</button>
+        </div>
       </div>
       <div class="tiles" id="uTiles"></div>
+      <div id="uSplit"></div>
       <div class="card"><div id="uRows"></div></div>
     </section>
 
@@ -1928,6 +1965,16 @@ placeholder="917568 माजीसा डिस्पोजल
 
     <!-- 🏦 बैंक की entry चुनकर इसी बिल का पेमेंट बनाना -->
     <!-- 🤔 «क्या यह वही पेमेंट है?» — statement के बाद, सिर्फ़ शक वाले -->
+    <!-- 🎯 यूनिट — एक टैप में भर दीजिए -->
+    <div id="unitSheet" class="sheet" hidden>
+      <div class="sheetBox" style="max-width:440px">
+        <div class="grab"></div>
+        <div class="sheetHead"><h3>🎯 यूनिट भरिए</h3>
+          <button class="x" onclick="closeSheet('unitSheet')">✕</button></div>
+        <div id="unitBody"></div>
+      </div>
+    </div>
+
     <div id="askSheet" class="sheet" hidden>
       <div class="sheetBox" style="max-width:440px">
         <div class="grab"></div>
@@ -9122,10 +9169,16 @@ function renderLedger() {
     const paid = t.type === "debit";
     const tw = twinOf(t);
     const hasBill = tw || t.matchedReceiptId || t.billPhotoId;
+    /* 🎯 «जो भी पैसा गया है उसमें यूनिट बड़े अक्षरों में लिखी आनी चाहिए» —
+       इसलिए हर गई हुई पंक्ति पर, जिसका बिल दर्ज है, यूनिट का बड़ा बिल्ला।
+       न लगी हो तो लाल «❓ यूनिट नहीं», और उसी पर टैप करके भरी जा सकती है। */
+    const be = (tw && tw.exp) || (t.matchedReceiptId
+      ? EXP.filter((x) => x.receiptId === t.matchedReceiptId)[0] : null);
     return `
     <div class="mrow txn ${paid ? "out" : "in"}">
       <div class="amt ${paid ? "out" : "in"}">${paid ? "−" : "+"}${INR(t.amount)}</div>
       <div class="mx">
+        ${paid && be ? `<div class="uLine">${unitChip(be)}</div>` : ""}
         <div class="pname"><span class="plink"
           onclick="showParty('${esc(pKey(t.party || t.narration))}')">${esc(t.party || "—")}</span></div>
         <span class="muted">${esc(t.date)}${t.time ? " · " + esc(t.time) : ""} ·
@@ -11429,8 +11482,8 @@ function billCards(rows) {
           <span class="bamt">${e.billTotal != null ? INR(e.billTotal) : "—"}</span>
         </div>
         <div class="bi">${esc(e.receiptId || "")} · ${esc(dayLabel(String(e.billDate || "").slice(0, 10))
-          || (e._date ? e._date.toLocaleDateString("en-IN") : ""))}
-          ${e.unit ? " · 🏷️ " + esc(e.unit) : ""}</div>
+          || (e._date ? e._date.toLocaleDateString("en-IN") : ""))}</div>
+        <div class="uLine" onclick="event.stopPropagation()">${unitChip(e)}</div>
         ${items.length ? `<div class="bi">${items.join(" · ")}${more > 0 ? ` +${more} और` : ""}</div>` : ""}
         <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <span class="chip ${esc(e.status)}"><i></i>${esc(e.status)}</span>
@@ -13461,28 +13514,64 @@ function renderUnitWatch() {
   }
   box.innerHTML = gfx.insight({ icon: "🚨", tone: "up",
     title: `${miss.length} बिल की यूनिट नहीं लिखी — ${INR(total)}`,
-    body: `पता ही नहीं चलेगा यह सामान कहाँ गया। नीचे एक-एक पर टैप करके भर दें।` +
+    body: `पता ही नहीं चलेगा यह सामान कहाँ गया। एक-एक पर टैप कीजिए, या सब ` +
+      `एक साथ भर दीजिए — यूनिट के बटन सीधे सामने आ जाएँगे।` +
+      `<div style="margin-top:10px"><button type="button" class="mini primary"
+        onclick="askUnitAll()">🎯 सब की यूनिट भर दीजिए (${miss.length})</button></div>` +
       `<div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap">` +
       miss.slice(0, 8).map((e) =>
-        `<button type="button" class="mini" onclick="editExpense('${esc(e._id)}')">` +
+        `<button type="button" class="mini" onclick="askUnit('${esc(e._id)}')">` +
         `${esc((e.vendor && e.vendor.name) || e.receiptId)} ${INR(e.billTotal)}</button>`).join("") +
+      (miss.length > 8 ? `<span class="muted" style="align-self:center">… और ${miss.length - 8}</span>` : "") +
       `</div>` });
 }
 
-/** यूनिट-वार लेखा — किस यूनिट में क्या, कब, कितने का गया। */
+/* ══════════ 🎯 यूनिट — «सब» भी, और नाम बड़े अक्षरों में ═══════════════
+
+   विक्रम जी: «जो इसके अंदर फ़िल्टर डालते हैं, उसमें एक ही यूनिट देखनी पड़ती
+   है — उसमें **सब** भी डाल दीजिए, ताकि जिस भी यूनिट का हो वह आ जाए। प्लस
+   जो भी पैसा गया है उसमें **यूनिट बड़े अक्षरों में लिखी हुई** आनी चाहिए…
+   क्योंकि मैं यूनिट वाला ही section देख रहा हूँ, तो उसके अंदर पता चले कि
+   जो entry की थी उसमें यूनिट लगी हुई है या मैंने डाली ही नहीं।»
+
+   इसलिए तीन बदलाव:
+     1. 🎯 «सब यूनिट» — सबसे ऊपर, और यही डिफ़ॉल्ट
+     2. ❓ «यूनिट नहीं लिखी» — अपना अलग फ़िल्टर, ताकि सीधे वही दिखें
+     3. हर पंक्ति पर यूनिट का नाम **बड़े अक्षरों में** — और न लिखी हो तो
+        लाल «❓ यूनिट नहीं» जिस पर टैप करते ही भरने का पर्दा खुल जाए     */
+
+/** «सब यूनिट» और «यूनिट नहीं लिखी» के लिए अपने निशान। */
+const U_ALL = "__all__", U_NONE = "__none__";
+
+/** पंक्ति पर लगने वाला यूनिट का बिल्ला — बड़ा, साफ़, और दबाने लायक़। */
+function unitChip(e) {
+  if (!e) return "";
+  const id = esc(e._id || "");
+  return e.unit
+    ? `<button type="button" class="uChip on" onclick="askUnit('${id}')">🎯 ${esc(e.unit)}</button>`
+    : `<button type="button" class="uChip off" onclick="askUnit('${id}')">❓ यूनिट नहीं</button>`;
+}
+
+/**
+ * यूनिट-वार लेखा — किस यूनिट में क्या, कब, कितने का गया।
+ * @param {string} unit  यूनिट का नाम, या U_ALL / U_NONE
+ */
 function unitLedger(unit) {
   const rows = [];
+  const want = (e) => unit === U_ALL ? true
+    : unit === U_NONE ? !e.unit
+    : e.unit === unit;
   EXP.forEach((e) => {
-    if (e.unit !== unit || !inRange(e.billDate || e.submittedAt)) return;
-    (e.items || []).forEach((it) => rows.push({
-      date: String(e.billDate || "").slice(0, 10),
-      name: it.name, qty: it.qty, unitName: it.unit, rate: it.rate,
-      amount: it.amount, party: (e.vendor && e.vendor.name) || "", receiptId: e.receiptId
+    if (!want(e) || !inRange(e.billDate || e.submittedAt)) return;
+    const head = { unit: e.unit || "", expId: e._id,
+      party: (e.vendor && e.vendor.name) || "", receiptId: e.receiptId,
+      date: String(e.billDate || "").slice(0, 10) };
+    (e.items || []).forEach((it) => rows.push(Object.assign({}, head, {
+      name: it.name, qty: it.qty, unitName: it.unit, rate: it.rate, amount: it.amount
+    })));
+    if (!(e.items || []).length) rows.push(Object.assign({}, head, {
+      name: "(सामान की list नहीं)", amount: e.billTotal
     }));
-    if (!(e.items || []).length) rows.push({
-      date: String(e.billDate || "").slice(0, 10), name: "(सामान की list नहीं)",
-      amount: e.billTotal, party: (e.vendor && e.vendor.name) || "", receiptId: e.receiptId
-    });
   });
   return rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
@@ -13490,16 +13579,29 @@ function unitLedger(unit) {
 /** चालान — यूनिट को भेजने लायक पर्ची, एक टैप में कॉपी। */
 function challanText(unit) {
   const rows = unitLedger(unit);
+  const title = unit === U_ALL ? "सब यूनिट"
+    : unit === U_NONE ? "जिनकी यूनिट नहीं लिखी" : unit;
   const total = rows.reduce((a, r) => a + (r.amount || 0), 0);
-  const L = ["चालान — " + unit, "Vande Bharat Enterprises, Barmer",
+  const L = ["चालान — " + title, "Vande Bharat Enterprises, Barmer",
     "अवधि: " + (DR.from ? dayLabel(DR.from) + " से " + dayLabel(DR.to || todayISO()) : "पूरा"),
     "─".repeat(34)];
-  rows.forEach((r, i) => L.push(
+  // «सब» हो तो यूनिट-वार खंड बनें, वरना सीधी सूची
+  const groups = {};
+  rows.forEach((r) => { (groups[r.unit || "— यूनिट नहीं —"] = groups[r.unit || "— यूनिट नहीं —"] || []).push(r); });
+  const many = unit === U_ALL && Object.keys(groups).length > 1;
+  const put = (list) => list.forEach((r, i) => L.push(
     `${i + 1}. ${r.name}` +
     (r.qty != null ? ` — ${r.qty} ${r.unitName || "Nos"}` : "") +
     (r.rate != null ? ` × ₹${r.rate}` : "") +
     (r.amount != null ? ` = ₹${r.amount}` : "") +
     (r.date ? `  (${r.date})` : "")));
+  if (many) {
+    Object.keys(groups).sort().forEach((g) => {
+      const sum = groups[g].reduce((a, r) => a + (r.amount || 0), 0);
+      L.push("", "▸ " + g + "  — ₹" + Math.round(sum));
+      put(groups[g]);
+    });
+  } else put(rows);
   L.push("─".repeat(34), "कुल: ₹" + Math.round(total));
   return L.join("\n");
 }
@@ -13509,32 +13611,156 @@ function renderUnitTab() {
   if (!sel) return;
   const keep = sel.value;
   const units = allUnits();
-  sel.innerHTML = units.map((u) => `<option>${esc(u)}</option>`).join("");
-  if (keep && units.indexOf(keep) !== -1) sel.value = keep;
+  const missN = billsWithoutUnit().length;
+  sel.innerHTML =
+    `<option value="${U_ALL}">🎯 सब यूनिट</option>` +
+    (missN ? `<option value="${U_NONE}">❓ यूनिट नहीं लिखी (${missN})</option>` : "") +
+    units.map((u) => `<option value="${esc(u)}">${esc(u)}</option>`).join("");
+  sel.value = (keep && [...sel.options].some((o) => o.value === keep)) ? keep : U_ALL;
   const unit = sel.value;
   const rows = unitLedger(unit);
   const total = rows.reduce((a, r) => a + (r.amount || 0), 0);
+  const bills = new Set(rows.map((r) => r.receiptId)).size;
+  const title = unit === U_ALL ? "सब यूनिट में गया"
+    : unit === U_NONE ? "बिना यूनिट के गया" : "इस यूनिट में गया";
 
   $("uTiles").innerHTML = [
-    gfx.tile({ k: "इस यूनिट में गया", v: INR(total), n: total, s: rows.length + " चीज़ें",
-      color: gfx.C.out, pct: 70 }),
-    gfx.tile({ k: "बिल", v: String(new Set(rows.map((r) => r.receiptId)).size),
-      s: rangeWords(), color: gfx.C.bill, pct: 70 })
+    gfx.tile({ k: title, v: INR(total), n: total, s: rows.length + " चीज़ें",
+      color: unit === U_NONE ? gfx.C.warn || gfx.C.out : gfx.C.out, pct: 70 }),
+    gfx.tile({ k: "बिल", v: String(bills), s: rangeWords(), color: gfx.C.bill, pct: 70 })
   ].join("");
   gfx.fit($("uTiles"));
   gfx.countUp($("uTiles"));
+
+  /* ── 🎯 «सब» पर यूनिट-वार पट्टी — कहाँ कितना गया, एक नज़र में ──── */
+  const box = $("uSplit");
+  if (box) {
+    if (unit !== U_ALL) box.innerHTML = "";
+    else {
+      const by = {};
+      rows.forEach((r) => {
+        const k = r.unit || "";
+        by[k] = by[k] || { sum: 0, n: 0, bills: new Set() };
+        by[k].sum += r.amount || 0; by[k].n++; by[k].bills.add(r.receiptId);
+      });
+      const keys = Object.keys(by).sort((a, b) => by[b].sum - by[a].sum);
+      const big = Math.max(1, ...keys.map((k) => by[k].sum));
+      box.innerHTML = keys.length ? `<div class="card" style="margin-bottom:12px">
+        <div class="itemsHead" style="margin-top:0"><span>🎯 यूनिट-वार</span></div>
+        ${keys.map((k) => `
+          <div class="uBar ${k ? "" : "none"}" onclick="setUnitFilter('${esc(k || U_NONE)}')">
+            <div class="uBarTop">
+              <b>${k ? esc(k.toUpperCase()) : "❓ यूनिट नहीं लिखी"}</b>
+              <span>${INR(by[k].sum)}</span>
+            </div>
+            <i style="width:${Math.max(4, (by[k].sum / big) * 100)}%"></i>
+            <small>${by[k].bills.size} बिल · ${by[k].n} चीज़ें</small>
+          </div>`).join("")}
+      </div>` : "";
+    }
+  }
 
   $("uRows").innerHTML = rows.length ? rows.map((r) => `
     <div class="mrow txn out">
       <div class="amt out">${r.amount != null ? INR(r.amount) : "—"}</div>
       <div class="mx">
+        <div class="uLine">${r.unit
+          ? `<button type="button" class="uChip on" onclick="askUnit('${esc(r.expId)}')">🎯 ${esc(r.unit.toUpperCase())}</button>`
+          : `<button type="button" class="uChip off" onclick="askUnit('${esc(r.expId)}')">❓ यूनिट नहीं — भर दीजिए</button>`}</div>
         <div class="pname">${esc(r.name)}</div>
         <span class="muted">${esc(dayLabel(r.date))}${r.qty != null
           ? " · " + r.qty + " " + esc(r.unitName || "Nos") : ""}${r.rate != null ? " × ₹" + r.rate : ""}
           ${r.party ? " · " + esc(r.party) : ""}</span>
       </div>
-    </div>`).join("") : gfx.empty("sleep", "इस अवधि में इस यूनिट का कुछ नहीं",
-      "दूसरी यूनिट या दूसरी अवधि चुनकर देखिए।");
+    </div>`).join("") : gfx.empty("sleep",
+      unit === U_NONE ? "एक भी बिल बिना यूनिट का नहीं" : "इस अवधि में इस यूनिट का कुछ नहीं",
+      unit === U_NONE ? "सब पर यूनिट लगी हुई है — यही चाहिए था ✅"
+        : "दूसरी यूनिट या दूसरी अवधि चुनकर देखिए।");
+}
+
+function setUnitFilter(v) {
+  const sel = $("uUnit");
+  if (!sel) return;
+  sel.value = v;
+  renderUnitTab();
+  goTab("unit");
+}
+
+/* ══════════ 🎯 एक टैप में यूनिट भर दो ═══════════════════════════════
+   पहले पूरा «बिल सुधारो» वाला पर्दा खुलता था — 30 बिल भरने के लिए 30 बार।
+   अब सिर्फ़ यूनिट के बटन आते हैं: एक टैप, और अगला बिल अपने-आप सामने।    */
+
+let U_ASK = [], U_AT = 0;
+
+/** एक बिल की यूनिट पूछो (या «यूनिट नहीं» वाली पूरी क़तार)। */
+function askUnit(expId) {
+  const e = EXP.filter((x) => x._id === expId)[0];
+  if (!e) return;
+  U_ASK = [e]; U_AT = 0;
+  renderUnitAsk();
+  openSheet("unitSheet");
+}
+
+/** सारे बिना-यूनिट वाले बिल एक-एक करके — «सब भर दीजिए» वाला रास्ता। */
+function askUnitAll() {
+  U_ASK = billsWithoutUnit();
+  if (!U_ASK.length) { toast("🎯 सब पर यूनिट लगी हुई है"); return; }
+  U_AT = 0;
+  renderUnitAsk();
+  openSheet("unitSheet");
+}
+
+function renderUnitAsk() {
+  const box = $("unitBody");
+  const e = U_ASK[U_AT];
+  if (!box || !e) return;
+  const units = allUnits();
+  box.innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon(e.unit ? "card" : "seek", 74)}</div>
+      <div class="toonSay"><b>यह सामान किस यूनिट में गया?</b>
+        <p>${esc((e.vendor && e.vendor.name) || "—")} · <b>${INR(e.billTotal)}</b>
+        · ${esc(dayLabel(String(e.billDate || "").slice(0, 10)) || "")}
+        <br><span class="muted">${esc(e.receiptId || "")}</span></p></div>
+    </div>
+    ${(e.items || []).length ? `<div class="uItems">${(e.items || []).slice(0, 6).map((it) =>
+      `<span>${esc(it.name)}${it.qty != null ? ` · ${it.qty} ${esc(it.unit || "Nos")}` : ""}</span>`).join("")}</div>` : ""}
+    <div class="uPick">
+      ${units.map((u) => `<button type="button" class="${u === e.unit ? "primary" : ""}"
+        onclick="setUnitOn('${esc(e._id)}', '${esc(u)}')">🎯 ${esc(u.toUpperCase())}</button>`).join("")}
+      <button type="button" onclick="addUnit()">➕ नई यूनिट</button>
+    </div>
+    <div class="pairBtns" style="margin-top:12px">
+      <button type="button" onclick="skipUnitAsk()">➡️ अभी छोड़िए</button>
+    </div>
+    ${U_ASK.length > 1 ? `<div class="muted" style="text-align:center;margin-top:10px">
+      ${U_AT + 1} / ${U_ASK.length}</div>` : ""}`;
+}
+
+function skipUnitAsk() {
+  U_AT++;
+  if (U_AT >= U_ASK.length) { closeSheet("unitSheet"); return; }
+  renderUnitAsk();
+}
+
+/** यूनिट लगा दो — और अगला बिल सामने ले आओ। */
+async function setUnitOn(expId, unit) {
+  const e = EXP.filter((x) => x._id === expId)[0];
+  if (!e) return;
+  const before = e.unit || null;
+  try {
+    await db.collection("vbe_expenses").doc(expId).update({ unit });
+    e.unit = unit;
+    await auditLog("unit_set", { unit: before }, { receiptId: e.receiptId, unit });
+    saveCache();
+    toast("🎯 " + unit + " लग गई");
+  } catch (err) {
+    e.unit = before;                       // 🛑 न लगी हो तो झूठ मत बोलो
+    toast("नहीं लग पाई: " + err.message);
+    return;
+  }
+  refreshUnitList(); renderUnitWatch(); renderUnitTab(); renderBills(); renderLedger();
+  skipUnitAsk();
 }
 
 async function copyChallan() {
