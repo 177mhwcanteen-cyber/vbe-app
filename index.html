@@ -1567,6 +1567,7 @@
           </div>
           <div id="rMaybe"></div>
         </div>
+        <div id="rResync"></div>
         <div class="card" id="rDupesCard" style="margin-bottom:12px"><div id="rDupes"></div></div>
         <div class="card">
           <div class="itemsHead" style="margin-top:0"><span>❓ इनका बिल नहीं मिला</span></div>
@@ -4055,7 +4056,8 @@ function txnKeyBits(t) {
 
 function txnId(accountId, t) {
   const u = String(t.utr || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (u.length >= 8) return "utr-" + u;
+  // ↩️ वापसी वाला जोड़ा — दिशा के साथ, ताकि दोनों के अलग दस्तावेज़ बनें
+  if (u.length >= 8) return "utr-" + u + (t.utrDir ? "-" + t.utrDir : "");
   return accountId + "-" + t.date + "-" + Math.round(t.amount * 100) + "-" +
     hash36(txnKeyBits(t));
 }
@@ -4072,7 +4074,7 @@ function txnId(accountId, t) {
  */
 function txnIdLegacy(accountId, t) {
   const u = String(t.utr || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (u.length >= 8) return "utr-" + u;
+  if (u.length >= 8) return "utr-" + u;      // पुराने में दिशा नहीं थी
   return accountId + "-" + t.date + "-" + Math.round(t.amount * 100) + "-" +
     hash36(pKey(t.party || t.narration || "") + "|" + (t.type || ""));
 }
@@ -4100,19 +4102,40 @@ function txnIdSafe(accountId, t) {
  * @returns {{rows:Array, dropped:Object}} हटाए गए «UTR» और उनकी गिनती
  */
 function dropFakeUtrs(rows) {
-  const seen = {};
+  const byU = {};
   (rows || []).forEach((t) => {
     const u = utrKey(t.utr);
-    if (u) seen[u] = (seen[u] || 0) + 1;
+    if (u) (byU[u] = byU[u] || []).push(t);
   });
-  const bad = {};
-  Object.keys(seen).forEach((u) => { if (seen[u] > 1) bad[u] = seen[u]; });
+  const bad = {}, back = {};
+  Object.keys(byU).forEach((u) => {
+    const g = byU[u];
+    if (g.length < 2) return;
+    /* ↩️ वापसी (reversal) — विक्रम जी ने ख़ुद पकड़ा:
+       «13-07 का ₹1,000 वाला सौदा और उसका reversal, दोनों का नंबर एक ही है
+        (619448440318) — UTR से dedupe करोगे तो इनमें से एक हमेशा मिट
+        जाएगा।» बात बिल्कुल सही है। पैसा गया और फिर वापस आया — ये दो अलग
+       सौदे हैं, नक़ली UTR नहीं। इसलिए इनका UTR रहने दिया जाता है और
+       दस्तावेज़ का नंबर दिशा के साथ बनता है: «utr-619448440318-D» और
+       «utr-619448440318-C»।                                             */
+    const dirs = {};
+    g.forEach((t) => { dirs[t.type] = (dirs[t.type] || 0) + 1; });
+    const twoWay = Object.keys(dirs).length === 2 &&
+                   Object.keys(dirs).every((k) => dirs[k] === 1);
+    if (twoWay) {
+      back[u] = 2;
+      g.forEach((t) => { t.utrDir = t.type === "credit" ? "C" : "D"; });
+      return;
+    }
+    // एक ही दिशा में कई बार = यह UTR है ही नहीं (अक्सर खाता नंबर)
+    bad[u] = g.length;
+  });
   if (Object.keys(bad).length) {
     rows.forEach((t) => {
       if (bad[utrKey(t.utr)]) { t.fakeUtr = t.utr; t.utr = null; }
     });
   }
-  return { rows, dropped: bad };
+  return { rows, dropped: bad, reversals: back };
 }
 
 /**
@@ -4133,7 +4156,10 @@ function findExisting(t, accountId) {
   if (byId) return { row: byId, why: t.utr ? "वही UTR" : "वही तारीख़-रकम-पार्टी" };
 
   if (t.utr) {
-    const u = live.filter((b) => b.utr && String(b.utr).toUpperCase() === String(t.utr).toUpperCase())[0];
+    // ↩️ दिशा भी मिलनी चाहिए — वरना ₹1,000 गया और ₹1,000 वापस आया, दोनों
+    //    एक ही सौदा मान लिए जाते हैं और एक हमेशा मिट जाता है
+    const u = live.filter((b) => b.utr && b.type === t.type &&
+      String(b.utr).toUpperCase() === String(t.utr).toUpperCase())[0];
     if (u) return { row: u, why: "वही UTR" };
   }
   const key = pKey(t.party || t.narration || "");
@@ -5239,6 +5265,8 @@ function renderRecon(total, allRows) {
     : gfx.empty("think", "कोई मिलान नहीं मिला",
         "इस statement की entries किसी बिल से नहीं जुड़ीं — फिर भी सहेजी जा सकती हैं।"));
 
+  renderResync();
+
   $("rDupes").innerHTML = (RECON.dupes || []).length
     ? '<div class="itemsHead" style="margin-top:0"><span>🔁 यह पहले से दर्ज हैं — दुबारा नहीं जुड़ेंगी</span></div>' +
       RECON.dupes.slice(0, 40).map(d => `
@@ -5308,6 +5336,7 @@ function txnDoc(t, accountId, receiptId, confidence, existing) {
     doc.narration = t.narration;
   }
   if (t.utr) doc.utr = String(t.utr).toUpperCase();
+  if (t.utrDir) doc.utrDir = t.utrDir;       // ↩️ वापसी वाले जोड़े की दिशा
   if (t.balance != null) doc.balance = t.balance;
   // 🔢 statement में यह पंक्ति किस नंबर पर छपी थी — पासबुक का क्रम इसी से
   if (t.srcSeq != null && (!existing || existing.srcSeq == null)) doc.srcSeq = t.srcSeq;
@@ -5392,6 +5421,165 @@ function importReport(r) {
   });
 }
 
+/* ══════════ 🧹 «statement ही सच है» — पूरा मिलान ═════════════════════
+
+   विक्रम जी ने v20 के बाद भी वही शिकायत की: फ़ाइल में 587 सौदे, ऐप में
+   563। और उनकी पकड़ बिल्कुल सही थी — छूटे हुए वही थे जिनमें UTR होता ही
+   नहीं (11 चेक की जमा, NEFT, ब्याज, नक़द निकासी, PMSBY, CMP)।
+
+   जाँच में यह हूबहू दुबारा पैदा किया गया — पहले पुराने (v15/v16) कोड से
+   वही फ़ाइल डाली, फिर v20 से दुबारा:
+
+       1️⃣ पुराने कोड से  : 587 पंक्तियाँ लिखीं, पर बनीं सिर्फ़ 577
+                            (10 पंक्तियाँ एक-दूसरे पर चढ़ गईं)
+       2️⃣ अब v20 से दुबारा : 576 «पहले से हैं» कहकर छोड़ दीं,
+                            सिर्फ़ 12 नई बनीं → हिसाब फिर भी नहीं मिला
+
+   यानी **ऐप की पढ़ाई सही है, पर पुरानी ख़राब पंक्तियाँ रास्ता रोके खड़ी
+   हैं।** जो पहले से दर्ज है उसे ऐप दुबारा नहीं लिखता (यह सही नियम है —
+   वरना बिल, फोटो और मिलान हर बार मिट जाते), पर जब पुरानी पंक्ति ख़ुद ही
+   ग़लत हो, तो यह नियम ही जेल बन जाता है।
+
+   इसलिए एक साफ़ रास्ता चाहिए, और बैंकिंग में उसका नियम बहुत सीधा है:
+
+       📄 **बैंक की statement ही सच है।**
+
+   यह बटन उसी अवधि (जो इस फ़ाइल में है) और उसी खाते का हिसाब statement के
+   हूबहू बराबर कर देता है:
+
+     • फ़ाइल की हर पंक्ति अपने सही नंबर पर लिखी जाती है — चाहे वह «पहले
+       से है» कही गई हो
+     • उस अवधि में पड़ी जो पंक्तियाँ फ़ाइल में हैं ही नहीं, उन पर «सेवा से
+       हटाया हुआ» का निशान लगता है
+
+   🔒 पहरे:
+     1. **मिटाया कुछ नहीं जाता** — सिर्फ़ निशान लगता है, पंक्ति डेटाबेस
+        में जस की तस रहती है और डॉक्टर में गिनी जाती है
+     2. सिर्फ़ **उसी खाते** की, सिर्फ़ **उसी अवधि** की पंक्तियाँ
+     3. GPay/PhonePe/Paytm से आई पंक्तियों को हाथ नहीं लगाया जाता — वे
+        बैंक की statement में होती ही नहीं
+     4. **पहले गिनती दिखती है, फिर बटन** — बिना देखे कुछ नहीं होता
+     5. हर मरम्मत `_audit_logs` में                                     */
+
+/* सिर्फ़ **बैंक की statement** से आई पंक्तियाँ ही हटाई जा सकती हैं।
+   GPay/PhonePe/Paytm (gpay_statement, phonepe_statement, paytm_statement),
+   हाथ से बनी entries, बिल से जुड़ी पंक्तियाँ — इन्हें कभी हाथ नहीं लगता,
+   क्योंकि वे बैंक की statement में होती ही नहीं और उनका ग़ायब होना ही
+   सबसे बड़ी ख़राबी होगी। */
+const BANK_SRC = /^(statement|csv_statement|sbi_statement|pasted_statement)$/;
+
+/** इस फ़ाइल से क्या-क्या बदलेगा — छूकर कुछ नहीं, सिर्फ़ गिनती। */
+function resyncPlan() {
+  const rows = (RECON.txns || []).filter((t) => t.date);
+  if (!rows.length) return null;
+  const want = {}, accs = {}, taken = {};
+  /* एक पंक्ति ↔ एक दस्तावेज़, और कोई दस्तावेज़ दो पंक्तियों को न मिले।
+     पुराना दस्तावेज़ मौजूद हो तो उसी में लिखो (वरना उसकी बिल-फोटो और
+     मिलान अनाथ हो जाएँगे) — पर वह पहले किसी और पंक्ति को दे दिया गया हो
+     तो नहीं, क्योंकि यही «दो सौदे एक ही दस्तावेज़ में» वाली पुरानी
+     ख़राबी थी जिसकी वजह से 10 पंक्तियाँ चढ़ गई थीं।                    */
+  rows.forEach((t) => {
+    const acc = txnAccount(t, RECON.account) || RECON.account;
+    accs[acc] = 1;
+    const nid = txnId(acc, t);                 // नए तरीक़े का नंबर — हमेशा अलग
+    let id = nid;
+    if (!existingTxn(nid)) {
+      const lid = txnIdLegacy(acc, t);
+      if (lid !== nid && existingTxn(lid) && !taken[lid]) id = lid;
+    }
+    if (taken[id]) id = nid;
+    taken[id] = 1;
+    want[id] = { t, acc };
+  });
+  const days = rows.map((t) => String(t.date).slice(0, 10)).sort();
+  const from = days[0], to = days[days.length - 1];
+
+  const extra = BANKTXNS.filter((t) => {
+    if (!accs[t.accountId]) return false;
+    const d = String(t.date || "").slice(0, 10);
+    if (!d || d < from || d > to) return false;
+    if (want[t._id]) return false;
+    if (t.app) return false;                 // 📲 GPay/PhonePe/Paytm — इनका अपना संसार
+    return BANK_SRC.test(String(t.source || "statement"));
+  });
+  const fresh = Object.keys(want).filter((id) => !existingTxn(id)).length;
+  return { want, from, to, accs: Object.keys(accs), extra,
+           total: Object.keys(want).length, fresh };
+}
+
+function renderResync() {
+  const box = $("rResync");
+  if (!box) return;
+  const p = resyncPlan();
+  if (!p) { box.innerHTML = ""; return; }
+  const same = p.total - p.fresh;
+  box.innerHTML = `
+    <div class="card docFix" style="margin-bottom:12px">
+      <b>🧹 इस अवधि का हिसाब statement से पूरा मिलाओ</b>
+      <small>बैंक की statement ही सच है। यह ${esc(dayLabel(p.from) || p.from)} से
+        ${esc(dayLabel(p.to) || p.to)} तक का हिसाब इस फ़ाइल के हूबहू बराबर कर देगा —
+        <b>${p.total}</b> पंक्तियाँ अपनी सही जगह पर लिख दी जाएँगी
+        (${p.fresh} नई, ${same} पहले से), और इस अवधि की
+        <b>${p.extra.length}</b> ऐसी पंक्तियाँ जो statement में हैं ही नहीं,
+        उन पर «सेवा से हटाया हुआ» का निशान लग जाएगा।
+        <b>मिटाया कुछ नहीं जाएगा</b> — वे डेटाबेस में जस की तस रहेंगी।
+        📲 GPay/PhonePe/Paytm वाली पंक्तियों को हाथ नहीं लगाया जाएगा।</small>
+      ${p.extra.length ? `
+        <div style="margin-top:9px">
+          ${p.extra.slice(0, 8).map((t) => `
+            <div class="mrow"><div class="amt ${t.type === "credit" ? "in" : "out"}">${INR(t.amount)}</div>
+              <div class="mx"><b>${esc(pbTitle(t).name)}</b> · ${esc(t.date)}
+                <br><span class="muted">${esc(String(t._id).slice(0, 46))}</span></div></div>`).join("")}
+          ${p.extra.length > 8 ? `<div class="muted" style="padding:6px 0">… और ${p.extra.length - 8}</div>` : ""}
+        </div>` : ""}
+      <button type="button" class="mini primary" style="margin-top:10px"
+        onclick="runResync(this)">🧹 हाँ, statement के बराबर कर दीजिए</button>
+      <div id="rResyncMsg" class="muted" style="margin-top:8px"></div>
+    </div>`;
+}
+
+async function runResync(btn) {
+  if (!accMapReady()) {
+    $("rResyncMsg").innerHTML = "🔒 पहले ऊपर हर खाते का पता बता दीजिए।";
+    renderAccMap(); return;
+  }
+  const p = resyncPlan();
+  if (!p) return;
+  btn.disabled = true; btn.textContent = "… मिला रहा हूँ";
+  const msg = $("rResyncMsg");
+  let wrote = 0, retired = 0, failed = 0;
+  try {
+    // 1️⃣ फ़ाइल की हर पंक्ति अपनी सही जगह पर — «पहले से है» वाली भी
+    for (const id of Object.keys(p.want)) {
+      const { t, acc } = p.want[id];
+      try {
+        const doc = txnDoc(t, acc, null, null, existingTxn(id));
+        await db.collection("vbe_bank_txns").doc(id).set(doc, { merge: true });
+        memTxn(id, doc); wrote++;
+      } catch (e) { failed++; }
+      if (wrote % 25 === 0) msg.textContent = `${wrote} / ${p.total} लिखी…`;
+    }
+    // 2️⃣ जो statement में हैं ही नहीं — निशान लगाकर हिसाब से बाहर
+    for (const t of p.extra) {
+      try { await retireDoc(t._id, "statement में यह पंक्ति नहीं है"); retired++; }
+      catch (e) { failed++; }
+    }
+    await auditLog("statement_resync", null,
+      { accounts: p.accs, from: p.from, to: p.to, wrote, retired, failed });
+    saveCache(); refreshAll();
+    const aud = pbAudit(p.accs[0]);
+    msg.className = failed ? "bad" : "ok";
+    msg.innerHTML = `✅ <b>${wrote}</b> पंक्तियाँ statement के बराबर कर दीं` +
+      (retired ? ` · 🗄️ <b>${retired}</b> हिसाब से बाहर` : "") +
+      (failed ? ` · ⚠️ <b>${failed}</b> नहीं हो पाईं` : "") +
+      (aud ? `<br>अब ${aud.ok ? "हिसाब पूरा मिल रहा है ✅"
+        : `हिसाब में ${INR(Math.abs(aud.gap))} का फ़र्क़ बचा है`}` : "") +
+      `<br><span class="muted">🏦 पासबुक खोलकर देख लीजिए।</span>`;
+  } catch (e) {
+    msg.className = "bad"; msg.textContent = "नहीं हो पाया: " + e.message;
+  } finally { btn.disabled = false; btn.textContent = "🧹 दुबारा मिलाओ"; }
+}
+
 async function commitRecon() {
   const btn = $("rSave"), status = $("rStatus");
   /* 🔒 v16 का पहरा: जिस पंक्ति का खाता पक्का न हो, कुछ भी नहीं सहेजा
@@ -5431,6 +5619,21 @@ async function commitRecon() {
         linked++;
       }
     }
+    /* 🔄 «पहले से थीं» वाली पंक्तियों की **छूटी जानकारी भी भर दो** — पर
+       उन्हीं के अपने दस्तावेज़ में, नया दस्तावेज़ बनाकर नहीं। पहले इन्हें
+       बिल्कुल छोड़ दिया जाता था, इसलिए statement दुबारा डालने पर भी क्रम-नंबर
+       (srcSeq), समय, पूरी narration — कुछ नहीं पहुँचता था और पासबुक का क्रम
+       वैसा का वैसा उलझा रहता था। txnDoc पहले से भरी चीज़ कभी नहीं मिटाता। */
+    for (const d of (RECON.dupes || [])) {
+      try {
+        const rid = d.row && d.row._id;
+        if (!rid) continue;
+        const doc2 = txnDoc(d.t, RECON.account, null, null, d.row);
+        await db.collection("vbe_bank_txns").doc(rid).set(doc2, { merge: true });
+        memTxn(rid, doc2);
+        enriched++;
+      } catch (e) { /* एक पंक्ति अटके तो बाक़ी न रुकें */ }
+    }
     // Unmatched debits (the बकाया list) and every credit are stored too, so the
     // timeline and party views hold the whole picture, not just matched money.
     for (const m of RECON.noBill.concat((RECON.credits || []).map((t) => ({ t })))) {
@@ -5450,9 +5653,10 @@ async function commitRecon() {
                skipped: (RECON.dupes || []).length }
     });
     status.className = "ok";
+    // 🔢 अब «पहले से थीं» वाली भी लिखी जाती हैं, इसलिए वे enriched में ही
+    //    गिनी जाती हैं — दुबारा मत जोड़ो, वरना गिनती दुगुनी दिखेगी
     status.innerHTML = importReport({
-      total: saved + (RECON.dupes || []).length, added,
-      existed: enriched + (RECON.dupes || []).length, enriched, linked }) +
+      total: added + enriched, added, existed: enriched, enriched, linked }) +
       statementSummary(RECON.account, added, (RECON.dupes || []).length);
     const utrBefore = pendingUtr().length;
     // 🔗 जो फास्ट entries UTR के इंतज़ार में थीं, वे अब भर जाएँ — «आज भी
@@ -7817,6 +8021,17 @@ function renderDoctor(acc) {
             <span class="dMark">${c.on === false ? "✕" : c.on === null ? "•" : "✓"}</span>
           </div>`).join("")}
       </div>
+      ${aud && aud.ok === false ? `
+        <div class="docFix">
+          <b>🧹 हिसाब मिलाने का पक्का रास्ता</b>
+          <small>उस अवधि की बैंक statement दुबारा डालिए — 🏦 मिलान वाले पन्ने पर।
+            फ़ाइल पढ़ते ही नीचे <b>«🧹 इस अवधि का हिसाब statement से पूरा मिलाओ»</b>
+            बटन आएगा। बैंक की statement ही सच है, इसलिए ऐप उसी के हूबहू बराबर हो
+            जाएगा — छूटी पंक्तियाँ बन जाएँगी, और जो statement में हैं ही नहीं वे
+            हिसाब से बाहर हो जाएँगी। <b>मिटाया कुछ नहीं जाएगा।</b></small>
+          <button type="button" class="mini primary" style="margin-top:9px"
+            onclick="goTab('recon')">📄 statement डालिए</button>
+        </div>` : ""}
       ${bad.length ? `
         <div class="docFix">
           <b>🔑 ${bad.length} दस्तावेज़ पुरानी ख़राबी के</b>
@@ -7925,6 +8140,11 @@ function renderPass() {
             <br><span class="muted">वहाँ तक अपना हिसाब ${INR(aud.broke.apna)} बनता है,
               पर बैंक ने उसी पंक्ति पर ${INR(aud.broke.bank)} लिखा है — यानी बीच में
               <b>${INR(Math.abs(aud.broke.gap))}</b> की एक entry दर्ज ही नहीं हुई।</span></div>` : ""}
+          <div class="poBreak">🧹 <b>सबसे पक्का इलाज:</b> उस अवधि की statement
+            दुबारा डालिए और नीचे आने वाला
+            <b>«🧹 इस अवधि का हिसाब statement से पूरा मिलाओ»</b> बटन दबा दीजिए।
+            बैंक की statement ही सच है — ऐप उसी के बराबर हो जाएगा, और
+            <b>मिटेगा कुछ नहीं</b>।</div>
           <div style="margin-top:9px"><button type="button" class="mini primary"
             onclick="goTab('recon')">📄 statement दुबारा डालें</button></div>
         </div>` : ""}
