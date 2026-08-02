@@ -1556,6 +1556,8 @@
         <div id="accList"></div>
       </div>
 
+      <div class="card" style="margin-bottom:12px"><div id="rFiles"></div></div>
+
       <div id="rResult" hidden>
         <div id="rAccMap"></div>
         <div id="rVerify"></div>
@@ -2332,8 +2334,9 @@ function loadCache() {
   EXP = (c.EXP || []).map((e) => Object.assign({}, e, { _date: toDate(e.submittedAt) }));
   ACCOUNTS = c.ACCOUNTS || {};
   PRICEBOOK = c.PRICEBOOK || [];
-  BANKTXNS = c.BANKTXNS || [];
-  RETIRED = c.RETIRED || [];
+  BANKTXNS = (c.BANKTXNS || []).filter((t) => !t.retired && !t.mergedInto);
+  RETIRED = (c.RETIRED || []).concat((c.BANKTXNS || [])
+    .filter((t) => t.retired || t.mergedInto));
   VCARDS = c.VCARDS || {};
   STAFF = c.STAFF || {};
   CHEQUES = c.CHEQUES || {};
@@ -2448,8 +2451,10 @@ async function fetchAll() {
      गिनी जातीं। इससे हर जगह `!t.retired` लिखने की ज़रूरत नहीं पड़ती और
      कोई जगह छूट भी नहीं सकती।                                          */
   const bankAll = bankDocs.map(d => Object.assign({ _id: d.id }, d.data()));
-  RETIRED = bankAll.filter((t) => t.retired);
-  BANKTXNS = bankAll.filter((t) => !t.retired);
+  // «सेवा से हटाई हुई» और «दूसरी में मिल चुकी» — दोनों अलग टोकरी में
+  const out = (t) => !!(t.retired || t.mergedInto);
+  RETIRED = bankAll.filter(out);
+  BANKTXNS = bankAll.filter((t) => !out(t));
   let n = expDocs.length + accSnap.size + pbDocs.length + bankDocs.length;
   try {
     const vs = markCapped("पार्टी के कार्ड", await pageAll("vbe_parties", 10000));
@@ -4087,6 +4092,180 @@ function txnIdSafe(accountId, t) {
   return existingTxn(old) ? old : now;
 }
 
+/* ══════════ 🔗 एक ही पैसा = एक ही पंक्ति ═══════════════════════════
+
+   विक्रम जी की माँग, उन्हीं के शब्दों में:
+
+     «मैं फास्ट एंट्री से जो बिल ऐड करता हूँ, उसके बाद statement डालता हूँ
+      तो अपने-आप वह UTR नंबर, UPI transaction ID या रिकॉर्ड से मिल जाना
+      चाहिए… मैं हर ट्रांजैक्शन का स्क्रीनशॉट भी लगाता हूँ, उसमें UTR, date
+      और timing होता है — उसी हिसाब से स्मार्ट तरीक़े से मर्ज करिए। अगर आप
+      एक व्यक्ति होते तो किस तरीक़े से इन चीज़ों को detect करते?»
+
+   बिल्कुल सही सवाल — और जवाब भी वैसा ही होना चाहिए जैसा एक समझदार
+   मुनीम देता। वह क्या देखता?
+
+     1. 🔑 **UTR** — दो पर्चियों पर एक ही UTR? बात ख़त्म, यही वही पैसा है।
+        और अगर **दोनों पर UTR लिखा है पर अलग-अलग** — तो ये दो अलग सौदे
+        हैं, चाहे बाक़ी सब मिलता हो। यही सबसे पक्की पहचान है।
+     2. 🧾 **चेक नंबर** — दोनों तरफ़ हूबहू एक ही छपता है।
+     3. 📲 **ऐप का अपना नंबर** (GPay/PhonePe/Paytm का Transaction ID)।
+     4. 📅 फिर तारीख़, रकम, दिशा और **नाम** — दोनों नाम लिखे हों और अलग
+        हों तो दो अलग सौदे; एक तरफ़ नाम ख़ाली हो तो बाक़ी सबूत देखो।
+     5. 🕐 और समय — 30 मिनट के अंदर का मेल लगभग पक्का होता है।
+
+   एक और बात जो मुनीम कभी नहीं भूलता: **बैंक अगले दिन भी दर्ज कर सकता है।**
+   GPay पर रात 11:50 का पेमेंट बैंक की statement में अगले दिन की तारीख़ से
+   आता है। इसलिए एक दिन का फ़ासला माफ़ है, उससे ज़्यादा नहीं.
+
+   ⚠️ सबसे ज़रूरी पहरा — **शक़ हो तो जोड़ो मत।** ग़लत जोड़ने से दो अलग
+      सौदे एक हो जाते हैं और एक पैसा हमेशा के लिए ग़ायब। न जोड़ने से सिर्फ़
+      एक पंक्ति ज़्यादा दिखती है, जो आँख से पकड़ी जा सकती है।            */
+
+/**
+ * क्या ये दोनों पंक्तियाँ एक ही पैसा हैं?
+ * @returns {string|null} हाँ तो वजह (हिंदी में), नहीं तो null
+ */
+function sameMoney(a, b) {
+  if (!a || !b || a === b) return null;
+  if ((a.type || "") !== (b.type || "")) return null;          // गया ≠ आया
+  if (Math.abs((a.amount || 0) - (b.amount || 0)) > 0.01) return null;
+  if (a.accountId && b.accountId && a.accountId !== b.accountId) return null;
+
+  /* 🛑 सबसे पहला और सबसे ज़रूरी इनकार — **बैंक की लिखी बची रकम।**
+     बैंक हर पंक्ति के आगे उस वक़्त की बची रकम छापता है। दो पंक्तियों पर
+     वह अलग-अलग लिखी हो तो वे दो अलग सौदे हैं — चाहे तारीख़, रकम और नाम
+     सब मिलते हों।
+
+     यह पहरा जाँच में ही अपनी क़ीमत साबित कर चुका है: विक्रम जी की
+     statement में 16 जून को ₹20,000 दो बार गए (बची रकम ₹1,44,656.11 और
+     ₹1,80,066.11), और एक पर नाम ख़ाली था। इसके बिना ऐप उन्हें एक ही
+     सौदा मानकर मिला देता — और ₹20,000 हमेशा के लिए ग़ायब हो जाते।     */
+  if (a.balance != null && b.balance != null &&
+      Math.abs(Number(a.balance) - Number(b.balance)) > 0.01) return null;
+
+  // 1️⃣ UTR — सबसे पक्की पहचान, और सबसे पक्का इनकार भी
+  const ua = txnUtr(a), ub = txnUtr(b);
+  if (ua && ub) return ua === ub ? "🔑 वही UTR " + ua : null;
+
+  // 2️⃣ चेक नंबर
+  const ca = String(a.chequeNo || "").replace(/\D/g, "");
+  const cb = String(b.chequeNo || "").replace(/\D/g, "");
+  if (ca && cb) return ca === cb ? "🧾 वही चेक नं. " + ca : null;
+
+  // 3️⃣ ऐप का अपना नंबर
+  const xa = String(a.appTxnId || "").trim(), xb = String(b.appTxnId || "").trim();
+  if (xa && xb && xa === xb) return "📲 वही ऐप-नंबर";
+
+  // 4️⃣ तारीख़ — बैंक अगले दिन भी दर्ज कर सकता है
+  const gap = dayGap(a.date, b.date);
+  if (!isFinite(gap) || gap > 1) return null;
+  const when = gap < 1 ? "उसी दिन" : "अगले दिन";
+
+  // 5️⃣ नाम — दोनों लिखे हों और अलग हों तो बात ख़त्म
+  const na = pKey(a.party || ""), nb = pKey(b.party || "");
+  if (na && nb) {
+    const near = na === nb || na.indexOf(nb) === 0 || nb.indexOf(na) === 0;
+    return near ? `📅 ${when}, वही रकम और वही नाम` : null;
+  }
+
+  // 6️⃣ एक तरफ़ नाम ख़ाली — तब समय सबसे बड़ा सबूत
+  const tm = timeGap(a.time, b.time);
+  if (tm != null) return tm <= 30 ? `🕐 वही रकम, समय ${tm} मिनट के अंदर` : null;
+  return gap < 1 ? "📅 उसी दिन, वही रकम — और नाम एक तरफ़ ख़ाली" : null;
+}
+
+/**
+ * एक पंक्ति को दूसरी में मिला दो — मिटाना नहीं, «मिली हुई» का निशान।
+ *
+ * जीतने वाली पंक्ति में वह सब चला जाता है जो हारने वाली के पास था और
+ * उसके पास नहीं — बिल का जोड़, फोटो, पूरा नाम, समय, UTR। यही «स्मार्ट
+ * मर्ज» है: जानकारी कभी घटती नहीं, सिर्फ़ बढ़ती है।
+ */
+async function mergeTxn(loseId, keepId, why) {
+  const lose = BANKTXNS.filter((t) => t._id === loseId)[0];
+  const keep = BANKTXNS.filter((t) => t._id === keepId)[0];
+  if (!lose || !keep || loseId === keepId) return false;
+
+  const add = {};
+  const take = (k) => { if (lose[k] != null && lose[k] !== "" && (keep[k] == null || keep[k] === "")) add[k] = lose[k]; };
+  ["time", "app", "appTxnId", "vpa", "chequeNo", "utr", "narration",
+   "billPhotoId", "billPhotoDriveUrl", "aiSummary", "srcSeq"].forEach(take);
+  // 🪪 नाम सिर्फ़ बेहतर हो सकता है, बुरा कभी नहीं
+  const nm = betterName(keep.party, lose.party, lose.partyTruncated);
+  if (nm && nm !== keep.party) { add.party = nm; add.partyKey = pKey(nm); }
+  // 🔗 बिल का जोड़ कभी नहीं टूटता
+  if (lose.matchedReceiptId && !keep.matchedReceiptId) {
+    add.matched = true;
+    add.matchedReceiptId = lose.matchedReceiptId;
+    add.matchConfidence = lose.matchConfidence || null;
+  }
+  add.mergedFrom = [...new Set(((keep.mergedFrom || []).concat([loseId])))].slice(0, 20);
+
+  await db.collection("vbe_bank_txns").doc(keepId).set(add, { merge: true });
+  memTxn(keepId, add);
+  const mark = { mergedInto: keepId, mergedWhy: why || null, mergedAt: todayISO() };
+  await db.collection("vbe_bank_txns").doc(loseId).set(mark, { merge: true });
+  // जो पंक्ति मिल गई वह हिसाब से बाहर — पर डेटाबेस में जस की तस
+  const i = BANKTXNS.findIndex((t) => t._id === loseId);
+  if (i >= 0) RETIRED.push(Object.assign(BANKTXNS.splice(i, 1)[0], mark));
+  // 🔗 बिल भी अब उसी पंक्ति की तरफ़ देखे
+  if (lose.matchedReceiptId) {
+    const e = EXP.filter((x) => x.receiptId === lose.matchedReceiptId)[0];
+    if (e && e.matchedBankTxnId === loseId) {
+      await db.collection("vbe_expenses").doc(e._id)
+        .update({ matchedBankTxnId: keepId }).catch(() => {});
+      e.matchedBankTxnId = keepId;
+    }
+  }
+  await auditLog("txn_merged", null, { lost: loseId, kept: keepId, why: why || null });
+  return true;
+}
+
+/**
+ * पूरे डेटाबेस में «एक ही पैसा दो जगह» ढूँढो।
+ *
+ * 🔒 जोड़ा तभी बनता है जब **वह अकेला जोड़ा हो** — अगर एक पंक्ति के दो-तीन
+ *    दावेदार हैं तो कुछ नहीं किया जाता। एक समझदार आदमी भी यही करता:
+ *    «दो में से कौन सा?» का जवाब न पता हो तो वह अंदाज़ा नहीं लगाता।
+ */
+function findTwins(acc) {
+  const rows = BANKTXNS.filter((t) =>
+    (!acc || t.accountId === acc) && !t.retired && !t.mergedInto);
+  // सिर्फ़ उसी दिन/अगले दिन और वही रकम वालों को आपस में देखो — तेज़ भी, सही भी
+  const byAmt = {};
+  rows.forEach((t) => {
+    const k = Math.round((t.amount || 0) * 100) + "|" + (t.type || "");
+    (byAmt[k] = byAmt[k] || []).push(t);
+  });
+  const pairs = [], claimed = {};
+  Object.keys(byAmt).forEach((k) => {
+    const g = byAmt[k];
+    if (g.length < 2) return;
+    g.forEach((a, i) => {
+      const hits = [];
+      for (let j = 0; j < g.length; j++) {
+        if (j === i) continue;
+        const why = sameMoney(a, g[j]);
+        if (why) hits.push({ b: g[j], why });
+      }
+      if (hits.length !== 1) return;             // 🤔 एक से ज़्यादा दावेदार — छोड़ो
+      const b = hits[0].b;
+      const key = [a._id, b._id].sort().join("~");
+      if (claimed[key]) return;
+      claimed[key] = 1;
+      // 🏆 जीतेगी वह जिसके पास ज़्यादा जानकारी है (बैंक की statement भारी)
+      const score = (t) => (BANK_SRC.test(String(t.source || "")) ? 4 : 0) +
+        (t.balance != null ? 3 : 0) + (txnUtr(t) ? 2 : 0) +
+        (t.narration ? 1 : 0) + (t.srcSeq != null ? 1 : 0);
+      const keep = score(a) >= score(b) ? a : b;
+      const lose = keep === a ? b : a;
+      pairs.push({ keep, lose, why: hits[0].why });
+    });
+  });
+  return pairs;
+}
+
 /**
  * 🚨 एक ही file में वही «UTR» कई पंक्तियों पर — तो वह UTR है ही नहीं।
  *
@@ -4162,14 +4341,15 @@ function findExisting(t, accountId) {
       String(b.utr).toUpperCase() === String(t.utr).toUpperCase())[0];
     if (u) return { row: u, why: "वही UTR" };
   }
-  const key = pKey(t.party || t.narration || "");
-  const same = live.filter((b) =>
-    b.date === t.date && Math.abs((b.amount || 0) - t.amount) < 0.01 && b.type === t.type);
-  const byParty = same.filter((b) => key && pKey(b.party || b.narration || "") === key)[0];
-  if (byParty) return { row: byParty, why: "वही तारीख़, रकम और पार्टी" };
-  const byTime = t.time ? same.filter((b) => b.time && b.time === t.time)[0] : null;
-  if (byTime) return { row: byTime, why: "वही तारीख़, समय और रकम" };
-  return null;
+  /* 🔗 बाक़ी सब «एक ही पैसा?» वाले उसी इंजन से — जो पूरे ऐप में एक ही है
+     (देखें sameMoney)। पहले यहाँ अपने अलग नियम लिखे थे, इसलिए import और
+     पासबुक अलग-अलग जवाब देते थे। एक ही सवाल का जवाब पूरे ऐप में एक ही
+     जगह से आना चाहिए।                                                  */
+  const acc = txnAccount(t, accountId) || accountId;
+  const me = Object.assign({}, t, { accountId: t.accountId || acc });
+  const hits = live.map((b) => ({ b, why: sameMoney(me, b) })).filter((x) => x.why);
+  if (hits.length === 1) return { row: hits[0].b, why: hits[0].why };
+  return null;                      // 🤔 एक से ज़्यादा दावेदार = कुछ मत मानो
 }
 
 let RECON = { account: "", matched: [], maybe: [], noBill: [], skipped: 0 };
@@ -5494,16 +5674,37 @@ function resyncPlan() {
   const days = rows.map((t) => String(t.date).slice(0, 10)).sort();
   const from = days[0], to = days[days.length - 1];
 
-  const extra = BANKTXNS.filter((t) => {
+  /* जो पंक्तियाँ इस अवधि में पड़ी हैं पर फ़ाइल में नहीं हैं — उनके साथ
+     क्या हो? तीन ही रास्ते, और तीनों साफ़:
+
+       🔗 **मिला दो** — अगर वह statement की किसी पंक्ति का ही दूसरा रूप
+          है (फास्ट entry, पेमेंट का स्क्रीनशॉट, GPay/PhonePe की पंक्ति)।
+          यही विक्रम जी की असली माँग है — एक ही पैसा दो जगह न दिखे।
+       🗄️ **हिसाब से बाहर** — बैंक की statement से ही आई थी, पर अब उस
+          statement में है ही नहीं। यानी पुराने ख़राब कोड की बनाई हुई।
+       🙋 **छोड़ दो, पर बता दो** — किसी और रास्ते से आई और statement की
+          किसी पंक्ति से मेल नहीं खाती। यह सचमुच अलग पैसा हो सकता है,
+          इसलिए हाथ नहीं लगाया जाता — सिर्फ़ दिखा दिया जाता है।         */
+  const fileRows = Object.keys(want).map((id) => ({ id, t: want[id].t, acc: want[id].acc }));
+  const inRange = BANKTXNS.filter((t) => {
     if (!accs[t.accountId]) return false;
     const d = String(t.date || "").slice(0, 10);
     if (!d || d < from || d > to) return false;
-    if (want[t._id]) return false;
-    if (t.app) return false;                 // 📲 GPay/PhonePe/Paytm — इनका अपना संसार
-    return BANK_SRC.test(String(t.source || "statement"));
+    return !want[t._id] && !t.retired && !t.mergedInto;
   });
+
+  const merge = [], extra = [], leave = [];
+  inRange.forEach((row) => {
+    const hits = fileRows
+      .map((f) => ({ f, why: sameMoney(Object.assign({}, f.t, { accountId: f.acc }), row) }))
+      .filter((x) => x.why);
+    if (hits.length === 1) { merge.push({ row, into: hits[0].f.id, why: hits[0].why }); return; }
+    if (!row.app && BANK_SRC.test(String(row.source || "statement"))) extra.push(row);
+    else leave.push(row);
+  });
+
   const fresh = Object.keys(want).filter((id) => !existingTxn(id)).length;
-  return { want, from, to, accs: Object.keys(accs), extra,
+  return { want, from, to, accs: Object.keys(accs), extra, merge, leave,
            total: Object.keys(want).length, fresh };
 }
 
@@ -5513,25 +5714,50 @@ function renderResync() {
   const p = resyncPlan();
   if (!p) { box.innerHTML = ""; return; }
   const same = p.total - p.fresh;
+  const list = (rows, cls) => rows.slice(0, 8).map((x) => {
+    const t = x.row || x;
+    return `<div class="mrow"><div class="amt ${t.type === "credit" ? "in" : "out"}">${INR(t.amount)}</div>
+      <div class="mx"><b>${esc(pbTitle(t).name)}</b> · ${esc(t.date)}
+        ${x.why ? `<br><span class="badge ${cls}">${esc(x.why)}</span>` : ""}
+        <br><span class="muted">${esc(String(t._id).slice(0, 46))}</span></div></div>`;
+  }).join("") + (rows.length > 8
+    ? `<div class="muted" style="padding:6px 0">… और ${rows.length - 8}</div>` : "");
+
   box.innerHTML = `
     <div class="card docFix" style="margin-bottom:12px">
       <b>🧹 इस अवधि का हिसाब statement से पूरा मिलाओ</b>
       <small>बैंक की statement ही सच है। यह ${esc(dayLabel(p.from) || p.from)} से
-        ${esc(dayLabel(p.to) || p.to)} तक का हिसाब इस फ़ाइल के हूबहू बराबर कर देगा —
-        <b>${p.total}</b> पंक्तियाँ अपनी सही जगह पर लिख दी जाएँगी
-        (${p.fresh} नई, ${same} पहले से), और इस अवधि की
-        <b>${p.extra.length}</b> ऐसी पंक्तियाँ जो statement में हैं ही नहीं,
-        उन पर «सेवा से हटाया हुआ» का निशान लग जाएगा।
-        <b>मिटाया कुछ नहीं जाएगा</b> — वे डेटाबेस में जस की तस रहेंगी।
-        📲 GPay/PhonePe/Paytm वाली पंक्तियों को हाथ नहीं लगाया जाएगा।</small>
-      ${p.extra.length ? `
-        <div style="margin-top:9px">
-          ${p.extra.slice(0, 8).map((t) => `
-            <div class="mrow"><div class="amt ${t.type === "credit" ? "in" : "out"}">${INR(t.amount)}</div>
-              <div class="mx"><b>${esc(pbTitle(t).name)}</b> · ${esc(t.date)}
-                <br><span class="muted">${esc(String(t._id).slice(0, 46))}</span></div></div>`).join("")}
-          ${p.extra.length > 8 ? `<div class="muted" style="padding:6px 0">… और ${p.extra.length - 8}</div>` : ""}
-        </div>` : ""}
+        ${esc(dayLabel(p.to) || p.to)} तक का हिसाब इस फ़ाइल के हूबहू बराबर कर देगा।
+        <b>मिटाया कुछ नहीं जाएगा</b> — सब डेटाबेस में जस का तस रहेगा।</small>
+      <div class="docList" style="margin-top:10px">
+        <div class="docRow yes"><span class="dIco">📄</span>
+          <div class="dTxt"><b>${p.total} पंक्तियाँ अपनी सही जगह पर</b>
+            <small>${p.fresh} नई बनेंगी · ${same} पहले से हैं</small></div>
+          <span class="dMark">✓</span></div>
+        ${p.merge.length ? `<div class="docRow yes"><span class="dIco">🔗</span>
+          <div class="dTxt"><b>${p.merge.length} पंक्तियाँ आपस में मिल जाएँगी</b>
+            <small>यही पैसा statement में भी है — फास्ट entry, पेमेंट का
+              स्क्रीनशॉट या GPay/PhonePe की पंक्ति। दोनों की जानकारी एक ही
+              पंक्ति में आ जाएगी, बिल का जोड़ भी साथ चलेगा।</small></div>
+          <span class="dMark">✓</span></div>` : ""}
+        ${p.extra.length ? `<div class="docRow hm"><span class="dIco">🗄️</span>
+          <div class="dTxt"><b>${p.extra.length} पंक्तियाँ हिसाब से बाहर</b>
+            <small>बैंक की statement से ही आई थीं, पर अब उसमें हैं ही नहीं —
+              यानी पुराने ख़राब कोड की बनाई हुई।</small></div>
+          <span class="dMark">•</span></div>` : ""}
+        ${p.leave.length ? `<div class="docRow hm"><span class="dIco">🙋</span>
+          <div class="dTxt"><b>${p.leave.length} पंक्तियों को हाथ नहीं लगेगा</b>
+            <small>ये किसी और रास्ते से आई हैं और statement की किसी पंक्ति से
+              मेल नहीं खातीं। सचमुच अलग पैसा हो सकता है — इसलिए सिर्फ़ दिखा
+              रहा हूँ, छू नहीं रहा।</small></div>
+          <span class="dMark">•</span></div>` : ""}
+      </div>
+      ${p.merge.length ? `<div style="margin-top:10px">
+        <div class="pbSecHead">🔗 ये आपस में मिलेंगी</div>${list(p.merge, "hi")}</div>` : ""}
+      ${p.extra.length ? `<div style="margin-top:10px">
+        <div class="pbSecHead">🗄️ ये हिसाब से बाहर होंगी</div>${list(p.extra, "lo")}</div>` : ""}
+      ${p.leave.length ? `<div style="margin-top:10px">
+        <div class="pbSecHead">🙋 इन्हें देख लीजिए — छुआ नहीं जाएगा</div>${list(p.leave, "lo")}</div>` : ""}
       <button type="button" class="mini primary" style="margin-top:10px"
         onclick="runResync(this)">🧹 हाँ, statement के बराबर कर दीजिए</button>
       <div id="rResyncMsg" class="muted" style="margin-top:8px"></div>
@@ -5547,7 +5773,7 @@ async function runResync(btn) {
   if (!p) return;
   btn.disabled = true; btn.textContent = "… मिला रहा हूँ";
   const msg = $("rResyncMsg");
-  let wrote = 0, retired = 0, failed = 0;
+  let wrote = 0, merged = 0, retired = 0, failed = 0;
   try {
     // 1️⃣ फ़ाइल की हर पंक्ति अपनी सही जगह पर — «पहले से है» वाली भी
     for (const id of Object.keys(p.want)) {
@@ -5559,22 +5785,29 @@ async function runResync(btn) {
       } catch (e) { failed++; }
       if (wrote % 25 === 0) msg.textContent = `${wrote} / ${p.total} लिखी…`;
     }
-    // 2️⃣ जो statement में हैं ही नहीं — निशान लगाकर हिसाब से बाहर
+    // 2️⃣ 🔗 एक ही पैसा दो जगह — मिला दो (बिल का जोड़ और फोटो साथ ले जाकर)
+    for (const m of p.merge) {
+      try { if (await mergeTxn(m.row._id, m.into, m.why)) merged++; }
+      catch (e) { failed++; }
+    }
+    // 3️⃣ जो statement में हैं ही नहीं — निशान लगाकर हिसाब से बाहर
     for (const t of p.extra) {
       try { await retireDoc(t._id, "statement में यह पंक्ति नहीं है"); retired++; }
       catch (e) { failed++; }
     }
     await auditLog("statement_resync", null,
-      { accounts: p.accs, from: p.from, to: p.to, wrote, retired, failed });
+      { accounts: p.accs, from: p.from, to: p.to, wrote, merged, retired, failed });
     saveCache(); refreshAll();
     const aud = pbAudit(p.accs[0]);
     msg.className = failed ? "bad" : "ok";
     msg.innerHTML = `✅ <b>${wrote}</b> पंक्तियाँ statement के बराबर कर दीं` +
+      (merged ? ` · 🔗 <b>${merged}</b> आपस में मिलीं` : "") +
       (retired ? ` · 🗄️ <b>${retired}</b> हिसाब से बाहर` : "") +
       (failed ? ` · ⚠️ <b>${failed}</b> नहीं हो पाईं` : "") +
       (aud ? `<br>अब ${aud.ok ? "हिसाब पूरा मिल रहा है ✅"
         : `हिसाब में ${INR(Math.abs(aud.gap))} का फ़र्क़ बचा है`}` : "") +
       `<br><span class="muted">🏦 पासबुक खोलकर देख लीजिए।</span>`;
+    renderResync();
   } catch (e) {
     msg.className = "bad"; msg.textContent = "नहीं हो पाया: " + e.message;
   } finally { btn.disabled = false; btn.textContent = "🧹 दुबारा मिलाओ"; }
@@ -5658,6 +5891,22 @@ async function commitRecon() {
     status.innerHTML = importReport({
       total: added + enriched, added, existed: enriched, enriched, linked }) +
       statementSummary(RECON.account, added, (RECON.dupes || []).length);
+    /* 📂 फ़ाइल Drive पर रख दो — असली और साफ़ CSV, दोनों। यह पीछे चलता
+       रहता है; न बने तो import रुकता नहीं, बस नीचे बता दिया जाता है।   */
+    (async () => {
+      const days = (RECON.txns || []).map((t) => String(t.date).slice(0, 10)).sort();
+      const r = await keepStatementFile(PENDING_FILE, RECON.txns, RECON.account,
+        days[0], days[days.length - 1]);
+      const fbox = $("rFiles");
+      renderStatementFiles();
+      if (!r.ok && fbox) {
+        fbox.insertAdjacentHTML("afterbegin",
+          `<div class="capWarn">📂 <b>statement Drive पर नहीं रखी जा सकी</b> — ${
+            esc(r.error || "")}<br><small>हिसाब पूरा सहेजा जा चुका है, सिर्फ़ फ़ाइल की
+            नक़ल नहीं बनी। bot का पता (appsUrl) जाँच लीजिए।</small></div>`);
+      }
+    })();
+
     const utrBefore = pendingUtr().length;
     // 🔗 जो फास्ट entries UTR के इंतज़ार में थीं, वे अब भर जाएँ — «आज भी
     // करो और बाद में बैंक से भी» वाली दोहरी मेहनत यहीं ख़त्म होती है
@@ -5853,6 +6102,8 @@ function initRecon() {
     Object.keys(ACCOUNTS).map(id => `<option value="${esc(id)}">${esc(ACCOUNTS[id].label || id)}</option>`).join("");
   if (keep) $("rAccount").value = keep;
   renderCoverage();
+  renderStatementFiles();
+  if (!STATEMENT_FILES.length) loadStatementFiles().then(renderStatementFiles);
   const zone = $("dropZone").querySelector(".drop");
   $("rFile").onchange = (e) => { if (e.target.files[0]) handleStatementFile(e.target.files[0]); };
   ["dragenter", "dragover"].forEach(ev => zone.addEventListener(ev, (e) => {
@@ -6539,6 +6790,139 @@ async function botCall(action, payload) {
 }
 
 const driveUpload = (dataUrl, name) => botCall("upload", { dataUrl, name });
+
+/* ══════════ 📂 बैंक की statement — Drive पर सुरक्षित ═════════════════
+
+   विक्रम जी: «हर बार मेरे को ध्यान रखना पड़ता है कि जो statement बैंक से
+   लेकर आया हूँ वह सुरक्षित रखना पड़ता है… वह Google Drive में सेव हो जाए,
+   और जब भी ज़रूरत पड़े मैं वहीं से PDF वापस डाउनलोड कर सकूँ — मेरे को हर
+   बार बैंक पर निर्भर न होना पड़े।»
+
+   इसलिए अब जो भी फ़ाइल इस पन्ने पर डाली जाती है, वह **दो रूपों में** Drive
+   पर चली जाती है:
+
+     1. 📄 **जैसी बैंक ने दी** — वही PDF/CSV, हूबहू, बिना छुए
+     2. 📊 **साफ़ CSV** — ऐप ने जो पढ़ा वह, उसी खाने-क्रम में जो हमारे
+        प्रॉम्प्ट में लिखा है। यानी अगली बार CSV बनाने की मेहनत ही नहीं।
+
+   फ़ोल्डर: VBE-Bills ▸ Statements ▸ «खाते का नाम»
+   और हर फ़ाइल का पता vbe_meta/statement_files में दर्ज रहता है, ताकि
+   मिलान वाले पन्ने पर सूची दिखती रहे — बैंक जाने की ज़रूरत ही न पड़े।
+
+   🔒 यह फ़ाइल कभी AI को नहीं जाती — सिर्फ़ Drive पर रखी जाती है।       */
+
+/** फ़ाइल → dataURL (base64), ताकि bot उसे Drive पर लिख सके। */
+function fileToDataUrl(file) {
+  return new Promise((ok, no) => {
+    const r = new FileReader();
+    r.onload = () => ok(r.result);
+    r.onerror = () => no(new Error("फ़ाइल पढ़ी नहीं गई"));
+    r.readAsDataURL(file);
+  });
+}
+
+/** ऐप ने जो पढ़ा, वही साफ़ CSV — प्रॉम्प्ट वाले खानों के क्रम में। */
+function rowsToCsv(rows, accLabelText) {
+  const q = (v) => {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const head = "Date,Time,Party,Account,Description,ChequeNo,UTR,Debit,Credit,Balance";
+  return head + "\n" + rows.map((t) => [
+    t.date, t.time || "", t.party || "", accLabelText || "", t.narration || "",
+    t.chequeNo || "", t.utr || "",
+    t.type === "debit" ? t.amount : "", t.type === "credit" ? t.amount : "",
+    t.balance == null ? "" : t.balance
+  ].map(q).join(",")).join("\n");
+}
+
+const MAX_DRIVE_MB = 12;
+
+/**
+ * इस import की फ़ाइल Drive पर रख दो — असली और साफ़ CSV, दोनों।
+ * @returns {Promise<{ok:boolean, saved:Array, error?:string}>}
+ */
+async function keepStatementFile(file, rows, accountId, from, to) {
+  const saved = [];
+  const label = accLabel(accountId) || accountId || "खाता";
+  const folder = "Statements/" + label;
+  const stamp = (from || todayISO()) + "_to_" + (to || todayISO());
+  try {
+    if (file) {
+      if (file.size > MAX_DRIVE_MB * 1024 * 1024) {
+        return { ok: false, error: `फ़ाइल ${MAX_DRIVE_MB}MB से बड़ी है` };
+      }
+      const dataUrl = await fileToDataUrl(file);
+      const ext = (String(file.name).match(/\.[a-z0-9]+$/i) || [""])[0] || ".bin";
+      const up = await botCall("upload", { dataUrl, folder,
+        mime: file.type || "application/octet-stream",
+        name: `${label} ${stamp} (असली)${ext}` });
+      if (up && up.ok) saved.push({ kind: "original", name: file.name,
+        url: up.url, download: up.download || up.url });
+      else return { ok: false, error: (up && up.error) || "Drive पर नहीं गई" };
+    }
+    if (rows && rows.length) {
+      const csv = rowsToCsv(rows, label);
+      const dataUrl = "data:text/csv;base64," +
+        btoa(unescape(encodeURIComponent("﻿" + csv)));
+      const up2 = await botCall("upload", { dataUrl, folder, mime: "text/csv",
+        name: `${label} ${stamp} (साफ़).csv` });
+      if (up2 && up2.ok) saved.push({ kind: "clean", name: "साफ़ CSV",
+        url: up2.url, download: up2.download || up2.url });
+    }
+    if (!saved.length) return { ok: false, error: "कुछ भी नहीं भेजा जा सका" };
+    // 📇 पता दर्ज कर दो — ताकि सूची में हमेशा मिलती रहे
+    const key = "statement_files";
+    const entry = { accountId, label, from: from || null, to: to || null,
+      rows: (rows || []).length, at: new Date().toISOString(), files: saved };
+    STATEMENT_FILES = [entry].concat(STATEMENT_FILES || []).slice(0, 200);
+    await db.collection("vbe_meta").doc(key)
+      .set({ list: STATEMENT_FILES }, { merge: true });
+    await auditLog("statement_kept", null,
+      { accountId, from, to, files: saved.map((s) => s.url) });
+    return { ok: true, saved };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+let STATEMENT_FILES = [];
+
+async function loadStatementFiles() {
+  try {
+    const d = await db.collection("vbe_meta").doc("statement_files").get();
+    readCount(1);
+    STATEMENT_FILES = (d.exists && d.data().list) || [];
+  } catch (e) { STATEMENT_FILES = []; }
+}
+
+/** 📂 अब तक सहेजी हुई statement फ़ाइलें — बैंक जाने की ज़रूरत नहीं। */
+function renderStatementFiles() {
+  const box = $("rFiles");
+  if (!box) return;
+  if (!STATEMENT_FILES.length) {
+    box.innerHTML = gfx.empty("book2", "अभी कोई statement सहेजी नहीं",
+      "जो भी फ़ाइल यहाँ डालेंगे, वह अपने-आप Google Drive पर रख दी जाएगी — " +
+      "असली PDF भी और साफ़ CSV भी। फिर बैंक जाने की ज़रूरत नहीं पड़ेगी।");
+    return;
+  }
+  box.innerHTML = '<div class="itemsHead" style="margin-top:0">' +
+    '<span>📂 Drive पर रखी हुई statement</span></div>' +
+    STATEMENT_FILES.slice(0, 25).map((e) => `
+      <div class="mrow">
+        <div class="mx">
+          <div class="pname">${esc(e.label || "—")}</div>
+          <span class="muted">${esc(e.from || "?")} से ${esc(e.to || "?")} तक · ${
+            e.rows || 0} पंक्तियाँ</span>
+          <div class="pick" style="margin-top:6px">
+            ${(e.files || []).map((f) => `
+              <a class="mini" target="_blank" rel="noopener"
+                 href="${esc(f.download || f.url)}">${
+                 f.kind === "clean" ? "📊 साफ़ CSV" : "📄 असली फ़ाइल"}</a>`).join("")}
+          </div>
+        </div>
+      </div>`).join("");
+}
 const tgNotify = (text) => botCall("notify", { text });
 
 /* ══════════ 🏛️ व्यापार की रिपोर्ट पढ़ना ═══════════════════════════
@@ -7949,6 +8333,20 @@ async function fixBadUtrs(btn) {
   toast(failed ? `🔧 ${n} ठीक, ${failed} नहीं हो पाईं` : `🔧 ${n} दस्तावेज़ हटा दिए`);
 }
 
+/** 👯 सारे «एक ही पैसा दो जगह» वाले जोड़े एक साथ मिला दो। */
+async function fixTwins(btn) {
+  const pairs = findTwins(PB_ACC);
+  if (!pairs.length) return;
+  if (btn) { btn.disabled = true; btn.textContent = "… मिला रहा हूँ"; }
+  let n = 0, failed = 0;
+  for (const x of pairs) {
+    try { if (await mergeTxn(x.lose._id, x.keep._id, x.why)) n++; else failed++; }
+    catch (e) { failed++; }
+  }
+  saveCache(); refreshAll();
+  toast(failed ? `🔗 ${n} मिलीं, ${failed} नहीं हो पाईं` : `🔗 ${n} जोड़े मिला दिए`);
+}
+
 /** 🔓 एक ग़लत जोड़ खोलो — बिल फिर «UTR बाकी» में चला जाएगा। */
 async function unlinkTxn(id) {
   const t = BANKTXNS.filter((x) => x._id === id)[0];
@@ -7977,6 +8375,7 @@ function renderDoctor(acc) {
   const aud = pbAudit(acc);
   const bad = badUtrDocs(acc);
   const links = badLinks(acc);
+  const twins = findTwins(acc);
   const rows = pbTxns(acc);
 
   const checks = [
@@ -7992,12 +8391,17 @@ function renderDoctor(acc) {
       ok: "एक भी नहीं", bad: bad.length + " दस्तावेज़ पुराने ख़राब कोड के बने हुए" },
     { on: !links.length, icon: "🔗", name: "जोड़ सही हैं",
       ok: "हर जोड़ या तो UTR से है या चेक नंबर से",
-      bad: links.length + " जोड़ ऐसे हैं जिनकी तारीख़ 2 दिन से ज़्यादा दूर है" }
+      bad: links.length + " जोड़ ऐसे हैं जिनकी तारीख़ 2 दिन से ज़्यादा दूर है" },
+    { on: !twins.length, icon: "👯", name: "एक ही पैसा दो जगह",
+      ok: "हर सौदा सिर्फ़ एक बार दर्ज है",
+      bad: twins.length + " जोड़े ऐसे हैं जो एक ही पैसा लगते हैं" }
   ];
-  const out = RETIRED.filter((t) => t.accountId === acc);
-  if (out.length) {
-    checks.push({ on: true, icon: "🗄️", name: "सेवा से हटाई हुई पंक्तियाँ",
-      ok: out.length + " — डेटाबेस में रखी हैं, पर हिसाब में नहीं गिनी जातीं" });
+  const gone = RETIRED.filter((t) => t.accountId === acc);
+  const joined = gone.filter((t) => t.mergedInto).length;
+  if (gone.length) {
+    checks.push({ on: true, icon: "🗄️", name: "हिसाब से बाहर रखी पंक्तियाँ",
+      ok: gone.length + " — इनमें " + joined + " दूसरी पंक्तियों में मिल चुकी हैं। " +
+          "सब डेटाबेस में जस की तस हैं, बस हिसाब में नहीं गिनी जातीं।" });
   }
   const sick = checks.filter((c) => c.on === false).length;
   const mood = sick ? "alert" : (checks.some((c) => c.on === null) ? "think" : "party");
@@ -8041,6 +8445,27 @@ function renderDoctor(acc) {
             बन जाएँगी। <b>मिटाया कुछ नहीं जाएगा</b> — बस निशान लगेगा।</small>
           <button type="button" class="mini primary" onclick="fixBadUtrs(this)"
             style="margin-top:9px">🔧 ${bad.length} को हिसाब से बाहर करें</button>
+        </div>` : ""}
+      ${twins.length ? `
+        <div class="docFix">
+          <b>👯 ${twins.length} जोड़े — एक ही पैसा दो जगह</b>
+          <small>यही सौदा दो पंक्तियों में दर्ज है — एक बैंक की statement से,
+            दूसरी फास्ट entry / पेमेंट के स्क्रीनशॉट / GPay-PhonePe से। मिलाने
+            पर दोनों की जानकारी एक ही पंक्ति में आ जाएगी (बिल का जोड़, फोटो,
+            पूरा नाम, समय — सब), और <b>मिटेगा कुछ नहीं</b>।
+            🔒 जिन पंक्तियों के एक से ज़्यादा दावेदार थे, वे यहाँ हैं ही नहीं —
+            शक़ हो तो जोड़ा नहीं जाता।</small>
+          ${twins.slice(0, 8).map((x) => `
+            <div class="mrow">
+              <div class="amt ${x.keep.type === "credit" ? "in" : "out"}">${INR(x.keep.amount)}</div>
+              <div class="mx"><b>${esc(pbTitle(x.keep).name)}</b> · ${esc(x.keep.date)}
+                <br><span class="badge hi">${esc(x.why)}</span>
+                <br><span class="muted">रहेगी: ${esc(String(x.keep._id).slice(0, 40))}
+                  <br>मिल जाएगी: ${esc(String(x.lose._id).slice(0, 40))}</span></div>
+            </div>`).join("")}
+          ${twins.length > 8 ? `<div class="muted" style="padding:6px 0">… और ${twins.length - 8}</div>` : ""}
+          <button type="button" class="mini primary" style="margin-top:9px"
+            onclick="fixTwins(this)">🔗 ${twins.length} जोड़े मिला दीजिए</button>
         </div>` : ""}
       ${links.length ? `
         <div class="docFix">
@@ -13864,7 +14289,18 @@ const CSV_PROMPT = [
   '      "Paid to AU Small Finance Bank 0628"  ← यह सिर्फ़ खाता है, गया नहीं',
   '    यानी "Paid to <बैंक का नाम>" कभी Debit नहीं होता।',
   "",
-  "17. आख़िर में ख़ुद जाँच लो — दो तरह से:",
+  "17. एक ही UTR दो पंक्तियों पर दिख सकता है — और वह ग़लती नहीं होती।",
+  "    पैसा गया और फिर वापस आ गया (reversal), तो बैंक दोनों पर वही नंबर",
+  "    छापता है:",
+  "      13-07  UPI/DR/619448440318/RAKESH   1000        (गया)",
+  "      13-07  UPI/CR/619448440318/RAKESH          1000 (आया)",
+  "    ये **दो अलग पंक्तियाँ** हैं — दोनों लिखो, एक भी मत हटाओ। एक ही",
+  "    UTR देखकर उन्हें जोड़ना या एक को छोड़ना सबसे बड़ी ग़लती होगी।",
+  "    हाँ, अगर वही नंबर **तीन या उससे ज़्यादा पंक्तियों पर एक ही दिशा में**",
+  "    आए, तो वह UTR है ही नहीं (अक्सर खाता नंबर होता है) — तब UTR का खाना",
+  "    तीनों में ख़ाली छोड़ दो।",
+  "",
+  "18. आख़िर में ख़ुद जाँच लो — दो तरह से:",
   "    (क) सब Debit का जोड़ और सब Credit का जोड़, statement पर छपे कुल से",
   "        मिलाओ।",
   "    (ख) पिछली बची रकम − गया + आया = इस पंक्ति की बची रकम।",
