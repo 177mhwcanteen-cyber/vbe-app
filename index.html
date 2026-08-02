@@ -338,6 +338,43 @@
     margin-top: 4px; font-size: 10.5px; font-variant-numeric: tabular-nums; }
   .pbChartFoot .lo { color: #ff9d9d; } .pbChartFoot .hi { color: #7de07d; }
 
+  /* ⚠️ «पूरा डेटा नहीं आया» — सबसे ऊपर, छिपने की कोई जगह नहीं */
+  .capWarn { border: 1px solid rgba(208,59,59,.55); border-radius: 13px;
+    background: linear-gradient(100deg, rgba(208,59,59,.16), transparent 74%);
+    padding: 10px 12px; margin-bottom: 9px; font-size: 12.5px; line-height: 1.55; }
+  .capWarn small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+
+  /* 🩺 डॉक्टर — खाते की अपनी जाँच */
+  .doc { margin-bottom: 12px; border-width: 1px; border-style: solid; }
+  .doc.fit { border-color: rgba(12,163,12,.42);
+    background: linear-gradient(155deg, rgba(12,163,12,.10), var(--surface) 62%); }
+  .doc.sick { border-color: rgba(208,59,59,.5);
+    background: linear-gradient(155deg, rgba(208,59,59,.12), var(--surface) 62%); }
+  .docList { margin-top: 11px; border: 1px solid var(--grid); border-radius: 13px;
+    overflow: hidden; }
+  .docRow { display: flex; align-items: center; gap: 10px; padding: 9px 11px; }
+  .docRow + .docRow { border-top: 1px solid var(--grid); }
+  .docRow.yes { background: linear-gradient(90deg, rgba(12,163,12,.07), transparent 58%); }
+  .docRow.no  { background: linear-gradient(90deg, rgba(208,59,59,.09), transparent 58%); }
+  .docRow.hm  { background: linear-gradient(90deg, rgba(224,168,42,.08), transparent 58%); }
+  .dIco { flex: 0 0 auto; font-size: 17px; line-height: 1; }
+  .dTxt { flex: 1; min-width: 0; }
+  .dTxt b { display: block; font-size: 13px; }
+  .dTxt small { display: block; font-size: 11.5px; color: var(--muted);
+    line-height: 1.5; margin-top: 1px; word-break: break-word; }
+  .dMark { flex: 0 0 auto; font-weight: 800; font-size: 15px; }
+  .docRow.yes .dMark { color: #7de07d; }
+  .docRow.no  .dMark { color: #ff9d9d; }
+  .docRow.hm  .dMark { color: #ffd479; }
+  .docFix { margin-top: 11px; padding: 11px; border-radius: 13px;
+    border: 1px solid var(--border); background: var(--surface-2); font-size: 12.5px; }
+  .docFix > b { display: block; margin-bottom: 3px; }
+  .docFix small { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.55; }
+  .docHead { font-size: 12px; color: var(--muted); }
+  .docHead b { display: block; font-size: 14px; color: var(--ink); margin-bottom: 1px; }
+  .doc .toonSay > div { margin-top: 6px; }
+  .doc .toonSay > div b { font-size: 13.5px; }
+
   /* 🏦 ओपनिंग बैलेंस का कार्ड */
   .pbOpen { margin-bottom: 12px; }
   .poRow { display: flex; align-items: center; gap: 11px; }
@@ -1406,6 +1443,7 @@
         </div>
         <div id="pbHead"></div>
       </div>
+      <div id="pbDoctor"></div>
       <div id="pbOpenAsk"></div>
       <div id="pbDays"></div>
     </section>
@@ -2260,6 +2298,7 @@ function cachePayload(slim) {
     SALES: tsClean(SALES), PAYINS: tsClean(PAYINS), SHORTNAME, VY_LOADED,
     CONTACTS: tsClean(CONTACTS),
     BANKTXNS: tsClean(BANKTXNS),
+    RETIRED: tsClean(RETIRED),
     VCARDS: tsClean(VCARDS),
     STAFF: tsClean(STAFF),
     CHEQUES: tsClean(CHEQUES),
@@ -2293,6 +2332,7 @@ function loadCache() {
   ACCOUNTS = c.ACCOUNTS || {};
   PRICEBOOK = c.PRICEBOOK || [];
   BANKTXNS = c.BANKTXNS || [];
+  RETIRED = c.RETIRED || [];
   VCARDS = c.VCARDS || {};
   STAFF = c.STAFF || {};
   CHEQUES = c.CHEQUES || {};
@@ -2307,7 +2347,7 @@ function loadCache() {
 const cacheStale = () => Date.now() - LAST_SYNC > CACHE_HOURS * 3600000;
 
 function recomputeMissing() {
-  MISSING = BANKTXNS.filter(t => t.type === "debit" && !t.matched)
+  MISSING = BANKTXNS.filter(t => t.type === "debit" && !t.matched && !t.retired)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 
@@ -2318,36 +2358,109 @@ function memTxn(id, doc) {
   else BANKTXNS[i] = Object.assign({}, BANKTXNS[i], doc);
 }
 
+/* ══════════ 🧱 «2000 की दीवार» — v20 में गिराई गई ═══════════════════
+
+   यहाँ पहले यह लिखा था:
+
+       db.collection("vbe_bank_txns").limit(2000).get()
+
+   दो घातक बातें एक साथ थीं।
+
+   1️⃣ **limit(2000), और चुप्पी।** 2000 से ऊपर की पंक्ति आती ही नहीं थी,
+      और ऐप कहीं नहीं बताता था कि कुछ छूटा है। डेटाबेस में पंक्ति
+      सही-सलामत पड़ी रहती, पर स्क्रीन पर होती ही नहीं।
+
+   2️⃣ **कोई क्रम नहीं।** orderBy न हो तो Firestore दस्तावेज़ के *नाम* के
+      अक्षर-क्रम में देता है। हमारे नाम दो तरह के बनते हैं —
+      «utr-657495454904» (जब UPI का नंबर हो) और «vc0499-2026-04-16-…»
+      (जब न हो)। अंग्रेज़ी में **v हमेशा u के बाद** आता है, इसलिए कैंची
+      सबसे पहले उन्हीं पर चली जिनमें UTR होता ही नहीं —
+      **चेक, नक़द, ATM, बैंक के शुल्क, DD।**
+
+   विक्रम जी के खाते पर गिनकर देखा गया: 587 में से 561 पंक्तियों का नाम
+   «utr-» से शुरू होता है और 26 का «vc0499-» से; उन 26 में **11 चेक की
+   जमा** थीं। और उनकी शिकायत ठीक यही थी — «11 चेक की जमा, ₹20,79,780,
+   ग़ायब हैं।»
+
+   👉 इसलिए अब हर संग्रह **पन्ना-दर-पन्ना, पूरा** पढ़ा जाता है, और अगर
+      कभी सचमुच ऊपरी हद छू जाए तो लाल कार्ड में साफ़ बता दिया जाता है।
+      आधा सच दिखाने से अच्छा है साफ़ कह देना।                          */
+
+/** इस बार के तालमेल में क्या-क्या पूरा नहीं आ पाया। */
+let LOAD_CAPPED = [];
+
+/** 🩺 सेवा से हटाई हुई बैंक-पंक्तियाँ — रखी हुई, पर हिसाब से बाहर। */
+let RETIRED = [];
+
+/**
+ * एक संग्रह पूरा पढ़ो — 500 का एक पन्ना, दस्तावेज़-नाम के पक्के क्रम में।
+ * @param {string} col  संग्रह का नाम
+ * @param {number} cap  ऊपरी हद (भागते हुए loop से बचाव)
+ * @returns {Promise<{docs:Array, capped:boolean}>}
+ */
+async function pageAll(col, cap) {
+  const out = [];
+  let last = null;
+  const idField = firebase.firestore.FieldPath.documentId();
+  for (let guard = 0; guard < 200; guard++) {
+    let q = db.collection(col).orderBy(idField).limit(500);
+    if (last) q = q.startAfter(last);
+    const snap = await q.get();
+    snap.docs.forEach((d) => out.push(d));
+    if (snap.size < 500) return { docs: out, capped: false };
+    last = snap.docs[snap.size - 1].id;
+    if (out.length >= cap) return { docs: out, capped: true };
+  }
+  return { docs: out, capped: true };
+}
+
+/** पूरा न आ पाए तो चुप मत रहो — नाम सँभालकर रखो, स्क्रीन पर दिखेगा। */
+function markCapped(label, res) {
+  if (res.capped) LOAD_CAPPED.push(label + " (" + res.docs.length + "+)");
+  return res.docs;
+}
+
 /** Firebase से सचमुच पढ़ना — सिर्फ़ ज़रूरत पर। */
 async function fetchAll() {
-  const [expSnap, accSnap, pbSnap, bankSnap] = await Promise.all([
-    db.collection("vbe_expenses").orderBy("submittedAt", "desc").limit(500).get(),
+  LOAD_CAPPED = [];
+  const [expRes, accSnap, pbRes, bankRes] = await Promise.all([
+    pageAll("vbe_expenses", 20000),
     db.collection("vbe_accounts").get(),
-    db.collection("vbe_pricebook").limit(300).get(),
-    db.collection("vbe_bank_txns").limit(2000).get()
+    pageAll("vbe_pricebook", 5000),
+    pageAll("vbe_bank_txns", 40000)
   ]);
-  EXP = expSnap.docs.map(d => {
+  const expDocs = markCapped("बिल", expRes);
+  const pbDocs = markCapped("भाव", pbRes);
+  const bankDocs = markCapped("बैंक की पंक्तियाँ", bankRes);
+
+  EXP = expDocs.map(d => {
     const x = d.data(); x._id = d.id; x._date = toDate(x.submittedAt); return x;
-  });
+  }).sort((a, b) => (b._date ? b._date.getTime() : 0) - (a._date ? a._date.getTime() : 0));
   ACCOUNTS = {};
   accSnap.docs.forEach(d => ACCOUNTS[d.id] = d.data());
-  PRICEBOOK = pbSnap.docs
+  PRICEBOOK = pbDocs
     .filter(d => d.id !== "_index")
     .map(d => ({ id: d.id, ...d.data() }))
     .sort((a, b) => String(a.canonicalName).localeCompare(String(b.canonicalName), "hi"));
-  BANKTXNS = bankSnap.docs.map(d => Object.assign({ _id: d.id }, d.data()));
-  let n = expSnap.size + accSnap.size + pbSnap.size + bankSnap.size;
+  /* 🩺 «सेवा से हटाई हुई» पंक्तियाँ अलग टोकरी में — डेटाबेस में वे जस की
+     तस पड़ी हैं (कुछ मिटता नहीं), पर हिसाब, पासबुक, मिलान — किसी में नहीं
+     गिनी जातीं। इससे हर जगह `!t.retired` लिखने की ज़रूरत नहीं पड़ती और
+     कोई जगह छूट भी नहीं सकती।                                          */
+  const bankAll = bankDocs.map(d => Object.assign({ _id: d.id }, d.data()));
+  RETIRED = bankAll.filter((t) => t.retired);
+  BANKTXNS = bankAll.filter((t) => !t.retired);
+  let n = expDocs.length + accSnap.size + pbDocs.length + bankDocs.length;
   try {
-    const vs = await db.collection("vbe_parties").limit(500).get();
+    const vs = markCapped("पार्टी के कार्ड", await pageAll("vbe_parties", 10000));
     VCARDS = {};
-    vs.docs.forEach(d => { VCARDS[d.id] = d.data(); });
-    n += vs.size;
+    vs.forEach(d => { VCARDS[d.id] = d.data(); });
+    n += vs.length;
   } catch (e) { VCARDS = {}; }
   try {
-    const ct = await db.collection("vbe_contacts").limit(500).get();
+    const ct = markCapped("संपर्क", await pageAll("vbe_contacts", 10000));
     CONTACTS = {};
-    ct.docs.forEach((d) => { CONTACTS[d.id] = d.data(); });
-    n += ct.size;
+    ct.forEach((d) => { CONTACTS[d.id] = d.data(); });
+    n += ct.length;
   } catch (e) { CONTACTS = {}; }
   try {
     const st = await db.collection("vbe_staff").limit(100).get();
@@ -2397,10 +2510,17 @@ function renderSync(err) {
     : "—";
   const hot = pct > 70;
   box.innerHTML =
+    (LOAD_CAPPED.length
+      ? '<div class="capWarn">⚠️ <b>पूरा डेटा नहीं आ पाया</b> — ' +
+        esc(LOAD_CAPPED.join(", ")) + '<br><small>यानी स्क्रीन पर आधी बात है। ' +
+        'यह लिखा दिखे तो मुझे बताइए, हद बढ़ानी पड़ेगी।</small></div>'
+      : '') +
     '<div class="sync' + (hot ? " hot" : "") + '">' +
       '<button type="button" class="mini" onclick="refreshData(this)">🔄 ताज़ा करें</button>' +
       '<span>डेटा <b>' + esc(when) + '</b> का' +
-        (err ? ' · ⚠️ नया नहीं मिल पाया' : '') + '<br>' +
+        (err ? ' · ⚠️ नया नहीं मिल पाया' : '') +
+        ' · 🏦 ' + BANKTXNS.length.toLocaleString("en-IN") +
+        ' पंक्तियाँ · 🧾 ' + EXP.length.toLocaleString("en-IN") + ' बिल<br>' +
         '<small>आज ' + used.toLocaleString("en-IN") + ' / 50,000 पढ़ाई' +
         (hot ? ' — अब सँभालकर' : '') +
         ' · 🧠 ' + ai.n + ' AI' +
@@ -3353,10 +3473,7 @@ async function saveEntry() {
     const when = new Date($("aDate").value + "T12:00:00+05:30");
     // Web receipts carry their own series so they can never collide with the
     // bot's lock-protected EXP counter — और आपस में भी नहीं (freeDocId देखें)
-    const { receiptId, docId } = await freeDocId("vbe_expenses", () => {
-      const r = `WEB/${fyLabel(when)}/${idTail()}`;
-      return { receiptId: r, docId: r.replace(/\//g, "-") };
-    });
+    const { receiptId, docId } = await newReceiptId("WEB", when);
     const vendorName = $("aVendor").value.trim();
     const vendorKey = vendorName ? vendorName.toLowerCase().replace(/[^a-z0-9ऀ-ॿ]/g, "") : null;
 
@@ -3832,6 +3949,66 @@ async function freeDocId(col, make) {
   throw new Error("नंबर नहीं बन पाया — दुबारा कोशिश करें");
 }
 
+/* ══════════ 🧾 रसीद नंबर — पढ़ने लायक़ ═══════════════════════════════
+
+   विक्रम जी: «आप बिल नंबर अपने-आप बनाकर डालते हो, इससे कई प्रकार की
+   दिक्कतें हो सकती हैं… FST/26-27/94T56S इस तरीक़े के… इनको सुधार कर
+   दीजिए।»
+
+   बात सही है। «94T56S» न याद रहता है, न फ़ोन पर बोला जाता है, न रजिस्टर
+   में लिखा जाता है। बेतरतीब अक्षर इसलिए थे कि दो entries का नंबर आपस में
+   न टकराए — पर उसकी क़ीमत पढ़ने लायक़ी से चुकाई गई।
+
+       पहले                      अब
+       FST/26-27/94T56S    →     FST/26-27/0007
+       WEB/26-27/M9K2XQ    →     WEB/26-27/0042
+
+   गिनती एक ही जगह रहती है — vbe_meta/counters — और **transaction से**
+   बढ़ती है, इसलिए दो entries एक ही सेकंड में बनें तो भी नंबर अलग-अलग।
+   Telegram bot का EXP/26-27/0001 पहले से ऐसे ही चलता आ रहा है।
+
+   ⚠️ नेट न चले या transaction न बने तो पुराना बेतरतीब तरीक़ा सहारे के लिए
+      बचा हुआ है — entry रुकनी नहीं चाहिए। और पुराने नंबर जहाँ लिखे हैं
+      वहीं रहेंगे; इस ऐप में कुछ बदला या मिटाया नहीं जाता।              */
+
+/** अगली सीधी गिनती — «0007» जैसी, हर वित्त-वर्ष में 0001 से। */
+async function nextReceiptNo(prefix, fy) {
+  const key = prefix + "-" + fy;                     // "FST-26-27"
+  const ref = db.collection("vbe_meta").doc("counters");
+  const n = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const cur = (snap.exists && Number(snap.data()[key])) || 0;
+    const next = cur + 1;
+    const patch = {}; patch[key] = next;
+    tx.set(ref, patch, { merge: true });
+    return next;
+  });
+  readCount(1);
+  return String(n).padStart(4, "0");
+}
+
+/**
+ * नया रसीद नंबर — पहले सीधी गिनती, वह न बने तो पुराना बेतरतीब सहारा।
+ * @param {"FST"|"WEB"} prefix
+ * @param {Date} when
+ */
+async function newReceiptId(prefix, when) {
+  const fy = fyLabel(when);
+  for (let i = 0; i < 3; i++) {
+    try {
+      const receiptId = `${prefix}/${fy}/${await nextReceiptNo(prefix, fy)}`;
+      const docId = receiptId.replace(/\//g, "-");
+      const d = await db.collection("vbe_expenses").doc(docId).get();
+      readCount(1);
+      if (!d.exists) return { receiptId, docId };    // ख़ाली मिला — यही चलेगा
+    } catch (e) { break; }                           // गिनती न बनी — सहारे पर
+  }
+  return await freeDocId("vbe_expenses", () => {
+    const receiptId = `${prefix}/${fy}/${idTail()}`;
+    return { receiptId, docId: receiptId.replace(/\//g, "-") };
+  });
+}
+
 function hash36(s) {
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
@@ -3946,17 +4123,21 @@ function dropFakeUtrs(rows) {
  *  - same date + time + amount      → same money, party spelled differently
  */
 function findExisting(t, accountId) {
+  /* 🩺 «सेवा से हटाया हुआ» दस्तावेज़ यहाँ गिना ही नहीं जाता — वरना डॉक्टर
+     से मरम्मत करवाने के बाद statement दुबारा डालने पर ऐप कहता «यह तो पहले
+     से है» और सही पंक्ति कभी बनती ही नहीं।                              */
+  const live = BANKTXNS.filter((b) => !b.retired);
   // 🔐 नया और पुराना, दोनों नंबर देखो — देखें txnIdSafe()
   const id = txnIdSafe(accountId, t);
-  const byId = BANKTXNS.filter((b) => b._id === id)[0];
+  const byId = live.filter((b) => b._id === id)[0];
   if (byId) return { row: byId, why: t.utr ? "वही UTR" : "वही तारीख़-रकम-पार्टी" };
 
   if (t.utr) {
-    const u = BANKTXNS.filter((b) => b.utr && String(b.utr).toUpperCase() === String(t.utr).toUpperCase())[0];
+    const u = live.filter((b) => b.utr && String(b.utr).toUpperCase() === String(t.utr).toUpperCase())[0];
     if (u) return { row: u, why: "वही UTR" };
   }
   const key = pKey(t.party || t.narration || "");
-  const same = BANKTXNS.filter((b) =>
+  const same = live.filter((b) =>
     b.date === t.date && Math.abs((b.amount || 0) - t.amount) < 0.01 && b.type === t.type);
   const byParty = same.filter((b) => key && pKey(b.party || b.narration || "") === key)[0];
   if (byParty) return { row: byParty, why: "वही तारीख़, रकम और पार्टी" };
@@ -3976,10 +4157,62 @@ function expenseAmount(e) {
   return (e.payment && e.payment.amount != null) ? e.payment.amount : e.billTotal;
 }
 
-/** Match debits to bills: UTR first, then amount + date, then amount alone. */
+/* ══════════ 🔗 बैंक की पंक्ति किस बिल की है — «पक्का» का नया मतलब ══════
+
+   विक्रम जी की शिकायत, उन्हीं के शब्दों में:
+
+     «आज से 20 दिन पहले का statement था, और कल मैंने फास्ट entry से कोई
+      बिल entry किया है — तो वह पुराना वाला जो भी UTR मिलता है, वह उसे
+      बिल के अंदर घुसा देता है, जिससे पूरा मामला ही ख़त्म हो जाता है।»
+
+   पुराने कोड में तारीख़ की **कोई हद थी ही नहीं**:
+
+       const score = (sameUtr ? 1000 : 0) + (days <= 2 ? 100 - days : 10) + …
+
+   `days` चाहे 2 हो या 200 — 10 अंक तो मिल ही जाते थे। रकम बराबर होते ही
+   वह पंक्ति उस बिल की «शायद» बन जाती थी, बिल्ले पर लिखा आता «सिर्फ़ रकम
+   मिली»। और नीचे की चुनाव-पट्टी पहले से **«✓ हाँ, यही है»** पर लगी होती
+   थी — यानी कुछ छुए बिना «सहेजें» दबाने से जोड़ चुपचाप हो जाता था।
+
+   जाँच में यह दुबारा पैदा किया गया, और उससे भी बुरी बात निकली: दो
+   पंक्तियाँ ₹560 की थीं — एक 18 दिन पुरानी, एक कल की — और ऐप ने **18 दिन
+   पुरानी** को बिल से जोड़ दिया, कल वाली असली पंक्ति «बिल बाकी» में चली
+   गई। यही «पूरा मामला ख़त्म» होना है।
+
+   ── अब का नियम, तीन दर्जे ─────────────────────────────────────────
+     🔑 UTR दोनों तरफ़ एक   → **पक्का**, तारीख़ की कोई हद नहीं
+     🧾 चेक नंबर एक        → **पक्का**, हद नहीं
+     📅 रकम + 2 दिन के अंदर → **पूछा जाएगा**, चुनाव पहले से «नहीं» पर
+     💸 सिर्फ़ रकम, तारीख़ दूर → **कुछ नहीं** — सीधा «बिल बाकी»
+
+   और जहाँ दो पंक्तियाँ एक ही बिल पर दावा करें, वहाँ **तारीख़ में सबसे पास
+   वाली** जीतेगी — 18 दिन पुरानी नहीं।                                  */
+
+/** इस बिल पर लिखे हुए सारे UTR — पुराना खाना, नया payments[], दोनों। */
+function expUtrs(e) {
+  const out = [];
+  const add = (v) => {
+    const s = String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (s.length >= 8) out.push(s);
+  };
+  add(e.utr);
+  add(e.payment && e.payment.upiRef);
+  (e.payments || []).forEach((p) => { add(p.utr); add(p.appTxnId); });
+  return out;
+}
+
+/** बिल और बैंक की पंक्ति के बीच कितने दिन। */
+function dayGap(a, b) {
+  const g = Math.abs(new Date(String(a).slice(0, 10) + "T12:00:00") -
+                     new Date(String(b).slice(0, 10) + "T12:00:00")) / 86400000;
+  return isFinite(g) ? g : Infinity;
+}
+
+/** इससे ज़्यादा फ़ासले पर सिर्फ़ रकम के भरोसे कोई सुझाव नहीं बनता। */
+const MATCH_DAYS = 2;
+
 function matchStatement(txns, accountId) {
-  // Anything already recorded is set aside first — it must not be matched,
-  // saved, or counted a second time.
+  // जो पहले से दर्ज है वह सबसे पहले अलग — न मिलाया जाए, न दुबारा गिना जाए
   const fresh = [], dupes = [];
   txns.forEach((t) => {
     const seen = findExisting(t, accountId);
@@ -3989,27 +4222,53 @@ function matchStatement(txns, accountId) {
   const open = EXP.filter(e => !e.reconciled && e.status !== "rejected" && expenseAmount(e) != null);
   const used = new Set();
   const matched = [], maybe = [], noBill = [];
+  const debits = txns.filter((t) => t.type === "debit");
+  const left = [];
 
-  txns.filter(t => t.type === "debit").forEach(t => {
-    let best = null, bestScore = -1, why = "";
-    open.forEach(e => {
-      if (used.has(e._id)) return;
-      const amt = expenseAmount(e);
-      const sameUtr = t.utr && e.payment && e.payment.upiRef &&
-        String(e.payment.upiRef).toUpperCase().includes(t.utr);
-      if (!sameUtr && Math.abs(amt - t.amount) > 0.01) return;
-      const days = Math.abs(new Date(t.date) - new Date(expenseDay(e))) / 86400000;
-      const score = (sameUtr ? 1000 : 0) + (days <= 2 ? 100 - days : 10) +
-        (e.paidFromAccountId === accountId ? 5 : 0);
-      if (score > bestScore) {
-        bestScore = score; best = e;
-        why = sameUtr ? "UTR मिला" : days <= 2 ? "रकम + तारीख़ मिली" : "सिर्फ़ रकम मिली";
+  // ── 1️⃣ और 2️⃣ पक्का: UTR या चेक नंबर ──────────────────────────────
+  debits.forEach((t) => {
+    const u = txnUtr(t);
+    let hit = null, why = "";
+    if (u) {
+      hit = open.filter((e) => !used.has(e._id) && expUtrs(e).indexOf(u) >= 0)[0];
+      if (hit) why = "🔑 UTR " + u;
+    }
+    if (!hit) {
+      const cn = String(t.chequeNo || "").replace(/\D/g, "");
+      if (cn) {
+        hit = open.filter((e) => !used.has(e._id) &&
+          String(e.chequeNo || "").replace(/\D/g, "") === cn)[0];
+        if (hit) why = "🧾 चेक नं. " + cn;
       }
-    });
-    if (best && bestScore >= 100) { used.add(best._id); matched.push({ t, e: best, why, sure: true }); }
-    else if (best) { used.add(best._id); maybe.push({ t, e: best, why, sure: false }); }
-    else noBill.push({ t });
+    }
+    if (hit) { used.add(hit._id); matched.push({ t, e: hit, why, sure: true }); }
+    else left.push(t);
   });
+
+  /* ── 3️⃣ अंदाज़ा: रकम + तारीख़ ─────────────────────────────────────
+     हर जोड़ी बनाकर, **फ़ासले के हिसाब से** क्रम में लगाकर बाँटी जाती है —
+     इसलिए कल वाली पंक्ति कल वाले बिल को मिलती है, 18 दिन पुरानी को नहीं। */
+  const pairs = [];
+  left.forEach((t) => {
+    open.forEach((e) => {
+      if (used.has(e._id)) return;
+      if (Math.abs(expenseAmount(e) - t.amount) > 0.01) return;
+      const gap = dayGap(t.date, expenseDay(e));
+      if (gap > MATCH_DAYS) return;               // 🚫 यहीं पुराना घुसना रुकता है
+      const sameName = sameParty(e.vendor && e.vendor.name, t.party);
+      pairs.push({ t, e, gap, sameName });
+    });
+  });
+  pairs.sort((a, b) => a.gap - b.gap || (b.sameName ? 1 : 0) - (a.sameName ? 1 : 0));
+  const tookTxn = new Set();
+  pairs.forEach((p) => {
+    if (used.has(p.e._id) || tookTxn.has(p.t)) return;
+    used.add(p.e._id); tookTxn.add(p.t);
+    maybe.push({ t: p.t, e: p.e, sure: false,
+      why: p.gap < 1 ? (p.sameName ? "उसी दिन, रकम और नाम भी वही" : "उसी दिन, रकम भी वही")
+        : `${Math.round(p.gap)} दिन का फ़ासला, रकम वही` });
+  });
+  left.forEach((t) => { if (!tookTxn.has(t)) noBill.push({ t }); });
 
   return { matched, maybe, noBill, dupes, credits: txns.filter((t) => t.type === "credit") };
 }
@@ -4821,6 +5080,32 @@ async function openNewAccount() {
   toast("🏦 खाता जुड़ गया");
 }
 
+/* ══════════ 🔢 statement का अपना क्रम ═══════════════════════════════
+
+   विक्रम जी ने पकड़ा: «ऐप ने ओपनिंग 'पहली पंक्ति' से नहीं, बल्कि 22 अप्रैल
+   वाली पंक्ति से निकाल ली।»
+
+   वजह: SBI की statement में **समय होता ही नहीं** — उनकी 587 पंक्तियों में
+   एक पर भी नहीं। और 75 में से 60 तारीख़ों पर एक से ज़्यादा पंक्तियाँ हैं
+   (7 जुलाई को तो 28)। यानी «पहले कौन सी» तय करने का ऐप के पास कोई पैमाना
+   ही नहीं था, और क्रम वही रह जाता था जो Firebase से आया — दस्तावेज़ के
+   नाम का अक्षर-क्रम, जिसका तारीख़ से कोई लेना-देना नहीं।
+
+   इलाज सीधा है: **बैंक की छपी हुई कॉपी में जो ऊपर है, वह ऐप में भी ऊपर।**
+   इसलिए पढ़ते ही हर पंक्ति पर उसका क्रम-नंबर लगा दिया जाता है।
+
+   ⚠️ कुछ बैंक नई पंक्ति ऊपर छापते हैं (उल्टा क्रम)। इसलिए पहले देखा जाता
+      है कि फ़ाइल किस तरफ़ चल रही है, और उल्टी हो तो नंबर भी उल्टे लगते हैं। */
+
+/** फ़ाइल की हर पंक्ति पर उसका क्रम-नंबर — उल्टी छपी फ़ाइल को सीधा करके। */
+function stampSeq(rows) {
+  const list = rows || [];
+  const days = list.map((t) => String(t.date || "").slice(0, 10)).filter(Boolean);
+  const desc = days.length > 1 && days[0] > days[days.length - 1];
+  list.forEach((t, i) => { t.srcSeq = desc ? list.length - 1 - i : i; });
+  return { reversed: desc, n: list.length };
+}
+
 let PENDING_FILE = null;
 
 async function handleStatementFile(file, password) {
@@ -4843,6 +5128,9 @@ async function handleStatementFile(file, password) {
     }
     // 🚨 पहले नक़ली UTR हटाओ — वरना कई सौदे एक ही दस्तावेज़ में जा गिरेंगे
     const fake = dropFakeUtrs(txns);
+    // 🔢 हर पंक्ति अपना क्रम-नंबर लेकर आगे जाए — पासबुक का सही क्रम इसी पर
+    //    टिकेगा (देखें stampSeq / pbOrder)
+    stampSeq(txns);
     const res = matchStatement(txns, accountId);
     RECON = Object.assign({ account: accountId, txns, fakeUtrs: fake.dropped }, res);
     // 🗺️ हर पंक्ति का अपना खाता — पहले नक़्शा, फिर बाक़ी सब
@@ -4925,25 +5213,31 @@ function renderRecon(total, allRows) {
       <div class="s">${s}</div><div class="bar"><i style="width:70%;background:${c}"></i></div></div>`).join("");
   attachTilt();
 
+  /* 🔒 v20: «पक्का» वाली पंक्ति पर चुनाव पहले से «हाँ», पर **अंदाज़े वाली
+     पर पहले से «नहीं»**। पहले उल्टा था — यानी कुछ छुए बिना «सहेजें» दबाने
+     से 20 दिन पुरानी पंक्ति भी बिल में चढ़ जाती थी। हाँ हमेशा विक्रम जी की
+     उँगली से होगी।                                                       */
   const line = (m, i, sure) => `
     <div class="mrow">
       <div class="amt">${INR(m.t.amount)}</div>
       <div class="mx">
         <b>${esc(m.t.date)}</b> ${esc((m.t.narration || "").slice(0, 60))}
         ${m.t.utr ? `<br><span class="muted">UTR: ${esc(m.t.utr)}</span>` : ""}
-        <br><span class="badge ${sure ? "hi" : "lo"}">${esc(m.why)}</span>
+        <br><span class="badge ${sure ? "hi" : "lo"}">${sure ? "✅ पक्का · " : "🤔 पूछना है · "}${esc(m.why)}</span>
         <select data-i="${i}" data-sure="${sure ? 1 : 0}">
-          <option value="${esc(m.e._id)}">✓ ${esc(m.e.receiptId)} — ${esc(m.e.vendor && m.e.vendor.name || "?")} — ${INR(expenseAmount(m.e))}</option>
-          <option value="">✕ नहीं, यह नहीं है</option>
+          <option value="${esc(m.e._id)}"${sure ? " selected" : ""}>✓ ${esc(m.e.receiptId)} — ${esc(m.e.vendor && m.e.vendor.name || "?")} — ${INR(expenseAmount(m.e))}</option>
+          <option value=""${sure ? "" : " selected"}>✕ नहीं, यह नहीं है</option>
         </select>
       </div>
     </div>`;
 
   const rows = RECON.matched.map((m, i) => line(m, i, true))
     .concat(RECON.maybe.map((m, i) => line(m, i + RECON.matched.length, false)));
-  $("rMaybe").innerHTML = rows.length ? rows.join("")
+  $("rMaybe").innerHTML = (rows.length
+    ? (RECON.maybe.length ? `<div class="itemsHead" style="margin-top:0"><span>🤔 ${
+        RECON.maybe.length} पंक्तियाँ पूछनी हैं — «हाँ» आप कीजिए</span></div>` : "") + rows.join("")
     : gfx.empty("think", "कोई मिलान नहीं मिला",
-        "इस statement की entries किसी बिल से नहीं जुड़ीं — फिर भी सहेजी जा सकती हैं।");
+        "इस statement की entries किसी बिल से नहीं जुड़ीं — फिर भी सहेजी जा सकती हैं।"));
 
   $("rDupes").innerHTML = (RECON.dupes || []).length
     ? '<div class="itemsHead" style="margin-top:0"><span>🔁 यह पहले से दर्ज हैं — दुबारा नहीं जुड़ेंगी</span></div>' +
@@ -5015,6 +5309,8 @@ function txnDoc(t, accountId, receiptId, confidence, existing) {
   }
   if (t.utr) doc.utr = String(t.utr).toUpperCase();
   if (t.balance != null) doc.balance = t.balance;
+  // 🔢 statement में यह पंक्ति किस नंबर पर छपी थी — पासबुक का क्रम इसी से
+  if (t.srcSeq != null && (!existing || existing.srcSeq == null)) doc.srcSeq = t.srcSeq;
 
   // पार्टी का नाम सिर्फ़ बेहतर हो सकता है, बुरा कभी नहीं (नीचे betterName देखें)
   const nm = betterName(existing && existing.party, t.party, t.partyTruncated);
@@ -5259,6 +5555,7 @@ function statementSummary(acc, added, dupes) {
 function settleNames() {
   const byUtr = {};
   BANKTXNS.forEach((t) => {
+    if (t.retired) return;              // 🩺 हटाई हुई पंक्ति से कुछ नहीं फैलता
     const u = txnUtr(t);
     if (!u) return;
     (byUtr[u] = byUtr[u] || []).push(t);
@@ -5275,21 +5572,37 @@ function settleNames() {
       if (!nm || t.partyTruncated) return;
       if (!best || nm.length > best.length) best = nm;
     });
-    if (!best) return;
+    /* 🕐 v20 — समय भी बैठे, सिर्फ़ नाम नहीं।
+       विक्रम जी: «जब मैं फ़ोनपे का statement डालूँगा तो उसमें व्यक्ति का
+       नाम भी बड़ा आएगा और समय भी — अपने-आप उसमें सेट हो जाए।»
+       SBI की 587 पंक्तियों में **एक पर भी समय नहीं** है; GPay/PhonePe/
+       Paytm की हर पंक्ति पर है। और समय ही वह चीज़ है जिससे «2:20 का
+       पेट्रोल» और «2:50 का पवन कुमार» अलग पहचाने जाते हैं।
+       नियम वही — सिर्फ़ **ख़ाली जगह भरती है**, भरी हुई कभी नहीं बदलती।  */
+    const pick = (k) => { for (const t of group) if (t[k]) return t[k]; return null; };
+    const time = pick("time"), app = pick("app"),
+          appTxnId = pick("appTxnId"), vpa = pick("vpa");
+
+    if (!best && !time && !app && !appTxnId && !vpa) return;
     group.forEach((t) => {
+      const patch = {};
       const nm = String(t.party || "").trim();
-      if (pKey(nm) === pKey(best)) return;
-      t.partyAliases = [...new Set((t.partyAliases || []).concat(nm ? [nm] : []))].slice(0, 6);
-      t.party = best;
-      t.partyKey = pKey(best);
-      t.partyFull = true;
-      t.partyTruncated = false;
-      t._renamed = true;
+      if (best && pKey(nm) !== pKey(best)) {
+        t.partyAliases = [...new Set((t.partyAliases || []).concat(nm ? [nm] : []))].slice(0, 6);
+        Object.assign(patch, {
+          party: best, partyKey: pKey(best), partyAliases: t.partyAliases,
+          partyFull: true, partyTruncated: false
+        });
+        Object.assign(t, { party: best, partyKey: pKey(best),
+          partyFull: true, partyTruncated: false, _renamed: true });
+      }
+      if (time && !t.time) { patch.time = time; t.time = time; t._timed = true; }
+      if (app && !t.app) { patch.app = app; t.app = app; }
+      if (appTxnId && !t.appTxnId) { patch.appTxnId = appTxnId; t.appTxnId = appTxnId; }
+      if (vpa && !t.vpa) { patch.vpa = vpa; t.vpa = vpa; }
+      if (!Object.keys(patch).length) return;
       n++;
-      db.collection("vbe_bank_txns").doc(t._id).set({
-        party: best, partyKey: pKey(best), partyAliases: t.partyAliases,
-        partyFull: true, partyTruncated: false
-      }, { merge: true }).catch(() => {});
+      db.collection("vbe_bank_txns").doc(t._id).set(patch, { merge: true }).catch(() => {});
     });
   });
   return n;
@@ -6375,15 +6688,16 @@ async function saveShortName() {
 async function loadVyapar(force) {
   if (VY_LOADED && !force) return;
   try {
+    // 🧱 यहाँ भी वही «दीवार» थी — 600 के बाद बिक्री चुपचाप कट जाती थी
     const [sa, pi, nm] = await Promise.all([
-      db.collection("vbe_sales").limit(600).get(),
-      db.collection("vbe_payins").limit(600).get(),
+      pageAll("vbe_sales", 20000),
+      pageAll("vbe_payins", 20000),
       db.collection("vbe_meta").doc("unit_names").get()
     ]);
-    SALES = sa.docs.map((d) => Object.assign({ _id: d.id }, d.data()));
-    PAYINS = pi.docs.map((d) => Object.assign({ _id: d.id }, d.data()));
+    SALES = markCapped("बिक्री", sa).map((d) => Object.assign({ _id: d.id }, d.data()));
+    PAYINS = markCapped("जो पैसा आया", pi).map((d) => Object.assign({ _id: d.id }, d.data()));
     SHORTNAME = (nm.exists && nm.data().map) || {};
-    readCount(sa.size + pi.size + 1);
+    readCount(SALES.length + PAYINS.length + 1);
     VY_LOADED = true;
     saveCache();
   } catch (e) { /* कैश से जो है वही चले */ }
@@ -7161,10 +7475,93 @@ function pbTitle(t) {
 
 let PB_ACC = "", PB_MONTH = "";
 
+/* ══════════ 🧭 पंक्तियों का पक्का क्रम ═══════════════════════════════
+
+   चार पैमाने, इसी क्रम में — पहला जो काम कर जाए, वही:
+
+     1️⃣ तारीख़ — यह हमेशा रहती है
+     2️⃣ समय — PhonePe/GPay/Paytm देते हैं, SBI नहीं
+     3️⃣ statement का अपना क्रम-नंबर (srcSeq) — v20 से हर नई पंक्ति पर
+     4️⃣ **बची-रकम की जंज़ीर** — पुरानी पंक्तियों के लिए, जिन पर नंबर नहीं
+
+   चौथा वाला अंदाज़ा नहीं, गणित है: जिस पंक्ति के बाद ₹311.93 बचे, उसके
+   ठीक बाद वही पंक्ति आती है जिसके **पहले** ₹311.93 थे। पूरा दिन एक ही
+   लड़ी में बँध जाए तभी यह क्रम माना जाता है, वरना छोड़ दिया जाता है।
+
+   और आख़िरी सहारा दस्तावेज़-नंबर — ताकि क्रम कम-से-कम **हर बार एक जैसा**
+   रहे। बदलता हुआ क्रम सबसे बुरा है: हर बार अलग ओपनिंग निकलता है।       */
+
+const cent = (x) => Math.round((Number(x) || 0) * 100);
+
+/**
+ * एक दिन की पंक्तियों को बची-रकम की जंज़ीर से क्रम में बाँधो।
+ *
+ * @param {Array} rows       उस दिन की पंक्तियाँ (पक्के stable क्रम में)
+ * @param {number|null} prevClose  पिछले दिन के अंत में बची रकम
+ *
+ * 🔑 पिछले दिन की आख़िरी रकम ही सबसे भरोसेमंद सिरा है। इसके बिना कुछ
+ *    दिन उलझ जाते हैं — जैसे 20 जून को ₹1000 आया और ₹1000 गया: दोनों
+ *    क्रम गणित से सही बैठते हैं (49.11 ⇄ 1049.11), और यह बताने वाला कोई
+ *    नहीं होता कि पहले कौन सा। पिछले दिन ₹49.11 बचे थे — बस, बात ख़त्म।
+ */
+function chainOrder(rows, prevClose) {
+  if (rows.length < 2) return rows;
+  if (rows.some((t) => t.balance == null)) return null;
+  const before = (t) => cent(t.balance) - (t.type === "credit" ? 1 : -1) * cent(t.amount);
+  const afterMap = {}, beforeMap = {};
+  for (const t of rows) {
+    const a = cent(t.balance), b = before(t);
+    if (afterMap[a] || beforeMap[b]) return null;   // दो पंक्तियाँ एक ही जगह — छोड़ो
+    afterMap[a] = t; beforeMap[b] = t;
+  }
+  // सिरा: पिछले दिन की बची रकम से जुड़ने वाली पंक्ति…
+  let head = prevClose == null ? null : beforeMap[cent(prevClose)];
+  if (!head) {
+    // …वरना वह जिसके «पहले» वाली रकम किसी और के «बाद» से नहीं मिलती
+    const heads = rows.filter((t) => !afterMap[before(t)]);
+    if (heads.length !== 1) return null;
+    head = heads[0];
+  }
+  const out = []; const seen = new Set();
+  // अगली पंक्ति वही है जिसके **पहले** वाली रकम इसके **बाद** वाली से मिलती है
+  let cur = head;
+  while (cur && !seen.has(cur)) {
+    out.push(cur); seen.add(cur);
+    cur = beforeMap[cent(cur.balance)];
+  }
+  return out.length === rows.length ? out : null;
+}
+
+/** पूरा क्रम — तारीख़ के हिसाब से बाँटकर, हर दिन के अंदर ऊपर वाले पैमाने। */
+function pbOrder(rows) {
+  const byDay = {};
+  rows.forEach((t) => {
+    const d = String(t.date || "").slice(0, 10);
+    (byDay[d] = byDay[d] || []).push(t);
+  });
+  const out = [];
+  let prevClose = null;
+  Object.keys(byDay).sort().forEach((d) => {
+    const g = byDay[d];
+    const stable = g.slice().sort((a, b) =>
+      String(a.time || "").localeCompare(String(b.time || "")) ||
+      (a.srcSeq == null ? 1e9 : a.srcSeq) - (b.srcSeq == null ? 1e9 : b.srcSeq) ||
+      String(a._id).localeCompare(String(b._id)));
+    // क्रम-नंबर या समय सब पर हो तो वही सच; वरना जंज़ीर से बाँधकर देखो
+    const known = g.every((t) => t.srcSeq != null) || g.every((t) => t.time);
+    const use = known ? stable : (chainOrder(stable, prevClose) || stable);
+    out.push(...use);
+    for (let i = use.length - 1; i >= 0; i--) {
+      if (use[i].balance != null) { prevClose = use[i].balance; break; }
+    }
+  });
+  return out;
+}
+
 /** इस खाते की सारी पंक्तियाँ, पुरानी से नई। */
 function pbTxns(acc) {
-  return BANKTXNS.filter((t) => t.accountId === acc && !t.mergedInto)
-    .sort((a, b) => String(a.date + (a.time || "")).localeCompare(String(b.date + (b.time || ""))));
+  return pbOrder(BANKTXNS.filter((t) =>
+    t.accountId === acc && !t.mergedInto && !t.retired));
 }
 
 /**
@@ -7173,6 +7570,10 @@ function pbTxns(acc) {
  * 🏦 विक्रम जी का भरा हुआ अंक सबसे ऊपर। पहले उल्टा था: statement से निकाला
  *    हुआ अंदाज़ा उनके अपने भरे हुए अंक पर भारी पड़ता था — यानी एक बार
  *    statement डलने के बाद उसे सुधारने का कोई रास्ता ही नहीं बचता था।
+ *
+ * 🔎 v20: अब वह पंक्ति भी लौटाई जाती है जिससे अंक निकला, ताकि कार्ड पर
+ *    दिखाई जा सके — «2 अप्रैल · MANISH · ₹250 आया · बाद में बचे ₹311.93»।
+ *    भरोसा दिखाने से बनता है, दावा करने से नहीं।
  */
 function pbOpening(acc) {
   const a = ACCOUNTS[acc] || {};
@@ -7183,8 +7584,8 @@ function pbOpening(acc) {
   const first = rows.filter((t) => t.balance != null)[0];
   if (first) {
     const d = (first.type === "credit" ? 1 : -1) * (Number(first.amount) || 0);
-    return { value: Number(first.balance) - d,
-             from: "statement की पहली पंक्ति से निकाला" };
+    return { value: Math.round((Number(first.balance) - d) * 100) / 100,
+             from: "statement की पहली पंक्ति से निकाला", row: first };
   }
   return { value: null, from: null };
 }
@@ -7273,8 +7674,182 @@ function pbAudit(acc) {
            ok: Math.abs(gap) <= 1, broke };
 }
 
+/* ══════════ 🩺 डॉक्टर — ऐप अपनी जाँच ख़ुद करता है ═══════════════════
+
+   विक्रम जी की सबसे असली बात यही थी: «विश्वास नहीं बन पा रहा है कि यार
+   मैं जिस पर काम कर रहा हूँ, वह सही है या नहीं।»
+
+   भरोसा दावा करने से नहीं बनता, **दिखाने** से बनता है। इसलिए पासबुक खुलते
+   ही चार जाँच अपने-आप चलती हैं और हिंदी में साफ़ जवाब देती हैं:
+
+     📥 पूरा डेटा आया?    — कहीं «दीवार» तो नहीं लगी
+     🧮 जंज़ीर मिलती है?   — ओपनिंग + आया − गया = बैंक की लिखी रकम
+     🔑 कोई नक़ली UTR?    — v17 से पहले के कोड ने खाता-नंबर को UTR समझकर
+                            जो दस्तावेज़ बना दिए थे
+     🔗 कोई ग़लत जोड़?     — बिल और बैंक की तारीख़ में 2 दिन से ज़्यादा फ़ासला
+
+   ⚠️ मरम्मत का मतलब **मिटाना नहीं** है। ख़राब दस्तावेज़ पर «सेवा से हटाया
+      हुआ» का निशान लगता है — वह डेटाबेस में जस का तस पड़ा रहता है, बस
+      हिसाब से बाहर हो जाता है, और हर मरम्मत _audit_logs में दर्ज होती है। */
+
+/** पुराने ख़राब कोड से बने दस्तावेज़ — नाम में जो UTR है वह असली है ही नहीं। */
+function badUtrDocs(acc) {
+  return BANKTXNS.filter((t) => {
+    if (acc && t.accountId !== acc) return false;
+    if (t.retired || t.mergedInto) return false;
+    const id = String(t._id || "");
+    if (!/^utr-/.test(id)) return false;
+    const inName = id.slice(4).toUpperCase();
+    const real = String(txnUtr(t) || "").toUpperCase();
+    return real !== inName;
+  });
+}
+
+/** ऐसे जोड़ जो अब के नियम से बनते ही नहीं — पुराने ढीले मिलान की निशानी। */
+function badLinks(acc) {
+  const byRid = {};
+  EXP.forEach((e) => { if (e.receiptId) byRid[e.receiptId] = e; });
+  return BANKTXNS.filter((t) =>
+      (!acc || t.accountId === acc) && t.matchedReceiptId && !t.retired)
+    .map((t) => ({ t, e: byRid[t.matchedReceiptId] }))
+    .filter(({ t, e }) => {
+      if (!e) return false;
+      const u = txnUtr(t);
+      if (u && expUtrs(e).indexOf(u) >= 0) return false;          // 🔑 पक्का
+      const cn = String(t.chequeNo || "").replace(/\D/g, "");
+      if (cn && String(e.chequeNo || "").replace(/\D/g, "") === cn) return false;
+      return dayGap(t.date, expenseDay(e)) > MATCH_DAYS;
+    });
+}
+
+/** एक ख़राब दस्तावेज़ को सेवा से हटाओ — मिटाओ कभी नहीं। */
+async function retireDoc(id, why) {
+  const patch = { retired: true, retiredWhy: why, retiredAt: todayISO() };
+  await db.collection("vbe_bank_txns").doc(id).set(patch, { merge: true });
+  const i = BANKTXNS.findIndex((t) => t._id === id);
+  if (i >= 0) RETIRED.push(Object.assign(BANKTXNS.splice(i, 1)[0], patch));
+  await auditLog("txn_retired", null, { txnId: id, why });
+}
+
+/** 🔧 सारे नक़ली-UTR वाले दस्तावेज़ एक साथ — बटन दबाने पर। */
+async function fixBadUtrs(btn) {
+  const bad = badUtrDocs(PB_ACC);
+  if (!bad.length) return;
+  if (btn) { btn.disabled = true; btn.textContent = "… ठीक कर रहा हूँ"; }
+  let n = 0, failed = 0;
+  for (const t of bad) {
+    try { await retireDoc(t._id, "पुराने कोड का नक़ली UTR"); n++; }
+    catch (e) { failed++; }
+  }
+  saveCache(); refreshAll();
+  toast(failed ? `🔧 ${n} ठीक, ${failed} नहीं हो पाईं` : `🔧 ${n} दस्तावेज़ हटा दिए`);
+}
+
+/** 🔓 एक ग़लत जोड़ खोलो — बिल फिर «UTR बाकी» में चला जाएगा। */
+async function unlinkTxn(id) {
+  const t = BANKTXNS.filter((x) => x._id === id)[0];
+  if (!t) return;
+  const e = EXP.filter((x) => x.receiptId === t.matchedReceiptId)[0];
+  try {
+    const patch = { matched: false, matchedReceiptId: null, matchConfidence: null };
+    await db.collection("vbe_bank_txns").doc(id).set(patch, { merge: true });
+    memTxn(id, patch);
+    if (e) {
+      const up = { reconciled: false, matchedBankTxnId: null, needsUtr: true };
+      await db.collection("vbe_expenses").doc(e._id).update(up);
+      Object.assign(e, up);
+    }
+    await auditLog("link_undone", null,
+      { txnId: id, receiptId: t.matchedReceiptId || null });
+    saveCache(); refreshAll();
+    toast("🔓 जोड़ खोल दिया");
+  } catch (err) { toast("नहीं हो पाया: " + err.message); }
+}
+
+/** 🩺 पूरा कार्ड — चारों जाँच, कार्टून के साथ। */
+function renderDoctor(acc) {
+  const box = $("pbDoctor");
+  if (!box) return;
+  const aud = pbAudit(acc);
+  const bad = badUtrDocs(acc);
+  const links = badLinks(acc);
+  const rows = pbTxns(acc);
+
+  const checks = [
+    { on: !LOAD_CAPPED.length, icon: "📥", name: "पूरा डेटा आया",
+      ok: rows.length.toLocaleString("en-IN") + " पंक्तियाँ इस खाते की",
+      bad: "कुछ पंक्तियाँ नहीं आ पाईं — " + LOAD_CAPPED.join(", ") },
+    { on: !aud ? null : aud.ok, icon: "🧮", name: "बची रकम की जंज़ीर",
+      ok: "ओपनिंग से आज तक हर पंक्ति पर हिसाब बैठता है",
+      bad: aud && aud.ok === false
+        ? INR(Math.abs(aud.gap)) + " का फ़र्क़ — नीचे देखिए कहाँ टूटी"
+        : "बैंक ने बची रकम लिखी ही नहीं, इसलिए जाँच नहीं हो सकी" },
+    { on: !bad.length, icon: "🔑", name: "नक़ली UTR",
+      ok: "एक भी नहीं", bad: bad.length + " दस्तावेज़ पुराने ख़राब कोड के बने हुए" },
+    { on: !links.length, icon: "🔗", name: "जोड़ सही हैं",
+      ok: "हर जोड़ या तो UTR से है या चेक नंबर से",
+      bad: links.length + " जोड़ ऐसे हैं जिनकी तारीख़ 2 दिन से ज़्यादा दूर है" }
+  ];
+  const out = RETIRED.filter((t) => t.accountId === acc);
+  if (out.length) {
+    checks.push({ on: true, icon: "🗄️", name: "सेवा से हटाई हुई पंक्तियाँ",
+      ok: out.length + " — डेटाबेस में रखी हैं, पर हिसाब में नहीं गिनी जातीं" });
+  }
+  const sick = checks.filter((c) => c.on === false).length;
+  const mood = sick ? "alert" : (checks.some((c) => c.on === null) ? "think" : "party");
+  const say = sick
+    ? `<b>${sick} जगह गड़बड़ मिली है</b><p>नीचे एक-एक करके लिखा है — और जो अपने-आप ठीक हो सकती है, उसका बटन साथ में है।</p>`
+    : `<b>सब ठीक है, विक्रम जी</b><p>चारों जाँच पास — डेटा पूरा है, हिसाब बैठता है, और हर जोड़ पक्की पहचान पर टिका है।</p>`;
+
+  box.innerHTML = `
+    <div class="card doc ${sick ? "sick" : "fit"}">
+      <div class="toonBox">
+        <div class="toonArt">${gfx.toon(mood, 72)}</div>
+        <div class="toonSay"><div class="docHead"><b>🩺 खाते की जाँच</b>${esc(accLabel(acc))}</div>
+          <div>${say}</div></div>
+      </div>
+      <div class="docList">
+        ${checks.map((c) => `
+          <div class="docRow ${c.on === false ? "no" : c.on === null ? "hm" : "yes"}">
+            <span class="dIco">${c.icon}</span>
+            <div class="dTxt"><b>${esc(c.name)}</b>
+              <small>${esc(c.on === false ? c.bad : c.on === null ? c.bad : c.ok)}</small></div>
+            <span class="dMark">${c.on === false ? "✕" : c.on === null ? "•" : "✓"}</span>
+          </div>`).join("")}
+      </div>
+      ${bad.length ? `
+        <div class="docFix">
+          <b>🔑 ${bad.length} दस्तावेज़ पुरानी ख़राबी के</b>
+          <small>इनके नाम में जो UTR लिखा है वह असली UTR है ही नहीं — v17 से
+            पहले का कोड खाता-नंबर को UTR समझ लेता था। इन्हें हिसाब से बाहर
+            कर दिया जाए तो statement दुबारा डालने पर सही पंक्तियाँ साफ़-साफ़
+            बन जाएँगी। <b>मिटाया कुछ नहीं जाएगा</b> — बस निशान लगेगा।</small>
+          <button type="button" class="mini primary" onclick="fixBadUtrs(this)"
+            style="margin-top:9px">🔧 ${bad.length} को हिसाब से बाहर करें</button>
+        </div>` : ""}
+      ${links.length ? `
+        <div class="docFix">
+          <b>🔗 ${links.length} जोड़ शक़ के दायरे में</b>
+          <small>ये पुराने ढीले मिलान से बने थे — रकम एक थी, पर तारीख़ बहुत
+            दूर। देखकर जो ग़लत लगे, उसका जोड़ खोल दीजिए।</small>
+          ${links.slice(0, 12).map(({ t, e }) => `
+            <div class="mrow">
+              <div class="amt">${INR(t.amount)}</div>
+              <div class="mx"><b>${esc(pbTitle(t).name)}</b> · ${esc(t.date)}
+                <br><span class="muted">जुड़ा है: ${esc(e.receiptId)} — ${
+                  esc((e.vendor && e.vendor.name) || "?")} · ${esc(expenseDay(e))}</span>
+                <br><span class="badge lo">${Math.round(dayGap(t.date, expenseDay(e)))} दिन का फ़ासला</span>
+                <button type="button" class="mini" style="margin-top:6px"
+                  onclick="unlinkTxn('${esc(t._id)}')">🔓 यह जोड़ खोलिए</button></div>
+            </div>`).join("")}
+          ${links.length > 12 ? `<div class="muted" style="padding:8px 0">… और ${links.length - 12}</div>` : ""}
+        </div>` : ""}
+    </div>`;
+}
+
 function renderPass() {
   if (!PB_ACC) return;
+  renderDoctor(PB_ACC);
   const open = pbOpening(PB_ACC);
   const flow = pbFlow(PB_ACC);
   const shown = PB_MONTH ? flow.filter((r) => String(r.t.date).slice(0, 7) === PB_MONTH) : flow;
@@ -7326,8 +7901,16 @@ function renderPass() {
         <button type="button" class="mini" onclick="askPbOpening()">✏️</button>
       </div>
       <div id="pbOpenEdit"></div>
+      ${open.row ? `
+        <div class="poBreak">🔎 यह अंक इस पंक्ति से निकला —
+          <b>${esc(dayLabel(String(open.row.date).slice(0, 10)) || open.row.date)}</b> ·
+          ${esc(pbTitle(open.row).name)} · ${INR(open.row.amount)}
+          ${open.row.type === "credit" ? "आया" : "गया"}, बाद में बचे
+          <b>${INR(open.row.balance)}</b>
+          <br><span class="muted">यानी उससे पहले ${INR(open.value)} रहे होंगे।
+            ग़लत लगे तो ✏️ से अपना अंक भर दीजिए — वही ऊपर रहेगा।</span></div>` : ""}
       ${aud && aud.ok === true ? `
-        <div class="poOk">✅ <b>हिसाब मिल रहा है</b>
+        <div class="poOk">✅ <b>जाँच लिया — पूरी जंज़ीर मिलती है</b>
           <small>${INR(aud.open.value)} + ${INR(aud.inSum)} आया − ${INR(aud.outSum)} गया
             = <b>${INR(aud.should)}</b>, और बैंक ने भी ${INR(aud.bank)} ही लिखा है।</small>
         </div>` : ""}
@@ -8575,6 +9158,8 @@ function refreshAll() {
   try { renderAccounts(); renderCoverage(); } catch (e) {}
   try { renderUnitTab(); renderUnitWatch(); renderChallanWatch(); } catch (e) {}
   try { renderUdhaar(); renderCheques(); renderStaff(); } catch (e) {}
+  try { if (PB_ACC) initPass(); } catch (e) {}
+  try { renderSync(); } catch (e) {}
 }
 
 /* ── 🏦 खाते — जोड़ना, सुधारना, और एक टैप में भेजना ─────────────────
@@ -9171,10 +9756,7 @@ async function saveBillSheet() {
          नहीं दिखा और Pricebook लगभग ख़ाली रहा। अब असली बिल बनता है, दोनों
          तरफ़ से जुड़ता है, और pricebook/flags उसी रास्ते से भरते हैं। */
       const when = new Date(String(BILL_TXN.date).slice(0, 10) + "T12:00:00+05:30");
-      const { receiptId, docId } = await freeDocId("vbe_expenses", () => {
-        const r = `WEB/${fyLabel(when)}/${idTail()}`;
-        return { receiptId: r, docId: r.replace(/\//g, "-") };
-      });
+      const { receiptId, docId } = await newReceiptId("WEB", when);
       const rec = Object.assign({
         receiptId,
         submittedBy: { telegramId: "dashboard",
@@ -10810,11 +11392,16 @@ function mergeShots(shots) {
 /** Firestore में रिकॉर्ड — फोटो के बिना, ताकि यह तुरंत हो जाए। */
 async function saveFastRecord(m, job) {
   const when = new Date((m.date || todayISO()) + "T12:00:00+05:30");
-  /* job.id का दायरा पहले से बड़ा है, पर एक ही job दुबारा चले (app बंद
-     होकर खुले) तो वही नंबर बनना **ज़रूरी** है — वरना वही entry दो बार बन
-     जाएगी। इसलिए यहाँ freeDocId नहीं: यही तय-नंबर होना ही सही है, और
-     job.docId सँभला हुआ होने से दुबारा लिखा भी नहीं जाता।              */
-  const receiptId = `FST/${fyLabel(when)}/${String(job.id).slice(-6).toUpperCase()}`;
+  /* 🧾 v20 — नंबर अब सीधी गिनती का: FST/26-27/0007
+     एक ही job दुबारा चले (app बंद होकर खुले) तो **वही नंबर** बनना ज़रूरी
+     है, वरना वही entry दो बार बन जाएगी। इसलिए नंबर मिलते ही job के साथ
+     सँभाल लिया जाता है और अगली बार वही उठाया जाता है।                   */
+  if (!job.receiptId) {
+    const got = await newReceiptId("FST", when);
+    job.receiptId = got.receiptId;
+    saveJobs();                       // फ़ोन में लिख दो — ऐप बंद हो तो भी बचे
+  }
+  const receiptId = job.receiptId;
   const docId = receiptId.replace(/\//g, "-");
 
   const pay = {
