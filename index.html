@@ -191,6 +191,11 @@
     background: linear-gradient(160deg, rgba(250,178,25,.12), transparent 70%); }
   .jobCard.failed { border-color: rgba(208,59,59,.45); }
   .jobCard.done { border-color: rgba(12,163,12,.4); }
+  /* 🛑 वही पैसा दुबारा — यह कार्ड लाल है और अपने-आप कुछ नहीं करता,
+     विक्रम जी के तीन बटन दबाने का इंतज़ार करता है */
+  .jobCard.dupe { align-items: flex-start; border-color: rgba(208,59,59,.55);
+    background: linear-gradient(160deg, rgba(208,59,59,.14), transparent 72%); }
+  .jobCard.dupe .jobTxt b { color: #ff9c9c; }
   .jobIco { font-size: 21px; flex: 0 0 auto; }
   .jobTxt { flex: 1; min-width: 0; font-size: 13.5px; }
   .jobTxt small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
@@ -1457,6 +1462,7 @@
         <input id="fSearch" type="search" placeholder="दुकान · सामान · ₹रकम · बिल नं.">
       </div>
       <div id="fNote" hidden></div>
+      <div id="billTwins" hidden></div>
       <div class="card">
         <div id="billRows"></div>
         <div id="billEmpty" hidden></div>
@@ -2392,6 +2398,7 @@ function cachePayload(slim) {
       if (slim && c.extractedText) c.extractedText = String(c.extractedText).slice(0, 300);
       return c;
     }),
+    EXP_OUT: EXP_OUT.map((e) => tsClean(e)),
     ACCOUNTS: tsClean(ACCOUNTS),
     SALES: tsClean(SALES), PAYINS: tsClean(PAYINS), SHORTNAME, VY_LOADED,
     CONTACTS: tsClean(CONTACTS),
@@ -2426,7 +2433,10 @@ function loadCache() {
   let c = null;
   try { c = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch (e) {}
   if (!c || !c.at || !Array.isArray(c.BANKTXNS)) return false;
-  EXP = (c.EXP || []).map((e) => Object.assign({}, e, { _date: toDate(e.submittedAt) }));
+  const expAll = (c.EXP || []).concat(c.EXP_OUT || [])
+    .map((e) => Object.assign({}, e, { _date: toDate(e.submittedAt) }));
+  EXP_OUT = expAll.filter(expOut_);
+  EXP = expAll.filter((e) => !expOut_(e));
   ACCOUNTS = c.ACCOUNTS || {};
   PRICEBOOK = c.PRICEBOOK || [];
   BANKTXNS = (c.BANKTXNS || []).filter((t) => !t.retired && !t.mergedInto);
@@ -2491,6 +2501,14 @@ let LOAD_CAPPED = [];
 /** 🩺 सेवा से हटाई हुई बैंक-पंक्तियाँ — रखी हुई, पर हिसाब से बाहर। */
 let RETIRED = [];
 
+/* 🔁 v29 — दोहरे बिल भी उसी तरह अलग टोकरी में।
+   जो बिल किसी दूसरे में मिला दिया गया, वह डेटाबेस में जस का तस पड़ा रहता
+   है (मिटता कुछ नहीं), पर हिसाब, tile, pricebook, पार्टी का कार्ड — किसी
+   में नहीं गिना जाता। यह छँटाई एक ही जगह होती है, इसलिए कोई जगह छूट नहीं
+   सकती — वही तरकीब जो बैंक-पंक्तियों के लिए RETIRED में लगी है। */
+let EXP_OUT = [];
+const expOut_ = (e) => !!(e && (e.mergedIntoReceipt || e.retired));
+
 /**
  * एक संग्रह पूरा पढ़ो — 500 का एक पन्ना, दस्तावेज़-नाम के पक्के क्रम में।
  * @param {string} col  संग्रह का नाम
@@ -2532,9 +2550,11 @@ async function fetchAll() {
   const pbDocs = markCapped("भाव", pbRes);
   const bankDocs = markCapped("बैंक की पंक्तियाँ", bankRes);
 
-  EXP = expDocs.map(d => {
+  const expAll = expDocs.map(d => {
     const x = d.data(); x._id = d.id; x._date = toDate(x.submittedAt); return x;
   }).sort((a, b) => (b._date ? b._date.getTime() : 0) - (a._date ? a._date.getTime() : 0));
+  EXP_OUT = expAll.filter(expOut_);
+  EXP = expAll.filter((e) => !expOut_(e));
   ACCOUNTS = {};
   accSnap.docs.forEach(d => ACCOUNTS[d.id] = d.data());
   PRICEBOOK = pbDocs
@@ -3007,7 +3027,8 @@ const esc = s => String(s == null ? "" : s)
 
 const FLAG_ICONS = {
   amount_mismatch: "💥", double_payment: "🔁", name_mismatch: "🪪",
-  unknown_vendor: "🆕", over_threshold: "💰", price_spike: "📈"
+  unknown_vendor: "🆕", over_threshold: "💰", price_spike: "📈",
+  forced_dupe: "🔁"
 };
 
 function renderBills() {
@@ -3040,6 +3061,7 @@ function renderBills() {
        <button type="button" class="mini" onclick="setRange('all')">📅 पूरा हिसाब</button>`);
   }
   $("billRows").innerHTML = billCards(rows);
+  renderBillTwins();
 }
 ["fStatus", "fStaff", "fSearch", "fChallan", "fAsked"].forEach(id =>
   $(id).addEventListener("input", renderBills));
@@ -3212,7 +3234,8 @@ const FLAG_TEXT = {
   name_mismatch: "बिल का नाम ≠ paid-to नाम",
   unknown_vendor: "नई दुकान",
   over_threshold: "limit से ऊपर",
-  price_spike: "कीमत में उछाल"
+  price_spike: "कीमत में उछाल",
+  forced_dupe: "वही UTR पहले से दर्ज था — फिर भी बनवाया गया"
 };
 
 /* ══════════ ⚠️ Flags — अब समझ में आए, और निपट भी जाए ══════════════
@@ -8427,6 +8450,224 @@ function twinOf(t) {
   return null;
 }
 
+
+/* ══════════ 🛑 एक पैसा = एक बिल ══════════════════════════════════════
+
+   विक्रम जी ने जान-बूझकर वही UTR दुबारा डालकर देखा — और तीन बिल बन गए:
+
+     FST/26-27/0012 · MANISH · ₹10,800 · 3 अग 2026 · 16:47
+     FST/26-27/0013 · MANISH · ₹10,800 · 3 अग 2026 · 16:47
+     FST/26-27/0014 · MANISH · ₹10,800 · 3 अग 2026 · 16:47
+
+   तीनों पर वही UTR। हिसाब में ₹10,800 की जगह ₹32,400 चढ़ गए।
+
+   कारण साफ़ था और मेरी ही ग़लती थी: saveFastRecord() सिर्फ़ यह देखता था कि
+   **रसीद नंबर** ख़ाली है या नहीं। «यह पैसा पहले से दर्ज है या नहीं» — यह
+   कभी देखा ही नहीं गया। बैंक की तरफ़ यह इंजन v22 से चल रहा था (sameMoney),
+   बिल की तरफ़ लगाया ही नहीं गया था।
+
+   अब हर बिल बनने से **पहले** — रसीद नंबर उठाने से भी पहले — जाँच होती है।
+   और झुकाव जान-बूझकर रोकने की तरफ़ है: झूठा रोक एक बटन से सुधर जाता है,
+   झूठा जाने देना चुपचाप हिसाब बिगाड़ देता है।
+
+   🔒 यह पूरी जाँच सादे कोड से होती है — किसी AI के पास कुछ नहीं जाता।    */
+
+/**
+ * एक बिल की सारी «पक्की» कुंजियाँ — UTR, ऐप का txn नंबर, चेक नंबर।
+ *
+ * UTR और ऐप-txn जान-बूझकर एक ही पिटारे में हैं: कई UPI ऐप वही 12 अंक
+ * दोनों जगह छापते हैं, और अलग रखने पर वही पैसा दो बार निकल जाता।
+ */
+function billKeys(e) {
+  if (!e) return [];
+  const out = [];
+  const ref = (v) => {
+    const x = String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    // 8 अंक से छोटा कुछ भी UTR नहीं होता — और «NA», «0000» जैसे कचरे को
+    // कुंजी मान लेना सबसे ख़तरनाक ग़लती होती: सारे अधूरे बिल एक हो जाते
+    if (x.length >= 8 && !/^0+$/.test(x) && !/^N+A+$/.test(x)) out.push(x);
+  };
+  const chq = (v) => {
+    /* आगे लगे शून्य हटा दो — बैंक «000345678» छापता है और बिल पर
+       «345678» लिखा होता है। न हटाएँ तो वही चेक दो अलग कुंजियाँ बन
+       जाता और दोहरी entry चुपचाप निकल जाती। */
+    const x = String(v || "").replace(/\D/g, "").replace(/^0+/, "");
+    if (x.length >= 5) out.push("CHQ" + x);
+  };
+  ref(e.utr);
+  ref(e.payment && e.payment.upiRef);
+  chq(e.chequeNo);
+  (e.payments || []).forEach((p) => {
+    if (!p) return;
+    ref(p.utr); ref(p.appTxnId); chq(p.chequeNo);
+  });
+  return [...new Set(out)];
+}
+
+/** ⚡/🧠 से आया «merged» ढाँचा भी उन्हीं कुंजियों में ढल जाए। */
+function fastKeys(m) {
+  if (!m) return [];
+  return billKeys({
+    utr: m.utr, chequeNo: m.chequeNo,
+    payments: [{ utr: m.utr, chequeNo: m.chequeNo,
+                 appTxnId: m.pay && m.pay.appTxnId }]
+  });
+}
+
+/** बिल पर लिखा पेमेंट का समय — शक वाले दर्जे में यही आख़िरी सहारा है। */
+function billTime(e) {
+  const p = ((e && e.payments) || [])[0];
+  return (p && p.time) || null;
+}
+
+/** दो नामों को «एक ही दुकान» मानें या नहीं — छोटा नाम बड़े का हिस्सा हो तो हाँ। */
+function nameNear(a, b) {
+  const x = pKey(a || ""), y = pKey(b || "");
+  if (!x || !y) return false;
+  return x === y || x.indexOf(y) === 0 || y.indexOf(x) === 0;
+}
+
+/**
+ * «यह पैसा पहले से दर्ज है क्या?» — फ़ोन में रखे हिसाब से (सबसे तेज़)।
+ *
+ * पुराने बिलों पर कोई migration नहीं चाहिए: कुंजियाँ उन्हीं ख़ानों से बनती
+ * हैं जो हर बिल पर पहले से भरे हुए हैं। इसलिए v29 आते ही 2024 का बिल भी
+ * पहरे में आ जाता है।
+ *
+ * @returns {null|{exp, by:string, sure:boolean}}
+ */
+function billTwinLocal(m, skipId) {
+  const keys = fastKeys(m);
+
+  // 🔒 पक्का — नंबर मिल गया, बात ख़त्म
+  if (keys.length) {
+    for (const e of EXP) {
+      if (!e || e._id === skipId) continue;
+      const hit = billKeys(e).filter((k) => keys.indexOf(k) >= 0)[0];
+      if (hit) return { exp: e, sure: true, by: keyWords(hit) };
+    }
+  }
+
+  // 🟡 शक — कोई नंबर नहीं, पर वही रकम + वही दिन
+  const amt = Number(m.amount);
+  const day = String(m.date || "").slice(0, 10);
+  if (!isFinite(amt) || amt <= 0 || !day) return null;
+  for (const e of EXP) {
+    if (!e || e._id === skipId) continue;
+    if (Math.abs((Number(e.billTotal) || 0) - amt) > 0.01) continue;
+    if (String(e.billDate || "").slice(0, 10) !== day) continue;
+    /* नाम दोनों तरफ़ हो तो वही फ़ैसला करता है — एक ही दिन दो अलग दुकानों
+       पर ₹500 देना आम बात है, इसलिए नाम अलग = अलग पैसा, शक भी नहीं। */
+    if (pKey(m.party || "") && pKey((e.vendor && e.vendor.name) || "")) {
+      if (nameNear(m.party, e.vendor && e.vendor.name)) {
+        return { exp: e, sure: false, by: "📅 उसी दिन, वही रकम और वही नाम" };
+      }
+      continue;
+    }
+    // नाम एक तरफ़ ख़ाली — तब समय देखो
+    const tm = timeGap(m.time, billTime(e));
+    if (tm != null && tm <= 30) {
+      return { exp: e, sure: false,
+        by: "🕐 वही रकम, समय " + tm + " मिनट के अंदर" };
+    }
+  }
+  return null;
+}
+
+/** कुंजी को हिंदी में — कार्ड पर यही लिखा जाता है। */
+function keyWords(k) {
+  return String(k).indexOf("CHQ") === 0
+    ? "🧾 वही चेक नं. " + String(k).slice(3)
+    : "🔑 वही UTR " + k;
+}
+
+/**
+ * Firestore से सीधा सवाल — दूसरा पहरा।
+ *
+ * फ़ोन का हिसाब पुराना हो, या बिल किसी दूसरे फ़ोन/bot से बना हो, तब भी
+ * पकड़ में आए। दोनों सवाल एक-एक ख़ाने पर हैं, इसलिए composite index की
+ * ज़रूरत नहीं पड़ती:
+ *   1. payment.upiRef — यह ख़ाना हर पुराने फास्ट बिल पर भी है
+ *   2. moneyKeys      — v29 से हर बिल पर; चेक और ऐप-txn यहीं से पकड़े जाते हैं
+ */
+async function billTwinRemote(m, skipId) {
+  const keys = fastKeys(m);
+  if (!keys.length) return null;
+  const pick = (snap, key) => {
+    for (const d of snap.docs) {
+      if (d.id === skipId) continue;
+      const e = Object.assign({ _id: d.id }, d.data());
+      if (expOut_(e)) continue;             // पहले ही हिसाब से बाहर है
+      return { exp: e, sure: true, by: keyWords(key) };
+    }
+    return null;
+  };
+  const u = String(m.utr || "").trim();
+  if (u) {
+    const snap = await db.collection("vbe_expenses")
+      .where("payment.upiRef", "==", u).limit(5).get();
+    const hit = pick(snap, u.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+    if (hit) return hit;
+  }
+  for (const k of keys.slice(0, 6)) {
+    const snap = await db.collection("vbe_expenses")
+      .where("moneyKeys", "array-contains", k).limit(5).get();
+    const hit = pick(snap, k);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * पूरी जाँच। पहले फ़ोन का हिसाब, फिर Firestore।
+ * नेट न पहुँचे तो जाँच रुकती नहीं — फ़ोन वाला नतीजा फिर भी चलता है।
+ */
+async function billTwin(m, skipId) {
+  const local = billTwinLocal(m, skipId);
+  if (local && local.sure) return local;    // पक्का मिल गया, आगे पूछने की ज़रूरत नहीं
+  let remote = null;
+  try { remote = await billTwinRemote(m, skipId); } catch (err) {}
+  return remote || local;
+}
+
+/** बिल पर «रुक जाओ» वाली ग़लती — इसी में पुराने बिल का पूरा पता होता है। */
+function dupeError(tw) {
+  const e = tw.exp;
+  const err = new Error("यह पैसा पहले से दर्ज है — " + tw.by);
+  err.dupe = {
+    docId: e._id, receiptId: e.receiptId || e._id,
+    party: (e.vendor && e.vendor.name) || null,
+    amount: e.billTotal != null ? e.billTotal : null,
+    date: String(e.billDate || "").slice(0, 10),
+    by: tw.by, sure: !!tw.sure
+  };
+  return err;
+}
+
+/**
+ * 🔁 आज तक जो दोहरे बन चुके — उन्हें ढूँढो।
+ * v29 से पहले बने बिल इसी से पकड़ में आते हैं। पहले वाला «रहेगा», बाद
+ * वाला «हिसाब से बाहर» — क्योंकि पहला ही असली दर्ज है।
+ */
+function findBillTwins() {
+  const first = {}, seen = {}, out = [];
+  const rows = EXP.slice().sort((a, b) =>
+    String(a.receiptId || a._id || "").localeCompare(String(b.receiptId || b._id || "")));
+  rows.forEach((e) => {
+    billKeys(e).forEach((k) => {
+      const keep = first[k];
+      if (!keep) { first[k] = e; return; }
+      if (keep._id === e._id) return;
+      const id = keep._id + "|" + e._id;
+      if (seen[id]) return;
+      seen[id] = 1;
+      out.push({ keep, lose: e, key: k, why: keyWords(k) });
+    });
+  });
+  return out.sort((a, b) =>
+    (Number(b.lose.billTotal) || 0) - (Number(a.lose.billTotal) || 0));
+}
+
 /**
  * 🧹 दोहरी entry ढूँढो।
  * दो तरह के जोड़े: (1) जिनका UTR/चेक एक है — यह पक्का है;
@@ -12473,7 +12714,8 @@ const JOB_SAY = {
   photos:  ["🖼️", "फोटो Drive में जा रही हैं"],
   waiting: ["⏳", "AI की सीमा भरी है"],
   done:    ["✅", "हो गया"],
-  failed:  ["⚠️", "नहीं हो पाया"]
+  failed:  ["⚠️", "नहीं हो पाया"],
+  dupe:    ["🛑", "यह पैसा पहले से दर्ज है"]
 };
 
 /* ── ⚡ का दरवाज़ा ─────────────────────────────────────────────────── */
@@ -12521,6 +12763,7 @@ function renderFastSheet() {
     return;
   }
   box.innerHTML = head + live.map((j) => {
+    if (j.status === "dupe" && j.dupe) return dupeCard(j);
     const [ic, txt] = JOB_SAY[j.status] || JOB_SAY.queued;
     const wait = j.nextAt > Date.now()
       ? ` · ${Math.max(1, Math.round((j.nextAt - Date.now()) / 60000))} मिनट बाद फिर` : "";
@@ -12645,9 +12888,39 @@ function renderClaude() {
 }
 
 /** चिपकाए हुए JSON से वही बिल बनाओ जो ⚡ बनाती है। */
-async function makeFromClaude(btn) {
+/** 🛑 चिपकाए हुए JSON पर «यह पैसा पहले से दर्ज है» निकले तो यहाँ रुकता है। */
+let CL_DUPE = null;
+
+function dupeMsg(d) {
+  return `🛑 <b>${d.sure ? "यह पैसा पहले से दर्ज है"
+      : "शायद यह पैसा पहले से दर्ज है"}</b>` +
+    `<br>${esc(d.by)}${d.sure ? "" : " — पक्का नहीं, आप देख लीजिए"}` +
+    `<br><span class="muted">${dupeLine(d)}</span>` +
+    `<div class="pick" style="margin-top:9px">` +
+      `<button type="button" class="mini" onclick="clDupeDrop()">✅ हाँ, वही है</button>` +
+      `<button type="button" class="mini" onclick="closeSheet('claudeSheet');editExpense('${
+        esc(d.docId)}')">👁️ पुराना बिल देखिए</button>` +
+      `<button type="button" class="mini ${d.sure ? "" : "primary"}"` +
+        ` onclick="makeFromClaude(this,1)">➕ फिर भी बनाइए</button>` +
+    `</div>`;
+}
+
+/** ✅ «वही है» — चिपकाया हुआ हटा दो, हिसाब जस का तस। */
+function clDupeDrop() {
+  if (CL_DUPE) {
+    auditLog("claude_dupe_dropped", null,
+      { keptReceipt: CL_DUPE.dupe.receiptId, by: CL_DUPE.dupe.by }).catch(() => {});
+  }
+  CL_DUPE = null;
+  if ($("claudeJson")) $("claudeJson").value = "";
   const msg = $("claudeMsg");
-  const raw = ($("claudeJson").value || "").trim();
+  if (msg) { msg.className = "muted"; msg.textContent = "ठीक है — कोई नया बिल नहीं बना।"; }
+}
+
+async function makeFromClaude(btn, force) {
+  const msg = $("claudeMsg");
+  const raw = (($("claudeJson").value || "").trim()) ||
+    (force && CL_DUPE ? CL_DUPE.raw : "");
   if (!raw) { msg.className = "bad"; msg.textContent = "पहले Claude का जवाब चिपकाइए।"; return; }
   let j;
   try { j = jsonOut(raw); }
@@ -12681,8 +12954,20 @@ async function makeFromClaude(btn) {
       pay: { app: j.app || null, appTxnId: j.appTxnId || null }
     };
     if (m.amount == null) throw new Error("रकम नहीं मिली — Claude से दुबारा पूछिए");
-    const job = { id: "cl" + Date.now().toString(36) };
-    const docId = await saveFastRecord(m, job);
+    const job = { id: "cl" + Date.now().toString(36), force: !!force };
+    if (force && CL_DUPE) job.dupe = CL_DUPE.dupe;
+    let docId;
+    try {
+      docId = await saveFastRecord(m, job);
+    } catch (err) {
+      /* 🛑 वही पैसा — यहाँ भी बिल नहीं बनता। चिपकाया हुआ JSON मिटता
+         नहीं, ताकि «फिर भी बनाइए» दबाने पर दुबारा चिपकाना न पड़े।  */
+      if (!err.dupe) throw err;
+      CL_DUPE = { raw, dupe: err.dupe };
+      msg.className = "bad"; msg.innerHTML = dupeMsg(err.dupe);
+      return;
+    }
+    CL_DUPE = null;
     if (j.oldDue) {
       await db.collection("vbe_expenses").doc(docId)
         .update({ oldDue: Number(j.oldDue) }).catch(() => {});
@@ -12776,6 +13061,219 @@ async function saveClaudeKey(btn) {
   finally { btn.disabled = false; renderAiSetup(); }
 }
 
+
+/* ══════════ 🛑 «यह पैसा पहले से दर्ज है» — तीन रास्ते ═══════════════
+
+   तीनों बटन जान-बूझकर हैं, और तीनों का मतलब अलग है:
+
+     ✅ हाँ, वही है          → काम हट जाता है, हिसाब जस का तस
+     🖼️ पुराने में जोड़ दीजिए → फोटो और सामान की सूची पुराने बिल में चली
+                              जाती है, यानी दुबारा डालना बेकार नहीं जाता
+     ➕ फिर भी बनाइए         → ताला विक्रम जी के ही हाथ में; बिल पर 🔁 का
+                              निशान लगता है और लेखे में लिखा जाता है      */
+
+/** पुराने बिल का एक-पंक्ति परिचय — कार्ड और संदेश दोनों में यही। */
+function dupeLine(d) {
+  return esc(d.receiptId) + " · " + esc(d.party || "—") + " · " +
+    (d.amount != null ? INR(d.amount) : "—") + " · " + esc(dayLabel(d.date));
+}
+
+function dupeCard(j) {
+  const d = j.dupe;
+  return `
+    <div class="jobCard dupe">
+      <div class="jobIco">🛑</div>
+      <div class="jobTxt">
+        <b>${d.sure ? "यह पैसा पहले से दर्ज है" : "शायद यह पैसा पहले से दर्ज है"}</b>
+        <small>${esc(d.by)}${d.sure ? "" : " — पक्का नहीं, आप देख लीजिए"}</small>
+        <small>${dupeLine(d)}</small>
+        <div class="pick" style="margin-top:9px">
+          <button type="button" class="mini ${d.sure ? "primary" : ""}"
+            onclick="dupeSame('${esc(j.id)}')">✅ हाँ, वही है</button>
+          <button type="button" class="mini"
+            onclick="dupeAttach('${esc(j.id)}',this)">🖼️ पुराने में जोड़ें</button>
+          <button type="button" class="mini ${d.sure ? "" : "primary"}"
+            onclick="dupeForce('${esc(j.id)}')">➕ फिर भी बनाइए</button>
+        </div>
+        <div class="pick" style="margin-top:6px">
+          <button type="button" class="mini"
+            onclick="closeSheet('fastSheet');editExpense('${esc(d.docId)}')">👁️ पुराना बिल देखिए</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/** ✅ «हाँ, वही है» — काम हटा दो। हिसाब में कुछ नहीं बदलता। */
+function dupeSame(id) {
+  const j = JOBS.filter((x) => x.id === id)[0];
+  if (j && j.dupe) {
+    auditLog("fast_dupe_dropped", null,
+      { keptReceipt: j.dupe.receiptId, by: j.dupe.by,
+        amount: j.dupe.amount }).catch(() => {});
+  }
+  dropJob(id);
+}
+
+/** ➕ «नहीं, यह अलग पैसा है» — बना दो, पर निशान के साथ। */
+function dupeForce(id) {
+  const j = JOBS.filter((x) => x.id === id)[0];
+  if (!j) return;
+  j.force = 1; j.status = "queued"; j.err = null; j.nextAt = 0;
+  saveJobs(); renderFastSheet();
+  toast("➕ बना रहा हूँ — बिल पर 🔁 का निशान लगेगा");
+  runJobs(true);
+}
+
+/**
+ * 🖼️ नई फोटो (और सामान की सूची) पुराने बिल में जोड़ दो।
+ *
+ * यही वह हालत है जो विक्रम जी के साथ हुई: 0014 में «जीरा 10 · नींबू 5» था
+ * जो 0012 में नहीं था। इसलिए दुबारा डाली हुई फोटो फेंकी नहीं जाती — पुराना
+ * बिल उससे और पूरा हो जाता है, और भाव-सूची भी भर जाती है।
+ */
+async function dupeAttach(id, btn) {
+  const j = JOBS.filter((x) => x.id === id)[0];
+  if (!j || !j.dupe) return;
+  const docId = j.dupe.docId;
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = "… जोड़ रहा हूँ";
+  try {
+    const e = EXP.filter((x) => x._id === docId)[0];
+    if (!e) throw new Error("पुराना बिल इस फ़ोन में नहीं मिला");
+    const photos = (e.photos || []).slice();
+    for (const sh of (j.shots || [])) {
+      const kind = (sh.r && sh.r.kind) || "other";
+      let url = null;
+      try {
+        const up = await driveUpload(sh.dataUrl, docId + "_" + kind);
+        url = (up && up.ok) ? up.url : null;
+      } catch (err) {}
+      photos.push({ kind, url, at: (sh.r && sh.r.time) || null });
+    }
+    const patch = { photos };
+    const m = mergeShots(j.shots || []);
+    // सामान की सूची पुराने पर न हो और नई में मिली हो — तभी जोड़ो
+    if (!(e.items || []).length && (m.items || []).length) {
+      patch.items = m.items;
+      patch.spentOn = m.items.map((i) => i.name).join(", ") || null;
+    }
+    await db.collection("vbe_expenses").doc(docId).update(patch);
+    Object.assign(e, patch);
+    if (patch.items) {
+      // 📊 भाव-सूची भी भर जाए — बिल न बनने का मतलब भाव खोना नहीं है
+      try {
+        const alerts = await pricebookAdd(e);
+        if ((alerts || []).length) {
+          e.priceAlerts = alerts;
+          await db.collection("vbe_expenses").doc(docId)
+            .update({ priceAlerts: alerts }).catch(() => {});
+        }
+      } catch (err) {}
+    }
+    await auditLog("fast_dupe_attached", null,
+      { receiptId: j.dupe.receiptId, photos: (j.shots || []).length,
+        items: patch.items ? patch.items.length : 0, by: j.dupe.by });
+    JOBS = JOBS.filter((x) => x.id !== id);
+    saveJobs(); renderFastSheet(); saveCache(); renderAll();
+    toast("🖼️ पुराने बिल में जुड़ गया — नया बिल नहीं बना");
+  } catch (err) {
+    btn.disabled = false; btn.textContent = was;
+    toast("नहीं जुड़ा: " + err.message);
+  }
+}
+
+/**
+ * 🔁 दो पुराने बिलों को एक कर दो।
+ * **मिटता कुछ नहीं** — बाद वाले पर सिर्फ़ निशान लगता है और उसकी रकम हिसाब
+ * से बाहर हो जाती है; पंक्ति डेटाबेस में जस की तस पड़ी रहती है।
+ */
+async function mergeBillTwin(loseId, keepId, btn) {
+  const lose = EXP.filter((e) => e._id === loseId)[0];
+  const keep = EXP.filter((e) => e._id === keepId)[0];
+  if (!lose || !keep) return;
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = "… मिला रहा हूँ";
+  try {
+    // 1️⃣ पहले जो नए बिल पर है वह पुराने में — ताकि कुछ खोए नहीं
+    const patch = {};
+    const photos = (keep.photos || []).slice();
+    (lose.photos || []).forEach((p) => {
+      if (p && p.url && !photos.some((q) => q && q.url === p.url)) photos.push(p);
+    });
+    if (photos.length !== (keep.photos || []).length) patch.photos = photos;
+    if (!(keep.items || []).length && (lose.items || []).length) {
+      patch.items = lose.items;
+      patch.spentOn = (lose.items || []).map((i) => i.name).join(", ") || null;
+    }
+    if (!keep.unit && lose.unit) patch.unit = lose.unit;
+    if (Object.keys(patch).length) {
+      await db.collection("vbe_expenses").doc(keepId).update(patch);
+      Object.assign(keep, patch);
+    }
+    // 2️⃣ अब निशान — मिटाना नहीं
+    const mark = {
+      mergedIntoReceipt: keep.receiptId || keepId,
+      mergedIntoDocId: keepId,
+      mergedAt: new Date().toISOString()
+    };
+    await db.collection("vbe_expenses").doc(loseId).update(mark);
+    Object.assign(lose, mark);
+    await auditLog("bill_twin_merged",
+      { receiptId: lose.receiptId, amount: lose.billTotal,
+        party: lose.vendor && lose.vendor.name },
+      { keptReceipt: keep.receiptId, keptDocId: keepId });
+    // 3️⃣ हिसाब से बाहर वाली टोकरी में
+    EXP = EXP.filter((e) => e._id !== loseId);
+    EXP_OUT = EXP_OUT.concat([lose]);
+    saveCache(); renderAll(); refreshAll();
+    toast("🔗 मिला दिया — " + (lose.receiptId || loseId) + " अब हिसाब से बाहर है");
+  } catch (err) {
+    btn.disabled = false; btn.textContent = was;
+    toast("नहीं मिला: " + err.message);
+  }
+}
+
+/** 🔁 बिल की सूची के ऊपर — जो दोहरे बन चुके हैं, वे सबसे पहले दिखें। */
+function renderBillTwins() {
+  const box = $("billTwins");
+  if (!box) return;
+  const tw = findBillTwins();
+  if (!tw.length) { box.innerHTML = ""; box.hidden = true; return; }
+  box.hidden = false;
+  const sum = tw.reduce((a, x) => a + (Number(x.lose.billTotal) || 0), 0);
+  box.innerHTML = `
+    <div class="card doc sick">
+      <div class="toonBox">
+        <div class="toonArt">${gfx.toon("alert", 66)}</div>
+        <div class="toonSay"><div class="docHead"><b>🔁 ${tw.length} बिल दोहरे हैं</b></div>
+          <p>एक ही पैसा दो बार चढ़ा हुआ है —
+            <b>${INR(sum)}</b> का झूठा ख़र्च।</p></div>
+      </div>
+      <div class="docFix" style="margin-top:0">
+        <small>इनका UTR या चेक नंबर किसी दूसरे बिल से हूबहू मिलता है।
+          मिलाने पर बाद वाले की रकम हिसाब से बाहर हो जाएगी और उसकी फोटो
+          पुराने बिल में चली जाएगी। <b>मिटेगा कुछ नहीं</b> — पंक्ति
+          डेटाबेस में जस की तस पड़ी रहेगी और हर क़दम लेखे में लिखा जाएगा।</small>
+      </div>
+      ${tw.slice(0, 10).map((x) => `
+        <div class="mrow">
+          <div class="amt out">${x.lose.billTotal != null ? INR(x.lose.billTotal) : "—"}</div>
+          <div class="mx"><b>${esc((x.lose.vendor && x.lose.vendor.name) || "—")}</b>
+            · ${esc(dayLabel(String(x.lose.billDate || "").slice(0, 10)))}
+            <br><span class="badge hi">${esc(x.why)}</span>
+            <br><span class="muted">रहेगा: ${esc(x.keep.receiptId || x.keep._id)}
+              <br>हिसाब से बाहर: ${esc(x.lose.receiptId || x.lose._id)}</span>
+            <div class="pick" style="margin-top:7px">
+              <button type="button" class="mini primary"
+                onclick="mergeBillTwin('${esc(x.lose._id)}','${esc(x.keep._id)}',this)">🔗 मिला दीजिए</button>
+              <button type="button" class="mini"
+                onclick="editExpense('${esc(x.lose._id)}')">👁️ देखिए</button>
+            </div></div>
+        </div>`).join("")}
+      ${tw.length > 10 ? `<div class="muted" style="padding:6px 0">… और ${tw.length - 10}</div>` : ""}
+    </div>`;
+}
+
 function dropJob(id) {
   JOBS = JOBS.filter((j) => j.id !== id);
   saveJobs();
@@ -12785,9 +13283,14 @@ function dropJob(id) {
 
 /* ── क़तार चलाने वाला ─────────────────────────────────────────────── */
 
+/* 🛑 «dupe» भी रुका हुआ माना जाता है — वरना क़तार उसी पर गोल-गोल घूमती
+   रहेगी। ⚡ पर अंक फिर भी दिखता है, क्योंकि विक्रम जी का जवाब बाकी है। */
+const jobIdle = (j) => j.status === "done" || j.status === "failed" ||
+  j.status === "dupe";
+
 async function runJobs(force) {
   if (JOB_BUSY) return;
-  const job = JOBS.filter((j) => j.status !== "done" && j.status !== "failed" &&
+  const job = JOBS.filter((j) => !jobIdle(j) &&
     (force || !j.nextAt || j.nextAt <= Date.now()))[0];
   if (!job) return;
   JOB_BUSY = true;
@@ -12797,7 +13300,7 @@ async function runJobs(force) {
     JOB_BUSY = false;
     renderFastSheet();
     // अगला काम — एक-एक करके, ताकि AI की प्रति-मिनट सीमा न टकराए
-    if (JOBS.some((j) => j.status !== "done" && j.status !== "failed" &&
+    if (JOBS.some((j) => !jobIdle(j) &&
         (!j.nextAt || j.nextAt <= Date.now()))) setTimeout(() => runJobs(), 1500);
   }
 }
@@ -12833,7 +13336,20 @@ async function runOneJob(job) {
   job.merged = { party: m.party, amount: m.amount };
   if (!job.docId) {
     job.status = "saving"; saveJobs(); renderFastSheet();
-    job.docId = await saveFastRecord(m, job);
+    try {
+      job.docId = await saveFastRecord(m, job);
+    } catch (err) {
+      /* 🛑 वही पैसा — बिल बनता ही नहीं। काम फ़ेल भी नहीं होता: वह
+         क़तार में रुका रहता है और विक्रम जी के तीन बटन का इंतज़ार करता
+         है। फोटो फ़ोन में सँभली रहती हैं, इसलिए कुछ खोता नहीं।       */
+      if (err.dupe) {
+        job.status = "dupe"; job.dupe = err.dupe; job.err = null;
+        saveJobs(); renderFastSheet();
+        toast("🛑 यह पैसा पहले से दर्ज है — ⚡ खोलकर देखिए");
+        return;
+      }
+      throw err;
+    }
     saveJobs();
   }
 
@@ -12940,6 +13456,14 @@ function mergeShots(shots) {
 
 /** Firestore में रिकॉर्ड — फोटो के बिना, ताकि यह तुरंत हो जाए। */
 async function saveFastRecord(m, job) {
+  /* 🛑 v29 — सबसे पहला सवाल: «यह पैसा पहले से दर्ज है क्या?»
+     रसीद नंबर उठाने से भी **पहले**, वरना रुकने पर भी एक नंबर बेकार चला
+     जाता और गिनती में छेद रह जाता। job.force सिर्फ़ तब लगता है जब विक्रम
+     जी ख़ुद «➕ फिर भी बनाइए» दबाएँ — ताला उन्हीं के हाथ में रहता है।  */
+  if (!job || !job.force) {
+    const tw = await billTwin(m, (job && job.docId) || null);
+    if (tw) throw dupeError(tw);
+  }
   const when = new Date((m.date || todayISO()) + "T12:00:00+05:30");
   /* 🧾 v20 — नंबर अब सीधी गिनती का: FST/26-27/0007
      एक ही job दुबारा चले (app बंद होकर खुले) तो **वही नंबर** बनना ज़रूरी
@@ -12976,6 +13500,12 @@ async function saveFastRecord(m, job) {
     items: m.items || [], billTotal: m.amount,
     billDate: m.date || todayISO(), unit: null, discount: 0,
     payments: [pay], paidFromAccountId: m.accountId || null,
+    /* 🔑 v29 — इस बिल की सारी पक्की कुंजियाँ एक ही ख़ाने में, ताकि अगली
+       बार Firestore से एक ही सवाल में «यह पैसा पहले से है क्या» पूछा जा
+       सके (array-contains — कोई composite index नहीं चाहिए)। */
+    moneyKeys: fastKeys(m),
+    // 🔁 दुबारा होने के बावजूद विक्रम जी ने ख़ुद बनवाया — निशान रहे
+    forcedDupeOf: (job && job.force && job.dupe) ? job.dupe.receiptId : null,
     payment: { mode: "upi", paidToName: m.party || null, amount: m.amount,
                upiRef: m.utr || null, paidAt: m.date || null },
     spentOn: (m.items || []).map((i) => i.name).join(", ") || null,
@@ -13014,9 +13544,11 @@ async function saveFastRecord(m, job) {
   } catch (e) { rec.flags = computeFlags(rec, []); }
 
   await db.collection("vbe_expenses").doc(docId).set(rec);
-  await auditLog("fast_entry", null,
+  await auditLog(rec.forcedDupeOf ? "fast_entry_forced_dupe" : "fast_entry", null,
     { receiptId, party: m.party, amount: m.amount, utr: m.utr || null,
-      askedBy: rec.requestedBy });
+      askedBy: rec.requestedBy,
+      // जानते-बूझते दुबारा बनाया — किसके जैसा, वह भी लेखे में
+      forcedDupeOf: rec.forcedDupeOf, dupeReason: (job && job.dupe) ? job.dupe.by : null });
   if (rec.requestedPhone) {
     // ⚡ का नाम भी AI ने चैट की फोटो से पढ़ा है — इसलिए «auto»
     await touchContact(rec.requestedPhone, rec.requestedBy,
@@ -14690,6 +15222,7 @@ function computeFlags(rec, priceAlerts) {
   if (inv && EXP.some((e) => e._id !== rec._id && e.vendor && e.vendor.invoiceNo === inv)) {
     f.push("double_payment");
   }
+  if (rec.forcedDupeOf) f.push("forced_dupe");
   if (!rec.unit) f.push("no_unit");
   if ((priceAlerts || []).length) f.push("price_spike");
   return f;
