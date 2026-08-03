@@ -338,6 +338,13 @@
     margin-top: 4px; font-size: 10.5px; font-variant-numeric: tabular-nums; }
   .pbChartFoot .lo { color: #ff9d9d; } .pbChartFoot .hi { color: #7de07d; }
 
+  /* 🛑 «यह खाता मेल नहीं खाता» — लाल, और रास्ता साथ में */
+  .amClash { margin-top: 9px; padding: 10px 11px; border-radius: 12px;
+    border: 1px solid rgba(208,59,59,.55); font-size: 12.5px; line-height: 1.55;
+    background: linear-gradient(100deg, rgba(208,59,59,.16), transparent 74%); }
+  .amClash small { display: block; color: var(--muted); font-size: 11.5px;
+    margin-top: 3px; }
+
   /* 🎯 यूनिट का बिल्ला — बड़ा, ताकि एक नज़र में दिख जाए कि लगी है या नहीं */
   .uLine { margin-bottom: 4px; }
   .uChip { display: inline-flex; align-items: center; gap: 5px;
@@ -4280,13 +4287,29 @@ function sameMoney(a, b) {
  * उसके पास नहीं — बिल का जोड़, फोटो, पूरा नाम, समय, UTR। यही «स्मार्ट
  * मर्ज» है: जानकारी कभी घटती नहीं, सिर्फ़ बढ़ती है।
  */
-async function mergeTxn(loseId, keepId, why) {
+/** एक पंक्ति को हिसाब से बाहर कर दो — सिर्फ़ फ़ोन की याद में। */
+function retireLocal(id, patch) {
+  const i = BANKTXNS.findIndex((t) => t._id === id);
+  if (i >= 0) RETIRED.push(Object.assign(BANKTXNS.splice(i, 1)[0], patch));
+}
+
+/**
+ * मिलाने के लिए क्या-क्या लिखना है — **सिर्फ़ हिसाब, कोई लिखाई नहीं।**
+ *
+ * इसे अलग इसलिए किया कि 542 मिलान एक-एक करके भेजने में ऐप जमा हुआ लगता
+ * था। अब यहाँ सिर्फ़ पर्चियाँ बनती हैं और भेजने वाला उन्हें गट्ठर में
+ * बाँधकर एक बार में भेज देता है।
+ *
+ * @returns {null|{keep:Object, lose:Object, into:string, expId:string|null}}
+ */
+function mergePatch(loseId, keepId, why) {
   const lose = BANKTXNS.filter((t) => t._id === loseId)[0];
   const keep = BANKTXNS.filter((t) => t._id === keepId)[0];
-  if (!lose || !keep || loseId === keepId) return false;
+  if (!lose || !keep || loseId === keepId) return null;
 
   const add = {};
-  const take = (k) => { if (lose[k] != null && lose[k] !== "" && (keep[k] == null || keep[k] === "")) add[k] = lose[k]; };
+  const take = (k) => { if (lose[k] != null && lose[k] !== "" &&
+    (keep[k] == null || keep[k] === "")) add[k] = lose[k]; };
   ["time", "app", "appTxnId", "vpa", "chequeNo", "utr", "narration",
    "billPhotoId", "billPhotoDriveUrl", "aiSummary", "srcSeq"].forEach(take);
   // 🪪 नाम सिर्फ़ बेहतर हो सकता है, बुरा कभी नहीं
@@ -4298,23 +4321,30 @@ async function mergeTxn(loseId, keepId, why) {
     add.matchedReceiptId = lose.matchedReceiptId;
     add.matchConfidence = lose.matchConfidence || null;
   }
-  add.mergedFrom = [...new Set(((keep.mergedFrom || []).concat([loseId])))].slice(0, 20);
+  add.mergedFrom = [...new Set((keep.mergedFrom || []).concat([loseId]))].slice(0, 20);
 
-  await db.collection("vbe_bank_txns").doc(keepId).set(add, { merge: true });
-  memTxn(keepId, add);
   const mark = { mergedInto: keepId, mergedWhy: why || null, mergedAt: todayISO() };
-  await db.collection("vbe_bank_txns").doc(loseId).set(mark, { merge: true });
-  // जो पंक्ति मिल गई वह हिसाब से बाहर — पर डेटाबेस में जस की तस
-  const i = BANKTXNS.findIndex((t) => t._id === loseId);
-  if (i >= 0) RETIRED.push(Object.assign(BANKTXNS.splice(i, 1)[0], mark));
-  // 🔗 बिल भी अब उसी पंक्ति की तरफ़ देखे
+  // फ़ोन की याद तुरंत सुधार दो — भेजना बाद में एक साथ होगा
+  memTxn(keepId, add);
+  retireLocal(loseId, mark);
+
+  let expId = null;
   if (lose.matchedReceiptId) {
     const e = EXP.filter((x) => x.receiptId === lose.matchedReceiptId)[0];
-    if (e && e.matchedBankTxnId === loseId) {
-      await db.collection("vbe_expenses").doc(e._id)
-        .update({ matchedBankTxnId: keepId }).catch(() => {});
-      e.matchedBankTxnId = keepId;
-    }
+    if (e && e.matchedBankTxnId === loseId) { e.matchedBankTxnId = keepId; expId = e._id; }
+  }
+  return { keep: add, lose: mark, into: keepId, expId };
+}
+
+/** एक जोड़ी मिलाओ और वहीं भेज भी दो — 🩺 डॉक्टर वाले रास्ते के लिए। */
+async function mergeTxn(loseId, keepId, why) {
+  const mv = mergePatch(loseId, keepId, why);
+  if (!mv) return false;
+  await db.collection("vbe_bank_txns").doc(keepId).set(mv.keep, { merge: true });
+  await db.collection("vbe_bank_txns").doc(loseId).set(mv.lose, { merge: true });
+  if (mv.expId) {
+    await db.collection("vbe_expenses").doc(mv.expId)
+      .update({ matchedBankTxnId: keepId }).catch(() => {});
   }
   await auditLog("txn_merged", null, { lost: loseId, kept: keepId, why: why || null });
   return true;
@@ -5302,11 +5332,60 @@ function accountMap(txns) {
 let ACCMAP = [];
 
 /** सब खाते चुने जा चुके? — «सहेजें» इसी पर टिका है। */
-const accMapReady = () => ACCMAP.every((m) => !!m.pick);
+/* ══════════ 🛑 ग़लत खाते में statement — अब जा ही नहीं सकती ═════════
+
+   3 अगस्त 2026 को यह सचमुच हुआ, और यही सबसे बड़ी ख़राबी थी:
+
+     statement : SBI · 51110490499        (विक्रम जी का अपना खाता)
+     चुना गया  : Ujjwal Bharat AU-0628     ← बिल्कुल दूसरा खाता!
+
+   हुआ यूँ कि उस वक़्त ऐप में **सिर्फ़ एक ही खाता दर्ज था**। नक़्शे वाली
+   पर्ची में दो ही विकल्प थे — «— चुनिए —» और «Ujjwal Bharat AU-0628» —
+   सो वही चुना गया, और ऐप ने हरा ✅ लगाकर आगे बढ़ने दिया।
+
+   नतीजा: 587 SBI पंक्तियाँ AU के खाते पर चढ़ने लगीं, और उन्हें AU की
+   पुरानी 562 पंक्तियों से «एक ही पैसा» मान लिया गया।
+
+   ऐप का काम सिर्फ़ यह पूछना नहीं है कि «कोई खाता चुना या नहीं» — उसे यह
+   भी देखना है कि **चुना हुआ खाता उस पंक्ति से मेल खाता है या नहीं।**
+   बैंक का नाम अलग, या खाता नंबर अलग — दोनों हालत में जोड़ना मना।       */
+
+/**
+ * क्या यह खाता इस पर्ची के लिए चल सकता है?
+ * @returns {string} ख़ाली = चल सकता है; वरना मना करने की वजह
+ */
+function accMapClash(m, id) {
+  const a = ACCOUNTS[id];
+  if (!m || !id || !a) return "";
+  const rowBank = bankKey(m.bank);
+  const accBank = bankKey(a.bank) || bankKey(a.label);
+  if (rowBank && accBank && rowBank !== accBank) {
+    return `statement पर <b>${esc(m.bank)}</b> लिखा है, पर यह खाता ` +
+      `<b>${esc(a.bank || a.label)}</b> का है`;
+  }
+  const rowNo = String(m.tail || "").replace(/\D/g, "");
+  const accNo = String(a.accountNumber || "").replace(/\D/g, "");
+  if (rowNo.length >= 4 && accNo.length >= 4) {
+    const n = Math.min(rowNo.length, accNo.length);
+    if (rowNo.slice(-n) !== accNo.slice(-n)) {
+      return `statement का नंबर <b>…${esc(rowNo.slice(-6))}</b> है, पर इस ` +
+        `खाते का <b>…${esc(accNo.slice(-6))}</b>`;
+    }
+  }
+  return "";
+}
+
+/** हर पर्ची का खाता चुना भी गया हो, और वह मेल भी खाता हो। */
+const accMapReady = () => ACCMAP.every((m) => !!m.pick && !accMapClash(m, m.pick));
+
+/** इस समय कितनी पर्चियाँ अटकी हैं — न चुनी हुई, या मेल न खाने वाली। */
+const accMapLeft = () => ACCMAP.filter((m) => !m.pick || accMapClash(m, m.pick)).length;
 
 function setAccMap(key, v) {
   const m = ACCMAP.filter((x) => x.key === key)[0];
-  if (m) m.pick = v;
+  if (!m) return;
+  m.pick = v;
+  m.auto = false;
   renderAccMap();
 }
 
@@ -5314,7 +5393,7 @@ function renderAccMap() {
   const box = $("rAccMap");
   if (!box) return;
   if (!ACCMAP.length) { box.innerHTML = ""; return; }
-  const left = ACCMAP.filter((m) => !m.pick).length;
+  const left = accMapLeft();
   const opts = (sel) => '<option value="">— चुनिए —</option>' +
     Object.keys(ACCOUNTS).map((id) =>
       `<option value="${esc(id)}"${id === sel ? " selected" : ""}>${esc(accLabel(id))}</option>`).join("");
@@ -5329,8 +5408,14 @@ function renderAccMap() {
              नहीं जाएगा।`
           : "सब पहचान लिए गए — अब सहेज सकते हैं।"}</p></div>
     </div>
-    ${ACCMAP.map((m) => `
-      <div class="amRow${m.pick ? " ok" : " ask"}">
+    ${ACCMAP.map((m) => {
+      const clash = m.pick ? accMapClash(m, m.pick) : "";
+      const ok = m.pick && !clash;
+      const mk = `<button type="button" class="mini primary" style="width:100%;margin-top:8px"
+            onclick="openNewAccount('${esc(m.key)}')">➕ «${esc(m.bank || "बैंक")}${
+              m.tail ? " " + esc(String(m.tail).slice(-4)) : ""}» का खाता बनाइए</button>`;
+      return `
+      <div class="amRow${ok ? " ok" : " ask"}">
         <div class="amHead">
           ${gfx.avatar(m.bank || "?", 34)}
           <div>
@@ -5338,10 +5423,14 @@ function renderAccMap() {
             <small>${m.n} ${m.n === 1 ? "पंक्ति" : "पंक्तियाँ"}${
               m.auto ? " · अपने-आप पहचाना" : ""}</small>
           </div>
-          <span class="amTick">${m.pick ? "✅" : "⚠️"}</span>
+          <span class="amTick">${ok ? "✅" : clash ? "🛑" : "⚠️"}</span>
         </div>
         <select onchange="setAccMap('${esc(m.key)}', this.value)">${opts(m.pick)}</select>
-      </div>`).join("")}
+        ${clash ? `<div class="amClash">🛑 <b>यह खाता मेल नहीं खाता</b>
+          <small>${clash}। ग़लत खाते में entry जाना सबसे बड़ी ख़राबी है —
+            इसलिए यह जोड़ नहीं होगा।</small>${mk}</div>` : ""}
+        ${!m.pick ? mk : ""}
+      </div>`; }).join("")}
     <button type="button" class="mini" style="width:100%;margin-top:8px"
       onclick="openNewAccount()">➕ नया खाता बनाएँ</button>
   </div>`;
@@ -5365,11 +5454,18 @@ function renderAccMap() {
 
    अब: नंबर टकराए तो अपने-आप आगे बढ़ता है, और `ledger` सिर्फ़ तभी लिखा
    जाता है जब खाता सचमुच नया हो।                                        */
-async function openNewAccount() {
-  const label = prompt("खाते का नाम (जैसे: Vikram Charan SBI)");
+async function openNewAccount(mapKey) {
+  /* 🗺️ पर्ची से बुलाया गया हो तो बैंक और नंबर **पहले से भरे हुए** आते हैं —
+     विक्रम जी को सिर्फ़ नाम देखना पड़ता है। जो नंबर statement पर छपा है वही
+     जाता है, इसलिए ग़लत नंबर टाइप होने की गुंजाइश ही नहीं रहती।         */
+  const m0 = mapKey ? ACCMAP.filter((x) => x.key === mapKey)[0] : null;
+  const sug = m0 ? ((m0.bank || "") + (m0.tail ? " " + String(m0.tail).slice(-4) : "")).trim() : "";
+  const label = prompt("खाते का नाम (जैसे: Vikram Charan SBI)", sug);
   if (!label) return;
-  const bank = prompt("बैंक का नाम (जैसे: State Bank of India)") || "";
-  const no = prompt("पूरा खाता नंबर — इसी से आगे पहचान होगी") || "";
+  const bank = prompt("बैंक का नाम (जैसे: State Bank of India)",
+    (m0 && m0.bank) || "") || "";
+  const no = prompt("पूरा खाता नंबर — इसी से आगे पहचान होगी",
+    (m0 && m0.tail) || "") || "";
 
   let id = pKey(label).slice(0, 20).toLowerCase() || ("acc" + Date.now());
   const base = id;
@@ -5388,8 +5484,14 @@ async function openNewAccount() {
   ACCOUNTS[id] = doc;
   saveCache();
   rebuildAccountPickers();
-  // जो खाते अब पहचाने जा सकते हैं, उन्हें अपने-आप भर दो
-  ACCMAP.forEach((m) => { if (!m.pick) { m.pick = accountByTail(m.bank, m.tail); m.auto = !!m.pick; } });
+  /* जो खाते अब पहचाने जा सकते हैं, उन्हें अपने-आप भर दो।
+     ⚠️ जिस पर्ची का चुनाव **मेल नहीं खा रहा**, उसे भी दुबारा देखो — वरना
+        नया सही खाता बन जाने के बाद भी पुराना ग़लत चुनाव अटका रह जाता। */
+  ACCMAP.forEach((m) => {
+    if (m.pick && !accMapClash(m, m.pick)) return;
+    m.pick = accountByTail(m.bank, m.tail);
+    m.auto = !!m.pick;
+  });
   renderAccMap();
   toast("🏦 खाता जुड़ गया");
 }
@@ -5873,52 +5975,111 @@ function renderResync() {
     </div>`;
 }
 
+/* ══════════ ⚡ एक-एक करके नहीं — गट्ठर बाँधकर ═══════════════════════
+
+   विक्रम जी की स्क्रीन पर «575 / 587 लिखी…» अटका रह गया और बटन घूमता
+   रहा। वजह: हर पंक्ति के लिए अलग-अलग Firestore को भेजा जा रहा था।
+   587 लिखाई + 542 मिलान (हर मिलान में 2 लिखाई + 1 लेखा) = **2,700 से
+   ज़्यादा बार** फ़ोन से Google तक आना-जाना। 4G पर इसमें कई मिनट लगते हैं
+   और बीच में कुछ भी टूटे तो आधा काम अधूरा रह जाता है।
+
+   Firestore में इसी के लिए **writeBatch** है — 500 काम एक ही बार में।
+   अब 2,700 चक्कर घटकर ~8 रह जाते हैं, और हर गट्ठर या तो **पूरा** लिखा
+   जाता है या **बिल्कुल नहीं** — आधा-अधूरा कभी नहीं।
+
+   साथ में: तीनों पड़ावों की गिनती दिखती है (पहले सिर्फ़ पहले पड़ाव की
+   दिखती थी, इसलिए बाक़ी वक़्त ऐप जमा हुआ लगता था), और 542 अलग-अलग लेखा
+   लिखने की जगह एक ही सारांश।                                          */
+
+/** 500-500 के गट्ठर — हर गट्ठर पूरा, या बिल्कुल नहीं। */
+function batcher(onEach) {
+  let b = db.batch(), n = 0, total = 0;
+  return {
+    set(ref, data, opt) { opt ? b.set(ref, data, opt) : b.set(ref, data); n++; total++; },
+    update(ref, data) { b.update(ref, data); n++; total++; },
+    async flushIfFull() {
+      if (n < 400) return;
+      await b.commit(); b = db.batch(); n = 0;
+      if (onEach) onEach(total);
+    },
+    async done() {
+      if (n) await b.commit();
+      if (onEach) onEach(total);
+      return total;
+    }
+  };
+}
+
 async function runResync(btn) {
   if (!accMapReady()) {
-    $("rResyncMsg").innerHTML = "🔒 पहले ऊपर हर खाते का पता बता दीजिए।";
+    $("rResyncMsg").innerHTML = "🔒 पहले ऊपर हर खाते का पता बता दीजिए — " +
+      "और जो मेल नहीं खा रहा, वह ठीक कर दीजिए।";
     renderAccMap(); return;
   }
   const p = resyncPlan();
   if (!p) return;
   btn.disabled = true; btn.textContent = "… मिला रहा हूँ";
   const msg = $("rResyncMsg");
-  let wrote = 0, merged = 0, retired = 0, failed = 0;
+  const step = (t) => { msg.className = "muted"; msg.textContent = t; };
+  let wrote = 0, merged = 0, retired = 0;
+  const T = p.total + p.merge.length + p.extra.length;
   try {
+    const B = batcher(() => step(`${wrote + merged + retired} / ${T} — भेज रहा हूँ…`));
+
     // 1️⃣ फ़ाइल की हर पंक्ति अपनी सही जगह पर — «पहले से है» वाली भी
     for (const id of Object.keys(p.want)) {
       const { t, acc } = p.want[id];
-      try {
-        const doc = txnDoc(t, acc, null, null, existingTxn(id));
-        await db.collection("vbe_bank_txns").doc(id).set(doc, { merge: true });
-        memTxn(id, doc); wrote++;
-      } catch (e) { failed++; }
-      if (wrote % 25 === 0) msg.textContent = `${wrote} / ${p.total} लिखी…`;
+      const doc = txnDoc(t, acc, null, null, existingTxn(id));
+      B.set(db.collection("vbe_bank_txns").doc(id), doc, { merge: true });
+      memTxn(id, doc); wrote++;
+      if (wrote % 25 === 0) step(`${wrote} / ${T} — पंक्तियाँ लिख रहा हूँ…`);
+      await B.flushIfFull();
     }
+
     // 2️⃣ 🔗 एक ही पैसा दो जगह — मिला दो (बिल का जोड़ और फोटो साथ ले जाकर)
+    const expFix = [];
     for (const m of p.merge) {
-      try { if (await mergeTxn(m.row._id, m.into, m.why)) merged++; }
-      catch (e) { failed++; }
+      const mv = mergePatch(m.row._id, m.into, m.why);
+      if (!mv) continue;
+      B.set(db.collection("vbe_bank_txns").doc(m.into), mv.keep, { merge: true });
+      B.set(db.collection("vbe_bank_txns").doc(m.row._id), mv.lose, { merge: true });
+      if (mv.expId) expFix.push(mv);
+      merged++;
+      if (merged % 25 === 0) step(`${wrote + merged} / ${T} — पंक्तियाँ मिला रहा हूँ…`);
+      await B.flushIfFull();
     }
+    expFix.forEach((mv) => {
+      B.update(db.collection("vbe_expenses").doc(mv.expId), { matchedBankTxnId: mv.into });
+    });
+
     // 3️⃣ जो statement में हैं ही नहीं — निशान लगाकर हिसाब से बाहर
     for (const t of p.extra) {
-      try { await retireDoc(t._id, "statement में यह पंक्ति नहीं है"); retired++; }
-      catch (e) { failed++; }
+      const patch = { retired: true, retiredWhy: "statement में यह पंक्ति नहीं है",
+        retiredAt: todayISO() };
+      B.set(db.collection("vbe_bank_txns").doc(t._id), patch, { merge: true });
+      retireLocal(t._id, patch);
+      retired++;
+      await B.flushIfFull();
     }
+    step("आख़िरी गट्ठर भेज रहा हूँ…");
+    await B.done();
+
     await auditLog("statement_resync", null,
-      { accounts: p.accs, from: p.from, to: p.to, wrote, merged, retired, failed });
+      { accounts: p.accs, from: p.from, to: p.to, wrote, merged, retired });
     saveCache(); refreshAll();
     const aud = pbAudit(p.accs[0]);
-    msg.className = failed ? "bad" : "ok";
+    msg.className = "ok";
     msg.innerHTML = `✅ <b>${wrote}</b> पंक्तियाँ statement के बराबर कर दीं` +
       (merged ? ` · 🔗 <b>${merged}</b> आपस में मिलीं` : "") +
       (retired ? ` · 🗄️ <b>${retired}</b> हिसाब से बाहर` : "") +
-      (failed ? ` · ⚠️ <b>${failed}</b> नहीं हो पाईं` : "") +
       (aud ? `<br>अब ${aud.ok ? "हिसाब पूरा मिल रहा है ✅"
         : `हिसाब में ${INR(Math.abs(aud.gap))} का फ़र्क़ बचा है`}` : "") +
       `<br><span class="muted">🏦 पासबुक खोलकर देख लीजिए।</span>`;
     renderResync();
   } catch (e) {
-    msg.className = "bad"; msg.textContent = "नहीं हो पाया: " + e.message;
+    msg.className = "bad";
+    msg.innerHTML = `नहीं हो पाया: ${esc(e.message)}<br><span class="muted">` +
+      `जितना भेजा जा चुका था वह सुरक्षित है — दुबारा दबाइए, बाक़ी वहीं से चलेगा।</span>`;
   } finally { btn.disabled = false; btn.textContent = "🧹 दुबारा मिलाओ"; }
 }
 
@@ -5927,20 +6088,27 @@ async function commitRecon() {
   /* 🔒 v16 का पहरा: जिस पंक्ति का खाता पक्का न हो, कुछ भी नहीं सहेजा
      जाएगा — एक भी नहीं। आधा सहेजकर बाद में सुधारना सबसे बुरा रास्ता है। */
   if (!accMapReady()) {
-    const left = ACCMAP.filter((m) => !m.pick).length;
     status.className = "bad";
-    status.innerHTML = `🔒 ऊपर <b>${left}</b> खाते का पता नहीं चला — पहले वह ` +
-      `चुन दीजिए। ग़लत खाते में entry जाना सबसे बड़ी ख़राबी है, इसलिए तब तक ` +
-      `कुछ नहीं सहेजा जाएगा।`;
+    status.innerHTML = `🔒 ऊपर <b>${accMapLeft()}</b> खाते का पता नहीं चला या ` +
+      `मेल नहीं खा रहा — पहले वह ठीक कर दीजिए। ग़लत खाते में entry जाना सबसे ` +
+      `बड़ी ख़राबी है, इसलिए तब तक कुछ नहीं सहेजा जाएगा।`;
     renderAccMap();
     return;
   }
   btn.disabled = true;
   status.className = "muted"; status.textContent = "सहेज रहा हूँ…";
   try {
+    /* ⚡ गट्ठर में भेजो, एक-एक करके नहीं। 587 पंक्तियों पर पहले हर पंक्ति
+       के लिए अलग चक्कर लगता था और «575 / 587 लिखी…» पर ऐप जमा हुआ लगता
+       था। अब 400 काम एक बार में जाते हैं — देखें batcher()।            */
     const all = RECON.matched.concat(RECON.maybe);
     const picks = [...document.querySelectorAll("#rMaybe select")];
     let saved = 0, linked = 0, added = 0, enriched = 0;
+    const total = picks.length + RECON.noBill.length +
+      (RECON.credits || []).length + (RECON.dupes || []).length;
+    const B = batcher();
+    const tick = () => { if (saved % 25 === 0) status.textContent = `${saved} / ${total} सहेजी…`; };
+
     for (const sel of picks) {
       const m = all[Number(sel.dataset.i)];
       if (!m) continue;
@@ -5949,17 +6117,18 @@ async function commitRecon() {
       const had = existingTxn(id);
       const doc = txnDoc(m.t, RECON.account, keep ? m.e.receiptId : null,
                          sel.dataset.sure === "1" ? "high" : "low", had);
-      await db.collection("vbe_bank_txns").doc(id).set(doc, { merge: true });
+      B.set(db.collection("vbe_bank_txns").doc(id), doc, { merge: true });
       memTxn(id, doc);
       if (had) enriched++; else added++;
-      saved++;
+      saved++; tick();
       if (keep) {
-        await db.collection("vbe_expenses").doc(keep)
-          .update({ reconciled: true, matchedBankTxnId: id });
+        B.update(db.collection("vbe_expenses").doc(keep),
+          { reconciled: true, matchedBankTxnId: id });
         const ex = EXP.filter((x) => x._id === keep)[0];
         if (ex) { ex.reconciled = true; ex.matchedBankTxnId = id; }
         linked++;
       }
+      await B.flushIfFull();
     }
     /* 🔄 «पहले से थीं» वाली पंक्तियों की **छूटी जानकारी भी भर दो** — पर
        उन्हीं के अपने दस्तावेज़ में, नया दस्तावेज़ बनाकर नहीं। पहले इन्हें
@@ -5967,14 +6136,13 @@ async function commitRecon() {
        (srcSeq), समय, पूरी narration — कुछ नहीं पहुँचता था और पासबुक का क्रम
        वैसा का वैसा उलझा रहता था। txnDoc पहले से भरी चीज़ कभी नहीं मिटाता। */
     for (const d of (RECON.dupes || [])) {
-      try {
-        const rid = d.row && d.row._id;
-        if (!rid) continue;
-        const doc2 = txnDoc(d.t, RECON.account, null, null, d.row);
-        await db.collection("vbe_bank_txns").doc(rid).set(doc2, { merge: true });
-        memTxn(rid, doc2);
-        enriched++;
-      } catch (e) { /* एक पंक्ति अटके तो बाक़ी न रुकें */ }
+      const rid = d.row && d.row._id;
+      if (!rid) continue;
+      const doc2 = txnDoc(d.t, RECON.account, null, null, d.row);
+      B.set(db.collection("vbe_bank_txns").doc(rid), doc2, { merge: true });
+      memTxn(rid, doc2);
+      enriched++; saved++; tick();
+      await B.flushIfFull();
     }
     // Unmatched debits (the बकाया list) and every credit are stored too, so the
     // timeline and party views hold the whole picture, not just matched money.
@@ -5982,11 +6150,14 @@ async function commitRecon() {
       const id2 = txnIdSafe(txnAccount(m.t, RECON.account) || RECON.account, m.t);
       const had2 = existingTxn(id2);
       const doc2 = txnDoc(m.t, RECON.account, null, null, had2);
-      await db.collection("vbe_bank_txns").doc(id2).set(doc2, { merge: true });
+      B.set(db.collection("vbe_bank_txns").doc(id2), doc2, { merge: true });
       memTxn(id2, doc2);
       if (had2) enriched++; else added++;
-      saved++;
+      saved++; tick();
+      await B.flushIfFull();
     }
+    status.textContent = "आख़िरी गट्ठर भेज रहा हूँ…";
+    await B.done();
     await db.collection("_audit_logs").add({
       at: firebase.firestore.FieldValue.serverTimestamp(),
       actorTelegramId: "dashboard-" + auth.currentUser.uid,
@@ -8589,8 +8760,7 @@ function badLinks(acc) {
 async function retireDoc(id, why) {
   const patch = { retired: true, retiredWhy: why, retiredAt: todayISO() };
   await db.collection("vbe_bank_txns").doc(id).set(patch, { merge: true });
-  const i = BANKTXNS.findIndex((t) => t._id === id);
-  if (i >= 0) RETIRED.push(Object.assign(BANKTXNS.splice(i, 1)[0], patch));
+  retireLocal(id, patch);
   await auditLog("txn_retired", null, { txnId: id, why });
 }
 
