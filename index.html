@@ -3876,6 +3876,76 @@ function csvRows(text) {
   return rows.filter(r => r.some(c => String(c).trim() !== ""));
 }
 
+/* ══════════ 🚨 अधूरी फ़ाइल — सबसे चुपचाप होने वाली ग़लती ═══════════
+
+   3 अगस्त 2026 को विक्रम जी ने उज्ज्वल भारत की पूरी statement (98 पन्ने,
+   1 अप्रैल – 3 अगस्त) AI को दी और CSV बनवाई। जो फ़ाइल आई उसमें:
+
+       999 पंक्तियाँ · 1 अप्रैल → **27 जुलाई** पर ख़त्म
+       आख़िरी बची रकम ₹3,69,595.31
+       पर बैंक की छपी हुई closing ₹5,32,755.51
+
+   यानी **एक हफ़्ते का हिसाब ग़ायब** — ₹1,63,160 का फ़र्क़। और सबसे ख़तरनाक
+   बात: जो 999 पंक्तियाँ लिखी गईं वे **बिल्कुल सही** थीं, जंज़ीर भी पूरी
+   मिलती थी। यानी ऐप की हर जाँच हरी हो जाती और फिर भी हिसाब अधूरा रहता।
+
+   AI का जवाब लंबाई की हद पर आकर **चुपचाप रुक गया** — «999» जैसी गोल
+   गिनती उसी की निशानी है।
+
+   इलाज: CSV की सबसे ऊपर एक «#» वाली पंक्ति, जिसमें बैंक की **छपी हुई**
+   अवधि और opening/closing लिखी हो। ऐप उसी से मिलाकर बता देता है कि फ़ाइल
+   पूरी है या अधूरी — और अधूरी हो तो लाल कार्ड में साफ़ लिखता है कि कहाँ
+   तक आई और आगे क्या माँगना है।                                        */
+
+/**
+ * CSV की सबसे ऊपर वाली «# …» पंक्ति — बैंक ने जो छापा है वही।
+ *   # VBE | Account: AU 2502229282370628 | Period: 2026-04-01 to 2026-08-03
+ *         | Opening: 3487029.27 | Closing: 532755.51 | Rows: 1284
+ */
+function statementMeta(text) {
+  const line = String(text || "").split(/\r?\n/).slice(0, 5)
+    .filter((l) => /^\s*#/.test(l) && /(closing|period|opening|rows)/i.test(l))[0];
+  if (!line) return null;
+  const grab = (re) => { const m = line.match(re); return m ? m[1].trim() : null; };
+  const num = (v) => { const n = parseFloat(String(v || "").replace(/[₹,\s]/g, "")); return isNaN(n) ? null : n; };
+  const per = line.match(/Period\s*:\s*([\d-]{8,10})\s*(?:to|तक|–|-{1,2})\s*([\d-]{8,10})/i);
+  return {
+    account: grab(/Account\s*:\s*([^|]+)/i),
+    from: per ? per[1] : null,
+    to: per ? per[2] : null,
+    opening: num(grab(/Opening\s*:\s*([^|]+)/i)),
+    closing: num(grab(/Closing\s*:\s*([^|]+)/i)),
+    rows: (() => { const n = num(grab(/Rows\s*:\s*([^|]+)/i)); return n == null ? null : Math.round(n); })()
+  };
+}
+
+/**
+ * क्या फ़ाइल पूरी है? — बैंक की छपी हुई बात से मिलाकर।
+ * @returns {null|{ok:boolean, why:string[], meta:Object}}
+ */
+function fileComplete(meta, rows) {
+  if (!meta || !rows || !rows.length) return null;
+  const why = [];
+  const last = [...rows].reverse().filter((t) => t.balance != null)[0];
+  const lastDate = rows[rows.length - 1].date;
+  if (meta.closing != null && last && Math.abs(last.balance - meta.closing) > 1) {
+    why.push(`फ़ाइल की आख़िरी बची रकम <b>${INR(last.balance)}</b> है, पर बैंक ने ` +
+      `<b>${INR(meta.closing)}</b> छापी है — फ़र्क़ <b>${INR(Math.abs(meta.closing - last.balance))}</b>`);
+  }
+  if (meta.to && lastDate && lastDate < meta.to) {
+    why.push(`फ़ाइल <b>${esc(dayLabel(lastDate) || lastDate)}</b> पर ख़त्म हो गई, ` +
+      `पर statement <b>${esc(dayLabel(meta.to) || meta.to)}</b> तक की है`);
+  }
+  if (meta.from && rows[0].date && rows[0].date > meta.from) {
+    why.push(`फ़ाइल <b>${esc(dayLabel(rows[0].date) || rows[0].date)}</b> से शुरू होती है, ` +
+      `पर statement <b>${esc(dayLabel(meta.from) || meta.from)}</b> से है`);
+  }
+  if (meta.rows != null && meta.rows !== rows.length) {
+    why.push(`फ़ाइल में <b>${rows.length}</b> पंक्तियाँ हैं, पर लिखा है <b>${meta.rows}</b>`);
+  }
+  return { ok: !why.length, why, meta };
+}
+
 const money = (s) => {
   if (s == null) return null;
   const n = parseFloat(String(s).replace(/[₹,\s]/g, ""));
@@ -5522,7 +5592,7 @@ function stampSeq(rows) {
   return { reversed: desc, n: list.length };
 }
 
-let PENDING_FILE = null;
+let PENDING_FILE = null, RAW_TEXT = "", FILE_META = null;
 
 async function handleStatementFile(file, password) {
   PENDING_FILE = file;
@@ -5536,7 +5606,7 @@ async function handleStatementFile(file, password) {
       ? await readPdfStatement(file, (i, n) => {
           status.textContent = `पन्ना ${i} / ${n} पढ़ा…`;
         }, password)
-      : parseStatement(await file.text());
+      : (RAW_TEXT = await file.text(), parseStatement(RAW_TEXT));
     if (!txns || !txns.length) {
       status.className = "bad";
       status.textContent = "यह file समझ नहीं आई — उसमें तारीख़ और रकम वाले column होने चाहिए।";
@@ -5547,6 +5617,8 @@ async function handleStatementFile(file, password) {
     // 🔢 हर पंक्ति अपना क्रम-नंबर लेकर आगे जाए — पासबुक का सही क्रम इसी पर
     //    टिकेगा (देखें stampSeq / pbOrder)
     stampSeq(txns);
+    // 🚨 «# …» वाली पंक्ति से मिलाओ कि फ़ाइल पूरी है या अधूरी
+    FILE_META = isPdf ? null : statementMeta(RAW_TEXT);
     const res = matchStatement(txns, accountId);
     RECON = Object.assign({ account: accountId, txns, fakeUtrs: fake.dropped }, res);
     // 🗺️ हर पंक्ति का अपना खाता — पहले नक़्शा, फिर बाक़ी सब
@@ -5598,12 +5670,34 @@ function renderRecon(total, allRows) {
      पिछली बची रकम − गया + आया = इस पंक्ति की बची रकम। */
   const box = $("rVerify");
   if (box) {
+    /* 🚨 सबसे पहले: फ़ाइल पूरी है या नहीं। जंज़ीर मिल जाना काफ़ी नहीं —
+       अधूरी फ़ाइल की जंज़ीर भी पूरी मिलती है (देखें statementMeta)।    */
+    const done = fileComplete(FILE_META, allRows || []);
+    let head = "";
+    if (done && !done.ok) {
+      head = gfx.insight({ icon: "🚨", tone: "up",
+        title: "यह फ़ाइल अधूरी है — पूरा statement नहीं आया",
+        body: done.why.join("<br>") +
+          `<br><br><b>क्या करना है:</b> जिस AI से फ़ाइल बनवाई थी, उसी से ` +
+          `<b>बची हुई अवधि</b> की अलग फ़ाइल माँगिए — जैसे «${
+            esc(dayLabel(allRows[allRows.length - 1].date) || "")} से ${
+            esc(dayLabel(done.meta.to) || done.meta.to || "आख़िर")} तक की CSV दो»। ` +
+          `<br><span class="muted">लंबी statement एक बार में पूरी नहीं लिखी जाती — ` +
+          `दो-तीन हिस्सों में माँगिए, हर हिस्सा अलग फ़ाइल। यहाँ दोनों डाल दीजिए, ` +
+          `जो पंक्तियाँ दोनों में हैं वे दुबारा नहीं जुड़ेंगी।</span>` });
+    } else if (done && done.ok) {
+      head = gfx.insight({ icon: "📋", tone: "down",
+        title: "फ़ाइल पूरी है — बैंक की छपी हुई बात से मिल गई",
+        body: `${esc(dayLabel(done.meta.from) || done.meta.from || "")} से ` +
+          `${esc(dayLabel(done.meta.to) || done.meta.to || "")} तक · आख़िरी बची रकम ` +
+          `<b>${INR(done.meta.closing)}</b> — दोनों हूबहू ✅` });
+    }
     const rows = (allRows || []).filter((t) => t.balance != null);
-    if (rows.length < 2) box.innerHTML = "";
+    if (rows.length < 2) box.innerHTML = head;
     else {
       const v = verifyLedger(rows, rows[0].type === "debit"
         ? rows[0].balance + rows[0].amount : rows[0].balance - rows[0].amount);
-      box.innerHTML = v.bad.length
+      box.innerHTML = head + (v.bad.length
         ? gfx.insight({ icon: "🚨", tone: "up",
             title: `${v.bad.length} पंक्ति का हिसाब नहीं मिला`,
             body: v.bad.slice(0, 4).map((b) =>
@@ -5613,7 +5707,11 @@ function renderRecon(total, allRows) {
               `<br><span class="muted">इन पंक्तियों को एक बार देख लें।</span>` })
         : gfx.insight({ icon: "🛡️", tone: "down",
             title: `${v.checked} में से ${v.checked} पंक्तियों का हिसाब मिला`,
-            body: "हर सौदे के बाद बची रकम सही बैठती है — कोई अंक ग़लत नहीं पढ़ा गया ✅" });
+            body: "हर सौदे के बाद बची रकम सही बैठती है — कोई अंक ग़लत नहीं पढ़ा गया ✅" +
+              (done ? "" : `<br><span class="muted">⚠️ फ़ाइल के ऊपर «#» वाली पंक्ति नहीं है, ` +
+                `इसलिए यह नहीं बताया जा सकता कि पूरा statement आया या नहीं। आख़िरी बची रकम ` +
+                `<b>${INR(rows[rows.length - 1].balance)}</b> — इसे बैंक की छपी हुई closing से ` +
+                `ख़ुद मिला लीजिए।</span>`) }));
     }
   }
   const sum = (a) => a.reduce((x, m) => x + m.t.amount, 0);
@@ -14830,7 +14928,13 @@ const CSV_PROMPT = [
   'नाम "statement.csv" हो और जो डाउनलोड की जा सके। कोई समझाइश मत लिखो,',
   "कोई भूमिका मत बाँधो — बस फ़ाइल।",
   "",
-  "पहली पंक्ति बिल्कुल यही रहे (हूबहू, इसी क्रम में):",
+  "सबसे पहली पंक्ति «#» वाली रहे — इसमें वही लिखो जो statement पर **छपा",
+  "हुआ** है (नाम, अवधि, opening, closing, कुल कितने सौदे)। यह पंक्ति सबसे",
+  "ज़रूरी है: इसी से पता चलता है कि फ़ाइल पूरी बनी या बीच में रह गई।",
+  "",
+  "# VBE | Account: AU 2502229282370628 | Period: 2026-04-01 to 2026-08-03 | Opening: 3487029.27 | Closing: 532755.51 | Rows: 1284",
+  "",
+  "उसके बाद की पंक्ति खानों के नाम की, बिल्कुल यही (हूबहू, इसी क्रम में):",
   "",
   "Date,Time,Party,Account,Description,ChequeNo,RefNo,UTR,Debit,Credit,Balance",
   "",
@@ -14938,7 +15042,20 @@ const CSV_PROMPT = [
   "    आए, तो वह UTR है ही नहीं (अक्सर खाता नंबर होता है) — तब UTR का खाना",
   "    तीनों में ख़ाली छोड़ दो।",
   "",
-  "19. आख़िर में ख़ुद जाँच लो — दो तरह से:",
+  "19. ⚠️ **कभी चुपचाप मत रुको।** यह सबसे ज़रूरी नियम है।",
+  "    लंबी statement (50–100 पन्ने, हज़ार से ज़्यादा सौदे) एक जवाब में पूरी",
+  "    नहीं लिख पाओगे — यह ठीक है। पर आधी लिखकर चुप हो जाना **सबसे बड़ी",
+  "    ग़लती** है, क्योंकि जो आधा लिखा है वह बिल्कुल सही दिखता है और गड़बड़",
+  "    पकड़ में ही नहीं आती।",
+  "    ऐसा लगे कि पूरा नहीं समाएगा तो **शुरू करने से पहले ही** साफ़ कह दो:",
+  "      «इसमें लगभग 1,284 सौदे हैं, एक बार में पूरे नहीं लिख पाऊँगा।",
+  "       पहले 1 अप्रैल से 31 मई तक की फ़ाइल दे रहा हूँ; बाक़ी के लिए फिर",
+  "       कहिएगा।»",
+  "    और हर हिस्से की «#» वाली पंक्ति में उसी हिस्से की अवधि, opening और",
+  "    closing लिखो — पूरे statement की नहीं। इससे हर फ़ाइल अपने-आप में",
+  "    पूरी रहती है।",
+  "",
+  "20. आख़िर में ख़ुद जाँच लो — दो तरह से:",
   "    (क) सब Debit का जोड़ और सब Credit का जोड़, statement पर छपे कुल से",
   "        मिलाओ।",
   "    (ख) पिछली बची रकम − गया + आया = इस पंक्ति की बची रकम।",
