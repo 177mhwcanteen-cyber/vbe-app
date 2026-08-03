@@ -1263,6 +1263,26 @@
     </div>
   </div>
 
+  <!-- 🧠 Claude से — मुफ़्त रास्ता (चिपकाकर) -->
+  <div id="claudeSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:480px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>🧠 Claude से बिल बनवाइए</h3>
+        <button class="x" onclick="closeSheet('claudeSheet')">✕</button></div>
+      <div id="claudeBody"></div>
+    </div>
+  </div>
+
+  <!-- ⚙️ कौन पढ़े — Gemini या Claude -->
+  <div id="aiSetupSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:460px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>⚙️ बिल कौन पढ़े</h3>
+        <button class="x" onclick="closeSheet('aiSetupSheet')">✕</button></div>
+      <div id="aiSetupBody"></div>
+    </div>
+  </div>
+
   <!-- 👤 — जो रोज़ नहीं चाहिए वह यहाँ, स्क्रीन पर नहीं -->
   <div id="meSheet" class="sheet" hidden>
     <div class="sheetBox" style="max-width:420px">
@@ -2605,8 +2625,10 @@ function renderSync(err) {
         '<small>आज ' + used.toLocaleString("en-IN") + ' / 50,000 पढ़ाई' +
         (hot ? ' — अब सँभालकर' : '') +
         ' · 🧠 ' + ai.n + ' AI' +
-        (GEMINI_MODEL ? ' · 🪶 ' + GEMINI_MODEL.replace(/^gemini-/, "") : '') +
-        (GEMINI_BIG && GEMINI_BIG !== GEMINI_MODEL
+        (AI_WHO === "claude"
+          ? ' · 🤖 ' + String(CLAUDE_MODEL).replace(/^claude-/, "").replace(/-\d{8}$/, "")
+          : (GEMINI_MODEL ? ' · 🪶 ' + GEMINI_MODEL.replace(/^gemini-/, "") : "")) +
+        (AI_WHO !== "claude" && GEMINI_BIG && GEMINI_BIG !== GEMINI_MODEL
           ? ' · ⚡ ' + GEMINI_BIG.replace(/^gemini-/, "") : '') +
         '</small></span>' +
       '<i style="width:' + pct.toFixed(1) + '%"></i>' +
@@ -6884,11 +6906,7 @@ async function askGemini(use, prompt, dataUrl, extraText, onWait) {
   }
   const text = ((cand.content || {}).parts || []).map(p => p.text || "").join("");
   if (!text.trim()) throw new Error("फोटो में कुछ पढ़ने लायक नहीं मिला");
-  try {
-    return JSON.parse(text.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, ""));
-  } catch (e) {
-    throw new Error("AI का जवाब समझ नहीं आया — दोबारा कोशिश करें");
-  }
+  return jsonOut(text);
 }
 
 function showShots() {
@@ -6984,7 +7002,7 @@ function readEntryBill(btn) {
   return aiClick("bill", btn, async () => {
     if (!ENTRY_SHOTS.bill) { aiSay("पहले बिल की फोटो चुनिए", "bad"); return; }
     try {
-      const r = await askGemini("bill", BILL_PROMPT, ENTRY_SHOTS.bill);
+      const r = await askAI("bill", BILL_PROMPT, ENTRY_SHOTS.bill);
 
       if (r.vendor) $("aVendor").value = r.vendor;
       if (r.billDate) $("aDate").value = r.billDate;
@@ -7074,7 +7092,7 @@ function readEntryRecv(btn) {
   return aiClick("pay", btn, async () => {
     if (!ENTRY_SHOTS.receipt) { aiSay("पहले रसीद की फोटो चुनिए", "bad"); return; }
     try {
-      const r = await askGemini("pay", PAY_PROMPT, ENTRY_SHOTS.receipt);
+      const r = await askAI("pay", PAY_PROMPT, ENTRY_SHOTS.receipt);
       ENTRY_PAY = paymentFromReceipt(r, null);
 
       if (r.utr) $("aUtr").value = r.utr;
@@ -10059,7 +10077,7 @@ function readVcard(btn) {
     if (!VCARD_SHOT) VCARD_SHOT = VCARD_SHOT_KEEP;
     if (!VCARD_SHOT) { m.className = "bad"; m.textContent = "पहले कार्ड की फोटो लगाइए"; return; }
     try {
-      const r = await askGemini("card", VCARD_PROMPT, VCARD_SHOT);
+      const r = await askAI("card", VCARD_PROMPT, VCARD_SHOT);
       // कार्ड में सिर्फ़ कार्ड की चीज़ें जाएँ। AI कभी कुछ और भी लौटा दे तो
       // वह चुपचाप Firestore में नहीं बैठना चाहिए।
       const card = {};
@@ -10149,12 +10167,111 @@ function initParties() {
 
 let GEMINI_KEY = null, APP_CFG = null;
 
+/* ══════════ 🤖 कौन पढ़ेगा — Gemini या Claude ═══════════════════════
+
+   विक्रम जी: «फास्ट एंट्री से जो बिल डालता हूँ उसमें थोड़ा लो क्वालिटी का
+   काम बन रहा है… क्या ऐसा हो सकता है कि Anthropic के Claude में डालूँ और
+   वह बिल अपने-आप मेरे ऐप के अंदर आ जाए?»
+
+   हाँ, दो रास्ते हैं — और दोनों बने हुए हैं:
+
+     🆓 **मुफ़्त रास्ता** — claude.ai पर एक Project बनाइए, उसमें एक बार
+        हमारा प्रॉम्प्ट चिपका दीजिए। फिर रोज़ बस फोटो भेजिए; Claude जो
+        JSON लौटाए उसे ऐप के «🧠 Claude से आया जवाब» वाले खाने में चिपका
+        दीजिए — बिल वैसे ही बन जाएगा जैसे ⚡ से बनता है। एक पैसा नहीं
+        लगता। (देखें pasteClaude / CLAUDE_PROJECT)
+
+     💳 **अपने-आप वाला रास्ता** — Claude की API चाबी डाल दीजिए, फिर ⚡
+        फास्ट एंट्री ख़ुद Claude से पढ़ेगी, कोई चिपकाना नहीं। यह मुफ़्त
+        नहीं है (Gemini की तरह free tier नहीं मिलता), पर बहुत सस्ता है।
+
+   🔒 लकीर वहीं की वहीं: Claude को भी सिर्फ़ बिल/रसीद/स्क्रीनशॉट जाते हैं।
+      बैंक की statement, खाता नंबर और मिलान — किसी AI के पास नहीं जाते।  */
+
+let AI_WHO = "gemini";                 // "gemini" | "claude"
+let CLAUDE_KEY = null;
+let CLAUDE_MODEL = "claude-sonnet-5";  // सबसे अच्छा पढ़ने वाला
+
 async function loadAppConfig() {
   try {
     const d = await db.collection("vbe_meta").doc("app_config").get();
     APP_CFG = d.exists ? d.data() : {};
     GEMINI_KEY = APP_CFG.geminiKey || null;
-  } catch (e) { APP_CFG = {}; GEMINI_KEY = null; }
+    CLAUDE_KEY = APP_CFG.claudeKey || null;
+    CLAUDE_MODEL = APP_CFG.claudeModel || "claude-sonnet-5";
+    AI_WHO = (APP_CFG.aiProvider === "claude" && CLAUDE_KEY) ? "claude" : "gemini";
+  } catch (e) { APP_CFG = {}; GEMINI_KEY = null; CLAUDE_KEY = null; }
+}
+
+/** JSON निकालो — दोनों तरफ़ का जवाब ```json से लिपटा आ सकता है। */
+function jsonOut(text) {
+  const t = String(text || "").trim()
+    .replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "").trim();
+  try { return JSON.parse(t); } catch (e) {}
+  // कभी-कभी आगे-पीछे कुछ लिखा आ जाता है — बीच का { … } उठा लो
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
+  throw new Error("AI का जवाब समझ नहीं आया — दोबारा कोशिश करें");
+}
+
+/** Claude से एक फोटो पढ़वाओ — जवाब वही JSON, जो Gemini देता है। */
+async function askClaude(prompt, dataUrl, extraText, onWait) {
+  if (!CLAUDE_KEY) throw new Error("Claude की चाबी नहीं डाली — ⚙️ से डाल दीजिए");
+  const content = [];
+  if (dataUrl) content.push({ type: "image", source: { type: "base64",
+    media_type: "image/jpeg", data: dataUrl.split(",")[1] } });
+  content.push({ type: "text", text: prompt + "\n\nToday's date is " + todayISO() + "." +
+    (extraText ? "\n\n" + extraText : "") });
+
+  const send = () => fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": CLAUDE_KEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true" },
+    body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 2000,
+      messages: [{ role: "user", content }] })
+  });
+
+  aiCount({ calls: 1 });
+  let res = await send();
+  // 429/5xx पर रुककर फिर — वही नियम जो Gemini पर है
+  for (let wait = 4000, i = 0; !res.ok && i < 3 &&
+       (res.status === 429 || res.status >= 500); i++, wait *= 2) {
+    if (typeof onWait === "function") onWait(Math.round(wait / 1000));
+    await sleep(wait);
+    aiCount({ calls: 1 });
+    res = await send();
+  }
+  if (!res.ok) {
+    const e = new Error(res.status === 401 ? "Claude की चाबी ग़लत लगती है"
+      : res.status === 429 ? "Claude अभी व्यस्त है — थोड़ी देर में फिर"
+      : res.status === 400 ? "Claude ने यह फोटो नहीं पढ़ी"
+      : "Claude से बात नहीं हुई (" + res.status + ")");
+    e.status = res.status;
+    e.canRetry = (res.status === 429 || res.status >= 500);
+    throw e;
+  }
+  const body = await res.json();
+  const text = (body.content || []).map((c) => c.text || "").join("");
+  if (!text.trim()) throw new Error("Claude ने कुछ नहीं लौटाया");
+  return jsonOut(text);
+}
+
+/**
+ * एक ही दरवाज़ा — अंदर चाहे Gemini हो या Claude।
+ * बाक़ी पूरा ऐप सिर्फ़ यही बुलाता है, इसलिए कल कोई तीसरा आए तो भी
+ * बदलाव सिर्फ़ यहीं होगा।
+ */
+async function askAI(use, prompt, dataUrl, extraText, onWait) {
+  const u = AI_USES[use];
+  if (!u) throw new Error("यहाँ AI बंद है");
+  if (!u.auto && AI_CLICK !== use) {
+    throw new Error("यह काम बटन दबाने पर ही होता है — 🧠 वाला बटन दबाइए");
+  }
+  if (AI_WHO === "claude" && CLAUDE_KEY) {
+    return askClaude(prompt, dataUrl, extraText, onWait);
+  }
+  return askGemini(use, prompt, dataUrl, extraText, onWait);
 }
 
 /** Shrink to something a phone uploads quickly and Firestore can hold. */
@@ -10752,7 +10869,7 @@ function readSheetBill(btn) {
     const ai = $("bmAI");
     if (!BILL_SHOTS.bill) { ai.className = "bad"; ai.textContent = "पहले फोटो चुनिए"; return; }
     try {
-      const r = await askGemini("bill", BILL_PROMPT, BILL_SHOTS.bill);
+      const r = await askAI("bill", BILL_PROMPT, BILL_SHOTS.bill);
       fillBillSheet({
         party: { name: r.vendor, phone: r.phone, gstin: r.gstin },
         invoiceNo: r.invoiceNo, billDate: r.billDate, items: r.items,
@@ -12387,9 +12504,14 @@ function renderFastSheet() {
   const box = $("fastBody");
   if (!box) return;
   const live = JOBS.filter((j) => j.status !== "done");
+  const who = AI_WHO === "claude" ? "🤖 Claude" : "🪶 Gemini";
   const head = `<div class="pick" style="margin-bottom:10px">
       <button type="button" class="primary" onclick="pickPhoto('fastFiles')">🖼️ फोटो चुनें</button>
       ${live.length ? `<button type="button" onclick="runJobs(true)">🔄 अभी कोशिश करें</button>` : ""}
+    </div>
+    <div class="pick" style="margin-top:0;margin-bottom:10px">
+      <button type="button" onclick="openClaude()">🧠 Claude से पढ़वाइए</button>
+      <button type="button" onclick="openAiSetup()">⚙️ अभी ${who}</button>
     </div>`;
   if (!live.length) {
     box.innerHTML = gfx.empty("hello", "पेमेंट के स्क्रीनशॉट डालिए",
@@ -12419,6 +12541,239 @@ function renderFastSheet() {
   }).join("") +
     `<div class="muted" style="margin-top:10px">यह sheet बंद कर दीजिए — काम
       पीछे चलता रहेगा। ⚡ पर लगा अंक बताता रहेगा कि कितने बाकी हैं।</div>`;
+}
+
+/* ══════════ 🧠 Claude से — मुफ़्त रास्ता ═══════════════════════════
+
+   एक बार claude.ai पर «VBE बिल» नाम का Project बनाइए और उसकी «Project
+   instructions» में नीचे वाला पाठ चिपका दीजिए। उसके बाद रोज़ बस फोटो
+   भेजिए — Claude वही JSON लौटाएगा जो ऐप समझता है, और उसे यहाँ चिपकाते ही
+   बिल बन जाएगा।
+
+   🆓 इसमें एक पैसा नहीं लगता — claude.ai का अपना इस्तेमाल है, API नहीं।  */
+
+const CLAUDE_PROJECT = [
+  "तुम VBE (Vande Bharat Enterprises, बाड़मेर) का हिसाब रखने में मदद कर रहे हो।",
+  "",
+  "मैं तुम्हें फ़ोन के स्क्रीनशॉट भेजूँगा — WhatsApp की बात, UPI/GPay/PhonePe",
+  "की रसीद, चेक, बैंक की पर्ची, या दुकान का बिल। एक बार में 1 से 4 फोटो।",
+  "",
+  "हर बार सिर्फ़ **एक JSON** लौटाओ — कोई समझाइश नहीं, कोई भूमिका नहीं।",
+  "```json से लपेट सकते हो, बाक़ी कुछ मत लिखो।",
+  "",
+  "{",
+  '  "party": "जिसे पैसा गया, पूरा नाम",',
+  '  "amount": 10800,',
+  '  "date": "2026-08-03",',
+  '  "time": "17:21",',
+  '  "mode": "bank",',
+  '  "utr": "658120673715",',
+  '  "appTxnId": "बैंक/ऐप का अपना नंबर, हो तो",',
+  '  "app": "GPay" | "PhonePe" | "Paytm" | null,',
+  '  "vpa": "8003011493@ibl",',
+  '  "chequeNo": null,',
+  '  "fromAccountNo": "जिस खाते से गया, पूरा नंबर हो तो",',
+  '  "toAccountNo": null,',
+  '  "askedBy": "किसने कहा था — WhatsApp वाले का नाम",',
+  '  "askedPhone": "10 अंक, हो तो",',
+  '  "askedNote": "उसने जो लिखा था, हूबहू",',
+  '  "askedAt": "16:47",',
+  '  "groupName": "ग्रुप का नाम, हो तो",',
+  '  "invoiceNo": null,',
+  '  "items": [ { "name": "जीरा", "qty": 10, "unit": "Kg", "rate": 540,',
+  '               "amount": 5400 } ],',
+  '  "oldDue": 5400,',
+  '  "note": "कुछ और ज़रूरी बात"',
+  "}",
+  "",
+  "नियम:",
+  "1. जो दिखे ही नहीं उसे null रखो — अंदाज़ा कभी मत लगाओ।",
+  "2. रकम सादे अंक — ₹ नहीं, कॉमा नहीं। 10,800 → 10800",
+  "3. तारीख़ हमेशा YYYY-MM-DD, समय 24 घंटे में HH:MM।",
+  "4. **items सबसे ज़रूरी है।** WhatsApp की बात में सामान लिखा हो तो उसे",
+  "   तोड़कर लिखो — «10 jera + 5nimbu Dilevard Total 5400» का मतलब है",
+  '   items: [{"name":"जीरा","qty":10}, {"name":"नींबू","qty":5}] और उस',
+  "   हिस्से का जोड़ 5400। अंग्रेज़ी में लिखा हिंदी नाम हिंदी में लिखो",
+  "   (jera → जीरा, nimbu → नींबू, aalu → आलू)।",
+  "5. «Old 5400 / पुराना 5400» जैसा कुछ लिखा हो तो वह oldDue में जाए,",
+  "   items में नहीं। amount में **कुल** रकम लिखो (जो सचमुच गई)।",
+  "6. UTR वही है जो «UPI transaction ID», «UTR», «Ref No» के साथ छपा हो।",
+  "   कोई भी लंबा नंबर UTR मत मान लेना।",
+  "7. एक से ज़्यादा फोटो हों तो सबको मिलाकर **एक ही** JSON बनाओ।"
+].join("\n");
+
+let CLAUDE_PASTE = "";
+
+function openClaude() {
+  renderClaude();
+  openSheet("claudeSheet");
+}
+
+function renderClaude() {
+  const box = $("claudeBody");
+  if (!box) return;
+  box.innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("book2", 74)}</div>
+      <div class="toonSay"><b>एक बार बना लीजिए, फिर रोज़ सिर्फ़ फोटो</b>
+        <p>claude.ai पर «VBE बिल» नाम का एक Project बनाइए और उसकी
+          <b>Project instructions</b> में नीचे वाला पाठ एक बार चिपका दीजिए।
+          🆓 इसमें कोई पैसा नहीं लगता।</p></div>
+    </div>
+    <div class="pick">
+      <button type="button" class="primary" onclick="copyText(CLAUDE_PROJECT).then(()=>toast('📋 कॉपी — Claude के Project में चिपकाइए'))">
+        📋 Project का पाठ कॉपी करें</button>
+      <a class="mini" target="_blank" rel="noopener" href="https://claude.ai/projects">🔗 claude.ai खोलिए</a>
+    </div>
+    <div class="docList" style="margin-top:12px">
+      <div class="docRow yes"><span class="dIco">1️⃣</span>
+        <div class="dTxt"><b>Claude में फोटो भेजिए</b>
+          <small>उसी Project में — WhatsApp की बात, UPI की रसीद, बिल। एक साथ सब।</small></div></div>
+      <div class="docRow yes"><span class="dIco">2️⃣</span>
+        <div class="dTxt"><b>जो JSON आए उसे कॉपी कीजिए</b>
+          <small>Claude के जवाब पर देर तक दबाइए → Copy।</small></div></div>
+      <div class="docRow yes"><span class="dIco">3️⃣</span>
+        <div class="dTxt"><b>नीचे चिपकाकर «बिल बनाइए» दबाइए</b>
+          <small>बिल वैसे ही बनेगा जैसे ⚡ से बनता है — नंबर, UTR, सब।</small></div></div>
+    </div>
+    <textarea id="claudeJson" rows="6" placeholder="यहाँ Claude का जवाब चिपकाइए…"
+      style="width:100%;margin-top:12px"></textarea>
+    <div class="pick">
+      <button type="button" class="primary" onclick="makeFromClaude(this)">✅ बिल बनाइए</button>
+    </div>
+    <div id="claudeMsg" class="muted" style="margin-top:8px"></div>`;
+}
+
+/** चिपकाए हुए JSON से वही बिल बनाओ जो ⚡ बनाती है। */
+async function makeFromClaude(btn) {
+  const msg = $("claudeMsg");
+  const raw = ($("claudeJson").value || "").trim();
+  if (!raw) { msg.className = "bad"; msg.textContent = "पहले Claude का जवाब चिपकाइए।"; return; }
+  let j;
+  try { j = jsonOut(raw); }
+  catch (e) { msg.className = "bad"; msg.textContent = "यह JSON समझ नहीं आया — पूरा जवाब चिपकाइए।"; return; }
+
+  btn.disabled = true; btn.textContent = "… बना रहा हूँ";
+  msg.className = "muted"; msg.textContent = "बिल बना रहा हूँ…";
+  try {
+    /* Claude का ढाँचा ⚡ वाले «merged» ढाँचे में ढालो — आगे का पूरा रास्ता
+       वही है (saveFastRecord), इसलिए नंबर, दोहरी-entry की जाँच, pricebook,
+       सब अपने-आप वैसे ही चलते हैं।                                      */
+    const m = {
+      party: j.party || j.toName || null,
+      amount: j.amount != null ? Number(j.amount) : null,
+      date: j.date || todayISO(),
+      time: j.time || null,
+      mode: j.mode || (j.chequeNo ? "cheque" : "bank"),
+      utr: j.utr || null,
+      chequeNo: j.chequeNo || null,
+      vpa: j.vpa || j.toVpa || null,
+      accountId: accountByNumber(j.fromAccountNo) || "",
+      fromAccountNo: j.fromAccountNo || null,
+      toAccountNo: j.toAccountNo || null,
+      items: Array.isArray(j.items) ? j.items : [],
+      phone: j.askedPhone || null,
+      avatar: null,
+      group: j.groupName || null,
+      req: j.askedBy ? { askedBy: j.askedBy, askedNote: j.askedNote || null,
+        time: j.askedAt || null } : null,
+      bill: { invoiceNo: j.invoiceNo || null },
+      pay: { app: j.app || null, appTxnId: j.appTxnId || null }
+    };
+    if (m.amount == null) throw new Error("रकम नहीं मिली — Claude से दुबारा पूछिए");
+    const job = { id: "cl" + Date.now().toString(36) };
+    const docId = await saveFastRecord(m, job);
+    if (j.oldDue) {
+      await db.collection("vbe_expenses").doc(docId)
+        .update({ oldDue: Number(j.oldDue) }).catch(() => {});
+    }
+    msg.className = "ok";
+    msg.innerHTML = `✅ बिल बन गया — <b>${esc(m.party || "—")}</b> · ${INR(m.amount)}` +
+      `<br><span class="muted">${esc(job.receiptId || docId)}${
+        m.items.length ? " · " + m.items.length + " चीज़ें" : ""}</span>`;
+    $("claudeJson").value = "";
+    await loadData(true).catch(() => {});
+    renderAll(); refreshAll();
+  } catch (e) {
+    msg.className = "bad"; msg.textContent = "नहीं बना: " + e.message;
+  } finally { btn.disabled = false; btn.textContent = "✅ बिल बनाइए"; }
+}
+
+/* ══════════ ⚙️ बिल कौन पढ़े ═══════════════════════════════════════ */
+
+function openAiSetup() { renderAiSetup(); openSheet("aiSetupSheet"); }
+
+function renderAiSetup() {
+  const box = $("aiSetupBody");
+  if (!box) return;
+  box.innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("think", 70)}</div>
+      <div class="toonSay"><b>⚡ फास्ट एंट्री की फोटो कौन पढ़े?</b>
+        <p>दोनों में से जो चुनेंगे, वही पढ़ेगा। 🔒 किसी को भी सिर्फ़ बिल और
+          रसीद जाती है — बैंक की statement किसी के पास नहीं जाती।</p></div>
+    </div>
+    <div class="uPick">
+      <button type="button" class="${AI_WHO === "gemini" ? "primary" : ""}"
+        onclick="setAiWho('gemini')">🪶 Gemini<br><small>मुफ़्त</small></button>
+      <button type="button" class="${AI_WHO === "claude" ? "primary" : ""}"
+        onclick="setAiWho('claude')">🤖 Claude<br><small>बेहतर, पर पैसे लगते हैं</small></button>
+    </div>
+    <div class="docFix" style="margin-top:12px">
+      <b>🤖 Claude चाहिए तो एक बार चाबी डालनी पड़ेगी</b>
+      <small>console.anthropic.com → API keys → «Create Key» → वहाँ से copy करके
+        नीचे चिपकाइए। Gemini की तरह मुफ़्त नहीं है, पर सस्ता है — एक बिल पढ़ने
+        पर लगभग <b>₹0.30–₹0.60</b>। रोज़ 20 बिल = महीने का ₹200–₹350 के आसपास।
+        चाबी सिर्फ़ आपके अपने Firestore में जाती है, code में कभी नहीं।</small>
+      <input id="clKey" type="password" placeholder="sk-ant-…"
+        style="width:100%;margin-top:9px" value="${esc(CLAUDE_KEY || "")}">
+      <select id="clModel" style="width:100%;margin-top:8px">
+        <option value="claude-sonnet-5"${CLAUDE_MODEL === "claude-sonnet-5" ? " selected" : ""}>
+          Sonnet 5 — सबसे अच्छा पढ़ने वाला</option>
+        <option value="claude-haiku-4-5-20251001"${CLAUDE_MODEL !== "claude-sonnet-5" ? " selected" : ""}>
+          Haiku 4.5 — तेज़ और सस्ता</option>
+      </select>
+      <button type="button" class="mini primary" style="margin-top:9px;width:100%"
+        onclick="saveClaudeKey(this)">💾 चाबी सहेजिए</button>
+    </div>
+    <div id="aiSetupMsg" class="muted" style="margin-top:8px"></div>`;
+}
+
+async function setAiWho(who) {
+  if (who === "claude" && !CLAUDE_KEY) {
+    $("aiSetupMsg").className = "bad";
+    $("aiSetupMsg").textContent = "पहले नीचे Claude की चाबी डाल दीजिए।";
+    return;
+  }
+  const was = AI_WHO;
+  AI_WHO = who;
+  try {
+    await db.collection("vbe_meta").doc("app_config")
+      .set({ aiProvider: who }, { merge: true });
+    await auditLog("ai_provider", { who: was }, { who });
+    toast(who === "claude" ? "🤖 अब Claude पढ़ेगा" : "🪶 अब Gemini पढ़ेगा");
+  } catch (e) { AI_WHO = was; toast("सहेजा नहीं गया"); }
+  renderAiSetup(); renderFastSheet(); renderSync();
+}
+
+async function saveClaudeKey(btn) {
+  const key = ($("clKey").value || "").trim();
+  const model = $("clModel").value;
+  const msg = $("aiSetupMsg");
+  if (key && !/^sk-ant-/.test(key)) {
+    msg.className = "bad"; msg.textContent = "चाबी «sk-ant-» से शुरू होनी चाहिए।"; return;
+  }
+  btn.disabled = true;
+  try {
+    await db.collection("vbe_meta").doc("app_config")
+      .set({ claudeKey: key || null, claudeModel: model }, { merge: true });
+    CLAUDE_KEY = key || null; CLAUDE_MODEL = model;
+    if (!CLAUDE_KEY && AI_WHO === "claude") AI_WHO = "gemini";
+    await auditLog("claude_key_set", null, { model, hasKey: !!key });
+    msg.className = "ok";
+    msg.textContent = key ? "💾 सहेज दी — अब ऊपर 🤖 Claude चुन लीजिए" : "चाबी हटा दी";
+  } catch (e) { msg.className = "bad"; msg.textContent = "सहेजी नहीं गई: " + e.message; }
+  finally { btn.disabled = false; renderAiSetup(); }
 }
 
 function dropJob(id) {
@@ -12464,7 +12819,7 @@ async function runOneJob(job) {
     if (sh.r || sh.skip) continue;
     if (!aiOn("fast")) { sh.skip = true; continue; }
     try {
-      sh.r = await askGemini("fast", FAST_PROMPT, sh.dataUrl);
+      sh.r = await askAI("fast", FAST_PROMPT, sh.dataUrl);
       saveJobs();
     } catch (err) {
       if (err.canRetry) { jobWait(job, err.message); return; }
@@ -13636,7 +13991,7 @@ function readPayShot(idx, btn) {
     if (!p.rawShot) { say("यह फोटो Drive में जा चुकी है — पढ़वाने के लिए रसीद " +
       "दुबारा लगाइए, या ✏️ से भर दीजिए", "bad"); return; }
     try {
-      const r = await askGemini("pay", PAY_PROMPT, p.rawShot);
+      const r = await askAI("pay", PAY_PROMPT, p.rawShot);
       const fresh = paymentFromReceipt(r, p.photoUrl || null);
       // भरे हुए ख़ाने वैसे ही रहें — AI सिर्फ़ ख़ाली जगह भरता है
       ["amount", "paidAt", "time", "app", "status", "utr", "appTxnId",
