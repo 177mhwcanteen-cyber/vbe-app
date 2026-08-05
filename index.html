@@ -1338,6 +1338,16 @@
     </div>
   </div>
 
+  <!-- 🧹 Drive की सफ़ाई -->
+  <div id="dcSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:560px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>🧹 Drive की सफ़ाई</h3>
+        <button class="x" onclick="closeSheet('dcSheet')">✕</button></div>
+      <div id="dcBody"></div>
+    </div>
+  </div>
+
   <!-- 📖 बहीखाता — एक क्लिक पर पूरा खाता -->
   <div id="bahiSheet" class="sheet" hidden>
     <div class="sheetBox" style="max-width:560px">
@@ -1734,7 +1744,9 @@
 
       <!-- 🔌 Google के मुफ़्त connector — Drive, Sheets, Gmail -->
       <div class="card" style="margin-bottom:12px">
-        <div class="itemsHead" style="margin-top:0"><span>🔌 Google से जोड़</span></div>
+        <div class="itemsHead" style="margin-top:0"><span>🔌 Google से जोड़</span>
+          <button type="button" class="primary mini" onclick="openDriveClean()">🧹 Drive की सफ़ाई</button>
+        </div>
         <p class="muted" style="margin-bottom:10px">तीनों मुफ़्त हैं और आपके ही
           Google account में रहते हैं। 🔒 इनमें से कुछ भी AI को नहीं जाता।</p>
         <div class="pick">
@@ -14623,6 +14635,207 @@ const askedMissing = () => EXP.filter((e) =>
 let ASKED_FOR = "";
 
 /** «किसके कहने पर» के लिए संपर्क — खोज के साथ, सबसे ज़्यादा वाला ऊपर। */
+
+
+/* ══════════ 🧹 Drive की सफ़ाई ═══════════════════════════════════════
+
+   विक्रम जी ने Claude को अपनी Drive की पूरी इजाज़त दे दी थी। पर फ़ोन वाले
+   ऐप में हर बार सिर्फ़ **«Allow once»** मिलता है — «Always» वाला विकल्प है
+   ही नहीं। उन्होंने पर्दे की फोटो भेजकर यही दिखाया।
+
+   और Drive को ठीक से जाँचने में 300 से ज़्यादा call लगती हैं। कोई आदमी
+   300 बार बटन नहीं दबा सकता, और मैं करवाऊँगा भी नहीं।
+
+   पर ज़रूरत ही नहीं थी: **ऐप का अपना bot पहले से उनकी Drive में बैठा है**,
+   उन्हीं के खाते से, और इजाज़त एक बार हमेशा के लिए मिल चुकी है। इसलिए
+   सफ़ाई वहीं होती है और यहाँ **एक ही जवाब में पूरी रिपोर्ट** आ जाती है।
+
+   🔒 और सबसे ज़रूरी: यह सफ़ाई **देखकर बताती है, हटाती नहीं।** बैंकिंग ऐप
+      में «अपने-आप हटा दिया» जैसी चीज़ नहीं होती।                        */
+
+let DC = null, DC_BUSY = false;
+
+function openDriveClean() {
+  renderDriveClean();
+  openSheet("dcSheet");
+  if (!DC && !DC_BUSY) runDriveClean();
+}
+
+async function runDriveClean() {
+  if (DC_BUSY) return;
+  DC_BUSY = true;
+  renderDriveClean();
+  try {
+    const r = await botCall("driveaudit", { max: 3000 });
+    if (!r || !r.ok) throw new Error((r && r.error) || "जवाब नहीं आया");
+    DC = r;
+    await auditLog("drive_audit", null,
+      { files: (r.files || []).length, folders: r.folders,
+        dupes: (r.dupes || []).length });
+  } catch (e) {
+    DC = { error: e.message };
+  } finally {
+    DC_BUSY = false;
+    renderDriveClean();
+  }
+}
+
+/**
+ * 🕳️ जो Drive में है, पर ऐप में कभी दर्ज ही नहीं हुई।
+ *
+ * यही सबसे क़ीमती चीज़ है। मिलान **लिंक से** होता है, नाम से नहीं — नाम
+ * बदल सकता है, Drive का लिंक नहीं। हर बिल की हर फोटो का लिंक इकट्ठा करके
+ * देखा जाता है कि Drive वाली फ़ाइल उनमें है या नहीं।
+ */
+function driveKnownIds() {
+  const ids = {};
+  const add = (u) => {
+    const m = String(u || "").match(/[-\w]{25,}/);   // Drive की file id
+    if (m) ids[m[0]] = 1;
+  };
+  EXP.concat(EXP_OUT).forEach((e) => {
+    if (!e) return;
+    add(e.billPhotoDriveUrl);
+    add(e.deliveryPhotoDriveUrl);
+    (e.photos || []).forEach((p) => p && add(p.url));
+  });
+  BANKTXNS.concat(RETIRED).forEach((t) => t && add(t.billPhotoDriveUrl));
+  return ids;
+}
+
+/** ऐप में दर्ज न हुई फ़ाइलें — सिर्फ़ फोटो/PDF, बाक़ी कूड़ा नहीं गिना जाता। */
+function driveOrphans() {
+  if (!DC || !DC.files) return [];
+  const known = driveKnownIds();
+  return DC.files.filter((f) =>
+    !known[f.id] && /^(image\/|application\/pdf)/.test(String(f.mime || "")));
+}
+
+function renderDriveClean() {
+  const box = $("dcBody");
+  if (!box) return;
+
+  if (DC_BUSY) {
+    box.innerHTML = `<div class="toonBox">
+      <div class="toonArt">${gfx.toon("seek", 74)}</div>
+      <div class="toonSay"><b>Drive देख रहा हूँ…</b>
+        <p>आपका अपना bot पूरा <b>VBE-Bills</b> छान रहा है। हज़ार से ज़्यादा
+          फ़ाइलें हों तो आधा मिनट लग सकता है — <b>एक भी बार «Allow» नहीं
+          दबाना पड़ेगा।</b></p></div></div>`;
+    return;
+  }
+
+  if (DC && DC.error) {
+    box.innerHTML = gfx.empty("alert", "Drive नहीं खुली", `${esc(DC.error)}<br><br>
+      अगर लिखा है «unknown action» तो bot अभी पुराना है — Telegram पर
+      <b>/update</b> भेज दीजिए, फिर दुबारा कोशिश कीजिए।`,
+      `<button type="button" class="mini primary" onclick="runDriveClean()">🔄 फिर कोशिश करें</button>`);
+    return;
+  }
+
+  if (!DC) {
+    box.innerHTML = gfx.empty("hello", "Drive की सफ़ाई",
+      `पूरा <b>VBE-Bills</b> देखकर बताऊँगा — कितनी फ़ाइलें हैं, कौन-सी दो बार
+       पड़ी हैं, और <b>कौन-सी फोटो ऐप में कभी दर्ज ही नहीं हुई</b>।
+       🔒 मिटाया कुछ नहीं जाएगा।`,
+      `<button type="button" class="mini primary" onclick="runDriveClean()">🧹 शुरू कीजिए</button>`);
+    return;
+  }
+
+  const orph = driveOrphans();
+  const dupes = DC.dupes || [];
+  const files = DC.files || [];
+
+  box.innerHTML = `
+    <div class="bahiTop">
+      <div><div class="bk">📁 फ़ाइलें</div><div class="bv">${files.length}</div>
+        <div class="bs">${DC.folders} फ़ोल्डर${DC.capped ? " · और भी हैं" : ""}</div></div>
+      <div class="out"><div class="bk">🔁 दोहरी</div>
+        <div class="bv">${dupes.length}</div><div class="bs">एक ही फ़ाइल दो बार</div></div>
+      <div class="out"><div class="bk">🕳️ बिन-दर्ज</div>
+        <div class="bv">${orph.length}</div><div class="bs">ऐप में नहीं</div></div>
+    </div>
+
+    <div class="bahiChain ok">
+      <span>🔒 सिर्फ़ देखा गया — मिटाया कुछ नहीं</span>
+      <span>${DC.skipped ? DC.skipped + " फ़ोल्डर छोड़े (बैंक के काग़ज़)" : "बैंक का फ़ोल्डर छुआ नहीं"}</span>
+    </div>
+
+    <div class="pick" style="margin-top:10px">
+      <button type="button" class="mini" onclick="DC=null;runDriveClean()">🔄 दुबारा देखिए</button>
+    </div>
+
+    ${orph.length ? `
+      <div class="bahiSec">🕳️ ये फोटो ऐप में दर्ज ही नहीं हुईं
+        <small>${orph.length}</small></div>
+      <div class="docFix" style="margin-top:8px">
+        <small>ये Drive में तो पड़ी हैं, पर हिसाब में कभी नहीं चढ़ीं — यानी
+          इनका पैसा कहीं गिना ही नहीं गया। <b>«⚡ इससे बिल बनाइए»</b> दबाने
+          पर फोटो सीधे ⚡ फास्ट एंट्री की क़तार में चली जाएगी, वही रास्ता जिससे
+          रोज़ के बिल बनते हैं।</small>
+      </div>
+      ${orph.slice(0, 40).map((f) => `
+        <div class="mrow">
+          <div class="mx"><b>${esc(f.name)}</b>
+            <br><span class="muted">${esc(f.path || "जड़ में")} · ${esc(f.at)} ·
+              ${Math.round((f.size || 0) / 1024)} KB</span>
+            <div class="pick" style="margin-top:6px">
+              <button type="button" class="mini primary"
+                onclick="orphanToFast('${esc(f.id)}',this)">⚡ इससे बिल बनाइए</button>
+              <a class="mini" href="${esc(f.url)}" target="_blank" rel="noopener"
+                style="text-decoration:none">👁️ देखिए</a>
+            </div></div>
+        </div>`).join("")}
+      ${orph.length > 40 ? `<div class="muted" style="padding:6px 0">… और ${
+        orph.length - 40}</div>` : ""}` : `
+      <div class="bahiSec">✅ एक भी फोटो छूटी नहीं</div>
+      <div class="muted">Drive की हर बिल-फोटो ऐप में दर्ज है।</div>`}
+
+    ${dupes.length ? `
+      <div class="bahiSec">🔁 एक ही फ़ाइल दो बार <small>${dupes.length} जोड़े</small></div>
+      <div class="docFix" style="margin-top:8px">
+        <small>इनका <b>नाम और आकार दोनों एक</b> हैं — दो अलग फोटो का आकार
+          बाइट-दर-बाइट एक होना लगभग नामुमकिन है, इसलिए यह पक्की पहचान है।
+          <b>मिटाया कुछ नहीं जाएगा</b> — देखकर आप ख़ुद तय कीजिए।</small>
+      </div>
+      ${dupes.slice(0, 20).map((g) => `
+        <div class="mrow">
+          <div class="amt out">${g.length}</div>
+          <div class="mx"><b>${esc(g[0].name)}</b>
+            <br><span class="muted">${Math.round((g[0].size || 0) / 1024)} KB</span>
+            <br>${g.map((f) => `<a href="${esc(f.url)}" target="_blank"
+              rel="noopener">${esc(f.path || "जड़")}</a>`).join(" · ")}</div>
+        </div>`).join("")}` : ""}
+
+    ${(DC.empty || []).length ? `
+      <div class="bahiSec">📂 खाली फ़ोल्डर <small>${DC.empty.length}</small></div>
+      <div class="muted">${DC.empty.slice(0, 15).map(esc).join(" · ")}</div>` : ""}`;
+}
+
+/** ⚡ Drive की फ़ाइल सीधे फास्ट एंट्री की क़तार में। */
+async function orphanToFast(id, btn) {
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = "… ला रहा हूँ";
+  try {
+    const r = await botCall("fetch", { id });
+    if (!r || !r.ok) throw new Error((r && r.error) || "फ़ाइल नहीं आई");
+    if (!/^image\//.test(String(r.mime || ""))) {
+      throw new Error("यह फोटो नहीं है — ⚡ सिर्फ़ फोटो पढ़ता है");
+    }
+    JOBS.push({
+      id: "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      shots: [{ dataUrl: r.dataUrl }], status: "queued", tries: 0,
+      at: Date.now(), nextAt: 0, fromDrive: id
+    });
+    saveJobs();
+    btn.textContent = "✅ क़तार में डाल दिया";
+    toast("⚡ क़तार में डाल दिया — पीछे बनता रहेगा");
+    runJobs();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = was;
+    toast("नहीं आई: " + e.message);
+  }
+}
 
 /* ══════════ 📖 बहीखाता — एक क्लिक पर पूरा खाता ═══════════════════════
 
