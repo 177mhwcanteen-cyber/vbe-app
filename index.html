@@ -198,6 +198,28 @@
   .jobCard.dupe .jobTxt b { color: #ff9c9c; }
   .jobIco { font-size: 21px; flex: 0 0 auto; }
 
+  /* ── 🎯 «अभी क्या बाक़ी है» — एक नज़र में पूरी हालत ─────────────── */
+  .todoCard { border: 1px solid var(--border); border-radius: 16px; padding: 13px;
+    margin-bottom: 12px; background: rgba(255,255,255,.03); }
+  .todoCard.ok { border-color: rgba(25,158,112,.5);
+    background: linear-gradient(160deg, rgba(25,158,112,.14), transparent 72%); }
+  .todoHead { display: flex; gap: 8px; align-items: center; font-weight: 800;
+    font-size: 14.5px; margin-bottom: 10px; }
+  .todoHead small { font-weight: 500; color: var(--muted); font-size: 11.5px;
+    margin-left: auto; }
+  .tRow { display: flex; gap: 10px; align-items: center; padding: 9px 0;
+    border-top: 1px solid var(--border); cursor: pointer;
+    transition: transform .12s ease; }
+  .tRow:first-of-type { border-top: 0; }
+  .tRow:active { transform: scale(.99); }
+  .tRow .ti { font-size: 17px; flex: 0 0 22px; text-align: center; }
+  .tRow .tt { flex: 1; min-width: 0; font-size: 13px; }
+  .tRow .tt b { display: block; }
+  .tRow .tt small { color: var(--muted); font-size: 11.5px; }
+  .tRow .tm { flex: 0 0 auto; font-size: 15px; }
+  .tRow.no .tt b { color: #f0c064; }
+  .tRow.bad .tt b { color: #ff9c9c; }
+
   /* ── 🧩 हर जगह वाली पट्टी — फोटो · किसके कहने पर · कौन-सी यूनिट ──── */
   /* फ़ोन पर तीन फोटो + तीन चिप एक पंक्ति में नहीं आते — चिप दाएँ किनारे से
      बाहर निकल जाते थे। इसलिए ऊपर फोटो, नीचे चिप; दोनों अपनी-अपनी पंक्ति में
@@ -1482,6 +1504,7 @@
       <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
       <!-- 🚨 सबसे ऊपर वही जो आज रोकना ज़रूरी है: दोहरी entry, और बिना UTR -->
       <div id="ovAlerts"></div>
+      <div id="ovStatus"></div>
       <div class="tiles" id="tiles"></div>
       <!-- 📎 काम करने की जगह — 10 सबसे बड़े बिना-बिल पेमेंट, एक-एक करके -->
       <div id="ovTodo"></div>
@@ -9788,6 +9811,101 @@ async function savePbOpening() {
    Overview पहले जैसा ही साफ़ रहता है — रोज़ एक लाल पट्टी देखने से आदमी
    उसे देखना ही बंद कर देता है।                                       */
 
+
+/* ══════════ 🎯 अभी क्या बाक़ी है ═══════════════════════════════════════
+
+   विक्रम जी: «मैंने यह काम कर दिया था, फिर भी आपके पास मेरी Drive का
+   एक्सेस है — एक बार आप चेक कर लीजिए।»
+
+   यही वह जगह है जहाँ ऐप कम पड़ रहा था। उन्होंने काम कर दिया, पर **यह
+   देखने का कोई तरीक़ा ही नहीं था कि हुआ या नहीं** — इसलिए हर बार मुझसे
+   पूछना पड़ता। और मेरा Drive-connector इस बातचीत में बार-बार बंद हो जाता
+   है, यानी मैं भरोसे लायक़ जवाब भी नहीं दे पाता।
+
+   इसलिए अब **ऐप ख़ुद बताता है।** Overview के सबसे ऊपर पूरी हालत — क्या
+   हो गया, क्या बाक़ी — और हर पीली पंक्ति दबाते ही वहीं पहुँचा देती है
+   जहाँ वह भरी जाती है।
+
+   🛑 और एक ज़रूरी बात: गिनती **चुनी हुई अवधि की नहीं, पूरे हिसाब की** होती
+      है। «इस महीने» चुनकर कार्ड हरा दिख जाए और पीछे 43 बिल अधूरे पड़े रहें
+      — यह सबसे भ्रम फैलाने वाली चीज़ होती।                               */
+
+const DC_KEY = "vbeDriveClean";
+
+/** पिछली Drive-सफ़ाई का नतीजा — पर्दा बंद होने पर भी याद रहे। */
+function lastDriveClean() {
+  try { return JSON.parse(localStorage.getItem(DC_KEY) || "null"); }
+  catch (e) { return null; }
+}
+function saveDriveClean(o) {
+  try { localStorage.setItem(DC_KEY, JSON.stringify(o)); } catch (e) {}
+}
+
+/** पूरे हिसाब की हालत — छह पंक्तियाँ, हर एक का अपना इलाज। */
+function appStatus() {
+  const noAsk = askedMissing().length;
+  const noUnit = EXP.filter((e) => !e.unit).length;
+  const noShot = EXP.filter((e) => !billShots(e).length).length;
+  const accTw = findAccTwins().length;
+  const billTw = findBillTwins().length;
+  const dc = lastDriveClean();
+  return [
+    { k: "acc", ic: "🏦", name: "खाते", bad: !!accTw,
+      ok: "हर असली खाता ऐप में एक ही बार दर्ज है",
+      no: accTw + " खाते असल में एक ही हैं — पैसा बँटा हुआ है",
+      go: "goTab('recon')", hard: 1 },
+    { k: "dupe", ic: "🔁", name: "दोहरे बिल", bad: !!billTw,
+      ok: "एक भी बिल दोहरा नहीं",
+      no: billTw + " बिल दोहरे हैं — वही UTR दो जगह",
+      go: "goTab('bills')", hard: 1 },
+    { k: "ask", ic: "🙋", name: "किसके कहने पर", bad: !!noAsk,
+      ok: "हर बिल पर नाम लिखा है",
+      no: noAsk + " बिल पर नाम नहीं लिखा", go: "goTab('bills')" },
+    { k: "unit", ic: "🎯", name: "कौन-सी यूनिट", bad: !!noUnit,
+      ok: "हर बिल पर यूनिट लगी है",
+      no: noUnit + " बिल पर यूनिट नहीं लगी", go: "goTab('unit')" },
+    { k: "shot", ic: "📷", name: "काग़ज़", bad: !!noShot,
+      ok: "हर बिल पर कम से कम एक फोटो है",
+      no: noShot + " बिल पर कोई फोटो नहीं", go: "goTab('bills')" },
+    { k: "drive", ic: "🧹", name: "Drive",
+      bad: !!(dc && (dc.lost || dc.orph)), unknown: !dc,
+      ok: dc ? `${esc(dayLabel(dc.at))} को देखी — ${dc.files} फ़ाइलें, सब जुड़ी हुई`
+             : "अभी तक देखी नहीं",
+      no: dc ? `${dc.lost || 0} की कड़ी टूटी · ${dc.orph || 0} बिन-दर्ज` : "",
+      go: "goTab('recon');openDriveClean()" }
+  ];
+}
+
+function renderStatus() {
+  const box = $("ovStatus");
+  if (!box) return;
+  const rows = appStatus();
+  const bad = rows.filter((r) => r.bad);
+  const hard = bad.filter((r) => r.hard).length;
+
+  box.innerHTML = `
+    <div class="todoCard ${bad.length ? "" : "ok"}">
+      <div class="todoHead">${bad.length ? "🎯 अभी क्या बाक़ी है"
+        : "🎉 सब हो गया, विक्रम जी"}
+        <small>${bad.length ? bad.length + " जगह" : "पूरा हिसाब"}</small></div>
+      ${bad.length ? "" : `<div class="muted" style="margin-bottom:8px">
+        हर खाता एक ही बार · कोई बिल दोहरा नहीं · हर बिल पर नाम, यूनिट और
+        काग़ज़। <b>हिसाब पूरा सीधा है।</b></div>`}
+      ${rows.map((r) => `
+        <div class="tRow ${r.bad ? (r.hard ? "bad" : "no") : ""}"
+             onclick="${esc(r.go)}">
+          <span class="ti">${r.ic}</span>
+          <div class="tt"><b>${esc(r.name)}</b>
+            <small>${r.bad ? esc(r.no) : esc(r.ok)}</small></div>
+          <span class="tm">${r.bad ? (r.hard ? "🔴" : "🟡")
+            : r.unknown ? "•" : "✅"}</span>
+        </div>`).join("")}
+      ${hard ? `<div class="muted" style="margin-top:9px;padding-top:9px;
+        border-top:1px solid var(--border)">🔴 वाली दो सबसे भारी हैं — जब तक
+        वे नहीं सुधरतीं, बची रकम की जंज़ीर पूरी नहीं मिलेगी।</div>` : ""}
+    </div>`;
+}
+
 function renderAlerts() {
   const box = $("ovAlerts");
   if (!box) return;
@@ -11274,6 +11392,7 @@ function refreshAll() {
   try { renderMissing(); } catch (e) {}
   try { renderAccounts(); renderCoverage(); } catch (e) {}
   try { renderRepeat(); } catch (e) {}
+  try { renderStatus(); } catch (e) {}
   try { renderUnitTab(); renderUnitWatch(); renderChallanWatch(); } catch (e) {}
   try { renderUdhaar(); renderCheques(); renderStaff(); } catch (e) {}
   try { if (PB_ACC) initPass(); } catch (e) {}
@@ -14886,6 +15005,16 @@ async function runDriveClean() {
     const r = await botCall("driveaudit", { max: 3000 });
     if (!r || !r.ok) throw new Error((r && r.error) || "जवाब नहीं आया");
     DC = r;
+    /* 🧾 नतीजा फ़ोन में सँभाल लो — पर्दा बंद होते ही ग़ायब न हो जाए। इससे
+       «पिछली बार 43 थीं, अब 0» वाली तुलना भी दिखने लगती है, यानी काम हुआ
+       या नहीं यह ख़ुद पता चल जाता है। */
+    const all = driveOrphans();
+    saveDriveClean({
+      at: todayISO(), files: (r.files || []).length, folders: r.folders,
+      dupes: (r.dupes || []).length,
+      lost: all.filter((f) => drivePhotoOwner(f.name)).length,
+      orph: all.filter((f) => !drivePhotoOwner(f.name)).length
+    });
     await auditLog("drive_audit", null,
       { files: (r.files || []).length, folders: r.folders,
         dupes: (r.dupes || []).length });
@@ -15137,6 +15266,10 @@ async function relinkAll(btn) {
     if (ok) done++; else failed++;
   }
   await auditLog("drive_relink", null, { done, failed });
+  // सँभाला हुआ नतीजा भी वहीं का वहीं सुधर जाए
+  const prev = lastDriveClean();
+  if (prev) saveDriveClean(Object.assign({}, prev,
+    { lost: Math.max(0, (prev.lost || 0) - done) }));
   saveCache();
   toast(`🔗 ${done} फोटो अपने बिल में जुड़ गईं` +
     (failed ? ` · ${failed} नहीं जुड़ीं` : ""));
