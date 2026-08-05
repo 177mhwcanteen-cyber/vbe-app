@@ -198,6 +198,36 @@
   .jobCard.dupe .jobTxt b { color: #ff9c9c; }
   .jobIco { font-size: 21px; flex: 0 0 auto; }
 
+  /* ── 🧩 हर जगह वाली पट्टी — फोटो · किसके कहने पर · कौन-सी यूनिट ──── */
+  /* फ़ोन पर तीन फोटो + तीन चिप एक पंक्ति में नहीं आते — चिप दाएँ किनारे से
+     बाहर निकल जाते थे। इसलिए ऊपर फोटो, नीचे चिप; दोनों अपनी-अपनी पंक्ति में
+     लपेट भी जाते हैं। */
+  .bStrip { display: flex; flex-direction: column; gap: 8px; margin-top: 9px;
+    padding-top: 9px; border-top: 1px dashed var(--border); }
+  .bShots { display: flex; gap: 6px; flex-wrap: wrap; }
+  .bShot { width: 72px; height: 72px; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--border); background: rgba(255,255,255,.04);
+    display: grid; place-items: center; position: relative; cursor: pointer;
+    transition: transform .12s ease, border-color .12s ease; }
+  .bShot:active { transform: scale(.94); border-color: var(--acc); }
+  .bShot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bShot .kk { position: absolute; left: 0; right: 0; bottom: 0; font-size: 9px;
+    text-align: center; padding: 2px 0; background: rgba(0,0,0,.62);
+    color: #fff; letter-spacing: .2px; }
+  .bShot.none { border-style: dashed; font-size: 22px; color: var(--muted); }
+  .bMeta { flex: 1; min-width: 0; display: flex; gap: 6px; flex-wrap: wrap;
+    align-content: flex-start; }
+  .bTag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+    padding: 7px 11px; border-radius: 999px; border: 1px solid var(--border);
+    background: rgba(255,255,255,.04); cursor: pointer; max-width: 100%;
+    transition: transform .12s ease; }
+  .bTag:active { transform: scale(.95); }
+  .bTag b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bTag.on { border-color: rgba(25,158,112,.55); color: #86e3bf;
+    background: rgba(25,158,112,.14); }
+  .bTag.off { border-color: rgba(201,133,0,.55); color: #f0c064;
+    background: rgba(201,133,0,.12); }
+
   /* ── 📖 बहीखाता — CA को भेजने लायक़ काग़ज़ ───────────────────────── */
   .bahiTop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
     margin: 12px 0; }
@@ -10745,9 +10775,10 @@ function showParty(key) {
           <br><span class="muted">${esc(accLabel(r.account))}${r.unit ? " · " + esc(r.unit) : ""}
             ${r.status ? " · " + esc(r.status) : ""}</span>
           ${r.narration ? '<br><span class="muted">' + esc(String(r.narration).slice(0, 70)) + "</span>" : ""}
-          ${r.kind === "bill" && r.id
-            ? `<div style="margin-top:7px"><button type="button" class="mini"
-                 onclick="editExpense('${esc(r.id)}')">✏️ सुधारें</button></div>` : ""}
+          ${(() => {
+            const e = r.id ? EXP.filter((x) => x._id === r.id)[0] : null;
+            return e ? billStrip(e, { close: "partySheet" }) : "";
+          })()}
         </div>
       </div>`).join("") || '<div class="empty">इस अवधि में कुछ नहीं</div>'}`;
   renderVcard(p);
@@ -13196,6 +13227,89 @@ function billPhotoUrl(e) {
 /** इस बिल का UTR अभी बाकी है या नहीं — पीले रंग की जड़। */
 const utrPending = (e) => !!e.needsUtr && !(e.payments || []).some((p) => p.utr);
 
+
+/* ══════════ 🧩 एक ही पट्टी, हर जगह ═══════════════════════════════════
+
+   विक्रम जी: «ऐसे नहीं हो कि ऐप की एक जगह पर तो फोटो नज़र आ रहा है, वहीं
+   दूसरी जगह नज़र नहीं आ रहा। इंटीग्रेटेड व्यवस्था होनी चाहिए।»
+
+   शिकायत सही थी, और वजह भी साफ़ थी: `gfx.photo()` पूरे ऐप में **सिर्फ़ तीन
+   जगह** बुलाया जाता था। बहीखाते में सिर्फ़ लिंक थे, पार्टी और यूनिट के
+   पन्नों पर कुछ भी नहीं। वही हाल «किसके कहने पर» और «यूनिट» का — बिल की
+   सूची पर चिप, बाक़ी जगह सादा पाठ, और भरने का कोई रास्ता नहीं।
+
+   ग़लती यह थी कि हर पन्ना अपने हिसाब से दिखा रहा था। अब **दिखाने वाली चीज़
+   एक ही है** — यह पट्टी — और वही हर जगह लगती है। इसलिए एक जगह नाम भरने पर
+   वह हर जगह दिख जाता है, और आगे कोई पन्ना पीछे छूट भी नहीं सकता।         */
+
+/** इस बिल की सारी फोटो — पुराने ख़ाने भी, नए भी, एक ही क़तार में। */
+function billShots(e) {
+  if (!e) return [];
+  const out = [], seen = {};
+  const add = (url, kind) => {
+    const u = String(url || "").trim();
+    if (!u || seen[u]) return;
+    seen[u] = 1;
+    out.push({ url: u, kind: kind || "other" });
+  };
+  (e.photos || []).forEach((p) => p && add(p.url, p.kind));
+  add(e.billPhotoDriveUrl, "bill");
+  add(e.deliveryPhotoDriveUrl, "delivery");
+  return out;
+}
+
+const SHOT_NAME = { bill: "बिल", payment: "रसीद", request: "बात",
+  cheque: "चेक", slip: "पर्ची", qr: "QR", delivery: "डिलीवरी", other: "काग़ज़" };
+
+/**
+ * 🧩 फोटो + «किसके कहने पर» + «किस यूनिट को» — तीनों, हर जगह एक जैसे।
+ *
+ * जो चीज़ नहीं है उसे ख़ाली नहीं छोड़ा जाता: वहाँ पीला चिप आता है और दबाते
+ * ही वही पर्दा खुल जाता है जहाँ से वह भरी जाती है।
+ *
+ * @param {object} e   बिल
+ * @param {object} opt {close: "किस sheet को बंद करना है"}
+ */
+function billStrip(e, opt) {
+  if (!e || !e._id) return "";
+  const id = esc(e._id);
+  const o = opt || {};
+  const shut = o.close ? `closeSheet('${esc(o.close)}');` : "";
+  const shots = billShots(e).slice(0, 4);
+  const ph = phoneKey(e.requestedPhone);
+  const c = ph ? CONTACTS[ph] : null;
+  const who = (c && c.name) || e.requestedBy || "";
+  const role = c && c.role;
+
+  return `
+  <div class="bStrip" onclick="event.stopPropagation()">
+    <div class="bShots">
+      ${shots.length ? shots.map((p) => `
+        <div class="bShot" onclick="lightbox('${esc(p.url)}')">
+          <img src="${esc(gfx.imgUrl(p.url))}" alt="${esc(SHOT_NAME[p.kind] || "काग़ज़")}"
+            loading="lazy"
+            onerror="this.replaceWith(Object.assign(document.createElement('div'),{textContent:'🧾',style:'font-size:24px'}))">
+          <span class="kk">${esc(SHOT_NAME[p.kind] || p.kind)}</span>
+        </div>`).join("")
+        : `<div class="bShot none" title="बिल लगाइए"
+             onclick="${shut}editExpense('${id}')">📷</div>`}
+    </div>
+    <div class="bMeta">
+      <span class="bTag ${who ? "on" : "off"}" onclick="${shut}openAsked('${id}')">
+        ${who ? (ROLE_ICON[role] || "🙋") + " <b>" + esc(who) + "</b>"
+              : "❓ <b>किसके कहने पर</b>"}
+      </span>
+      <span class="bTag ${e.unit ? "on" : "off"}" onclick="${shut}askUnit('${id}')">
+        ${e.unit ? "🎯 <b>" + esc(e.unit) + "</b>" : "❓ <b>यूनिट नहीं</b>"}
+      </span>
+      ${shots.length ? `<span class="bTag" onclick="${shut}editExpense('${id}')">
+        📎 <b>${shots.length} काग़ज़</b></span>`
+        : `<span class="bTag off" onclick="${shut}editExpense('${id}')">
+        📷 <b>बिल लगाइए</b></span>`}
+    </div>
+  </div>`;
+}
+
 function billCards(rows) {
   return rows.map((e) => {
     const url = billPhotoUrl(e);
@@ -13217,17 +13331,12 @@ function billCards(rows) {
         </div>
         <div class="bi">${esc(e.receiptId || "")} · ${esc(dayLabel(String(e.billDate || "").slice(0, 10))
           || (e._date ? e._date.toLocaleDateString("en-IN") : ""))}</div>
-        <div class="uLine" onclick="event.stopPropagation()">${unitChip(e)}</div>
         ${items.length ? `<div class="bi">${items.join(" · ")}${more > 0 ? ` +${more} और` : ""}</div>` : ""}
+        ${billStrip(e)}
         <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <span class="chip ${esc(e.status)}"><i></i>${esc(e.status)}</span>
           ${(e.flags || []).map((f) => `<span class="badge lo" title="${esc(FLAG_TEXT[f] || f)}">${FLAG_ICONS[f] || "⚠️"}</span>`).join("")}
-          ${extra ? `<span class="badge">📷 ${extra}</span>` : ""}
           ${noUtr ? '<span class="utrTag">🟡 UTR बाकी</span>' : ""}
-          ${e.requestedBy ? `<span class="badge asked">🙋 ${esc(e.requestedBy)}${
-            e.requestedAt ? " · " + esc(e.requestedAt) : ""}</span>`
-            : `<button type="button" class="mini" style="border-color:rgba(250,178,25,.45)"
-                onclick="event.stopPropagation();openAsked('${esc(e._id)}')">🙋 किसके कहने पर?</button>`}
           ${e.unverified ? '<span class="utrTag">✅ देखना बाकी</span>' : ""}
           ${s2.due > 0.5 ? `<span class="badge lo">⚖️ ${INR(s2.due)} बाकी</span>` : ""}
           ${e.challanNo ? `<span class="badge ok2">🧾 ${esc(e.challanNo)}</span>`
@@ -15265,26 +15374,14 @@ function bahiCard(r) {
     <div class="bStory"><div class="sl"><span>${esc(noBillWhy(t))}</span>
       <span class="muted">इसका बिल नहीं होता</span></div></div>` : `
     <div class="bStory">
-      <div class="sl"><span>🙋 किसके कहने पर</span><span>${
-        r.asker ? esc(r.asker) + (r.askerPhone ? ` · ${esc(phoneShow(r.askerPhone))}` : "") +
-          (r.askerRole ? ` · ${r.askerRole === "officer" ? "🎖️ आर्मी ऑफ़िसर" : "🧑‍🍳 स्टाफ़"}` : "")
-          : miss("पता नहीं", fixExp("openAsked"))}</span></div>
-      <div class="sl"><span>🎯 किस यूनिट को</span><span>${
-        r.unit ? esc(r.unit)
-          : miss("यूनिट नहीं लगी", fixExp("editExpense"))}</span></div>
+      ${r.e ? "" : `<div class="sl"><span>🙋 किसके कहने पर</span><span>${
+        miss("बिल ही नहीं लगा", fixExp("openAsked"))}</span></div>`}
       <div class="sl"><span>🛒 क्या ख़रीदा</span><span>${
         r.items.length ? esc(r.items.map((i) => i.name +
             (i.qty != null ? " " + i.qty + (i.unit ? " " + i.unit : "") : "")).join(" · "))
           : miss("बिल नहीं लगा", fixExp("editExpense"))}</span></div>
-      <div class="sl"><span>📎 काग़ज़</span><span>${
-        r.photos.length
-          ? r.photos.map((p) => p && p.url
-              ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">${
-                  p.kind === "bill" ? "🧾 बिल" : p.kind === "payment" ? "📱 रसीद"
-                  : p.kind === "request" ? "💬 WhatsApp" : "📎 " + esc(p.kind || "काग़ज़")}</a>`
-              : "").filter(Boolean).join(" · ") || miss("कुछ नहीं लगा", fixExp("editExpense"))
-          : miss("कुछ नहीं लगा", fixExp("editExpense"))}</span></div>
-    </div>`)}
+    </div>
+    ${r.e ? billStrip(r.e, { close: "bahiSheet" }) : ""}`)}
   </div>`;
 }
 
