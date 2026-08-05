@@ -220,6 +220,18 @@
   .tRow.no .tt b { color: #f0c064; }
   .tRow.bad .tt b { color: #ff9c9c; }
 
+  /* ── 👥 मेरी टीम ─────────────────────────────────────────────── */
+  .tmRow { display: flex; gap: 11px; align-items: center; padding: 11px 0;
+    border-top: 1px solid var(--border); }
+  .tmRow:first-of-type { border-top: 0; }
+  .tmWho { flex: 1; min-width: 0; }
+  .tmWho b { display: block; font-size: 14px; }
+  .tmWho small { display: block; color: var(--muted); font-size: 11.5px;
+    margin-top: 2px; }
+  .tmSum { flex: 0 0 auto; text-align: right; font-size: 12.5px; }
+  .tmSum b { display: block; font-weight: 800; }
+  .tmSum small { color: var(--muted); font-size: 11px; }
+
   /* ── 🧩 हर जगह वाली पट्टी — फोटो · किसके कहने पर · कौन-सी यूनिट ──── */
   /* फ़ोन पर तीन फोटो + तीन चिप एक पंक्ति में नहीं आते — चिप दाएँ किनारे से
      बाहर निकल जाते थे। इसलिए ऊपर फोटो, नीचे चिप; दोनों अपनी-अपनी पंक्ति में
@@ -1387,6 +1399,16 @@
       <div class="sheetHead"><h3>⚡ फास्ट एंट्री</h3>
         <button class="x" onclick="closeSheet('fastSheet')">✕</button></div>
       <div id="fastBody"></div>
+    </div>
+  </div>
+
+  <!-- 👥 मेरी टीम -->
+  <div id="teamSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:520px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>👥 मेरी टीम</h3>
+        <button class="x" onclick="closeSheet('teamSheet')">✕</button></div>
+      <div id="teamBody"></div>
     </div>
   </div>
 
@@ -2762,7 +2784,12 @@ async function fetchAll() {
   try {
     const ct = markCapped("संपर्क", await pageAll("vbe_contacts", 10000));
     CONTACTS = {};
-    ct.forEach((d) => { CONTACTS[d.id] = d.data(); });
+    CONTACT_OUT = {};
+    ct.forEach((d) => {
+      const c = d.data();
+      // 🔗 जो दूसरे में मिल चुका, वह सूची में नहीं आता (मिटता फिर भी नहीं)
+      (c && c.mergedInto ? CONTACT_OUT : CONTACTS)[d.id] = c;
+    });
     n += ct.length;
   } catch (e) { CONTACTS = {}; }
   try {
@@ -14710,7 +14737,15 @@ function mergeShots(shots) {
     party, amount, vpa, vpaMatch, pay, req, bill, qr, chq, slip,
     mode: (chq || slip) && !pay ? (chq ? "cheque" : "bank") : "bank",
     chequeNo: digits((chq && chq.chequeNo) || (slip && slip.chequeNo)) || null,
-    phone: (req && req.askedPhone) || (bill && bill.askedPhone) || null,
+    /* 🩸 v41 — यहीं वह गड़बड़ थी जिससे संपर्क-सूची में «JJ 1549 74» जैसे
+       नाम घुस गए थे। पहले यहाँ `(bill && bill.askedPhone)` भी था — यानी
+       **बिल की फोटो से भी «किसने कहा» वाला नंबर उठा लिया जाता था।**
+
+       बिल पर छपा नंबर दुकान का होता है, गाड़ी का होता है, कोई कोड होता है
+       — उसका «किसके कहने पर» से कोई लेना-देना नहीं। वह पार्टी की डिटेल
+       में जाता है, टीम में नहीं। इसलिए अब सिर्फ़ चैट/WhatsApp वाली फोटो
+       से लिया जाता है।                                                  */
+    phone: (req && req.askedPhone) || null,
     avatar: (req && req.askedByAvatar) || null,
     group: (req && req.groupName) || null,
     fromAccountNo: fromNo || null,
@@ -15674,6 +15709,360 @@ function renderRegulars() {
     </div>` : ""}`;
 }
 
+
+/* ══════════ 👥 मेरी टीम ═══════════════════════════════════════════════
+
+   विक्रम जी: «मेरा एक स्टाफ़ है नरपत — उसके तीन-चार contact हो गए हैं। अब
+   कल की तारीख़ में सर्च करूँगा तो कुछ निकलकर नहीं आएगा… अगर हर बार अलग नाम
+   से ऐड होगा तो यह पूरी व्यवस्था ज़ीरो हो जाएगी।»
+
+   उनके स्क्रीनशॉट में ऐप ख़ुद यह सुझा रहा था:
+
+       👑 इन्हें पक्का कर लीजिए?
+          Narpat Meghwal Marwar Rasoi  · 8 बार
+          JJ 1549 74 ge…               · 4 बार   ← यह आदमी है ही नहीं
+          JJ 2314 Ladhu…               · 4 बार
+
+   `JJ 1549 74` किसी गाड़ी का नंबर है या बिल पर छपा कोई कोड। जड़ ऊपर
+   mergeShots() में थी और वह बंद कर दी गई — पर जो कूड़ा पहले से भर चुका है,
+   उसे साफ़ करने का रास्ता भी चाहिए। यह पन्ना वही है।
+
+   📞 पहचान **नंबर** है, नाम नहीं। «मनोज» दो हो सकते हैं, नंबर एक ही होता
+      है। पूरा संग्रह नंबर से ही बना है और firestore.rules में भी वही जाँच
+      है — इसलिए एक नंबर दो बार दर्ज हो ही नहीं सकता।                    */
+
+/** इस आदमी का कॉलिंग नंबर — अलग न भरा हो तो WhatsApp वाला ही। */
+const callNo = (c) => (c && (c.callPhone || c.phone)) || "";
+
+/** पूरी टीम — सबसे ज़्यादा कहने वाले पहले। */
+function teamRows(q) {
+  const k = pKey(q || "");
+  const digits = String(q || "").replace(/\D/g, "");
+  return Object.values(CONTACTS)
+    .filter((c) => c && c.phone)
+    .map((c) => Object.assign({}, c, contactSpend(c.phone)))
+    .filter((c) => {
+      if (!q) return true;
+      /* नंबर से खोज तभी, जब सवाल **सिर्फ़ अंकों का** हो। पहले «110 Engineer»
+         लिखने पर भी नंबर वाला रास्ता पकड़ लिया जाता था और यूनिट से कुछ नहीं
+         मिलता था — जबकि यूनिट के नाम में अंक होना आम बात है। */
+      if (/^[\d\s+-]+$/.test(String(q).trim()) && digits.length >= 3) {
+        return (c.phone + " " + callNo(c)).indexOf(digits) >= 0;
+      }
+      return [c.name, c.unit].concat(c.aliases || [])
+        .some((a) => a && pKey(a).includes(k));
+    })
+    .sort((a, b) => (b.regular ? 1 : 0) - (a.regular ? 1 : 0) ||
+      (b.rows.length - a.rows.length) || (b.sum - a.sum));
+}
+
+/**
+ * 🔗 ये एक ही आदमी लगते हैं?
+ *
+ * नाम की शुरुआत मिलती हो तो जोड़ा सुझाया जाता है। **मिलाता ऐप ख़ुद नहीं** —
+ * दो अलग आदमी भी एक नाम के हो सकते हैं।
+ *
+ * ⚠️ पर यह आधा ही इलाज है, और यह साफ़ लिख देना ज़रूरी है: विक्रम जी के
+ *    यहाँ वही आदमी **«नरपत मेघवाल»** और **«Narpat Meghwal Marwar Rasoi»**
+ *    बनकर बैठा है — एक देवनागरी में, एक रोमन में। दोनों की शुरुआत कभी नहीं
+ *    मिलेगी, इसलिए ऐप उन्हें जोड़ ही नहीं सकता।
+ *
+ *    यही सबक़ v31 में खातों पर मिला था: **पहचानना ऐप का काम है, जानना
+ *    विक्रम जी का।** इसलिए नीचे «🔗 दो नाम मिलाइए» वाला हाथ का रास्ता भी
+ *    है, जो लिपि की परवाह किए बिना हमेशा चलता है।
+ */
+function teamTwins() {
+  const rows = Object.values(CONTACTS).filter((c) => c && c.phone && c.name)
+    .map((c) => Object.assign({}, c, contactSpend(c.phone)));
+  const out = [], seen = {};
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = i + 1; j < rows.length; j++) {
+      const a = rows[i], b = rows[j];
+      const x = pKey(a.name), y = pKey(b.name);
+      if (!x || !y || x.length < 4 || y.length < 4) continue;
+      const near = x === y || x.indexOf(y) === 0 || y.indexOf(x) === 0;
+      if (!near) continue;
+      let keep = a, lose = b;
+      if (lose.rows.length > keep.rows.length) { keep = b; lose = a; }
+      const kk = keep.phone + "|" + lose.phone;
+      if (seen[kk]) continue;
+      seen[kk] = 1;
+      out.push({ keep, lose });
+    }
+  }
+  return out.sort((a, b) => b.lose.rows.length - a.lose.rows.length);
+}
+
+/**
+ * 🔗 दो contact मिला दो — सारे पुराने बिल एक ही आदमी पर।
+ * **मिटता कुछ नहीं**: पुराना नाम उपनाम में रहता है और उसका दस्तावेज़ भी।
+ */
+async function mergeContacts(losePhone, keepPhone) {
+  const lose = CONTACTS[losePhone], keep = CONTACTS[keepPhone];
+  if (!lose || !keep || losePhone === keepPhone) return null;
+  const bills = EXP.concat(EXP_OUT)
+    .filter((e) => e && phoneKey(e.requestedPhone) === losePhone);
+
+  const B = batcher();
+  bills.forEach((e) => {
+    B.update(db.collection("vbe_expenses").doc(e._id),
+      { requestedPhone: keepPhone, requestedBy: keep.name || e.requestedBy || null });
+    e.requestedPhone = keepPhone;
+    e.requestedBy = keep.name || e.requestedBy || null;
+  });
+  // पुराना नाम उपनाम में — ताकि उसी से खोजने पर भी मिल जाए
+  const aliases = [...new Set((keep.aliases || [])
+    .concat([lose.name]).concat(lose.aliases || []).filter(Boolean)
+    .filter((a) => pKey(a) !== pKey(keep.name)))].slice(0, 8);
+  B.set(db.collection("vbe_contacts").doc(keepPhone), { aliases }, { merge: true });
+  B.set(db.collection("vbe_contacts").doc(losePhone),
+    { mergedInto: keepPhone, mergedAt: todayISO() }, { merge: true });
+  await B.done();
+
+  keep.aliases = aliases;
+  CONTACT_OUT[losePhone] = Object.assign({}, lose, { mergedInto: keepPhone });
+  delete CONTACTS[losePhone];
+  await auditLog("contacts_merged",
+    { phone: losePhone, name: lose.name, bills: bills.length },
+    { phone: keepPhone, name: keep.name });
+  saveCache();
+  return { bills: bills.length };
+}
+
+let CONTACT_OUT = {};
+
+/* ── 👥 पन्ना ─────────────────────────────────────────────────────── */
+
+let TEAM_EDIT = null;
+
+function openTeam() { TEAM_EDIT = null; renderTeam(); openSheet("teamSheet"); }
+
+function renderTeam(q) {
+  const box = $("teamBody");
+  if (!box) return;
+  const rows = teamRows(q === undefined ? ($("tmQ") ? $("tmQ").value : "") : q);
+  const tw = teamTwins();
+
+  box.innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("party", 70)}</div>
+      <div class="toonSay"><b>जिनके कहने पर पैसा जाता है</b>
+        <p>यहाँ हर आदमी <b>एक ही बार</b> दर्ज रहता है। पहचान उसका
+          <b>मोबाइल नंबर</b> है — नाम नहीं, क्योंकि «मनोज» दो हो सकते हैं,
+          नंबर एक ही होता है।</p></div>
+    </div>
+
+    <div class="pick" style="margin-bottom:10px">
+      <button type="button" class="primary" onclick="editTeam('')">➕ नया आदमी</button>
+      <button type="button" onclick="openTeamMerge()">🔗 दो नाम मिलाइए</button>
+    </div>
+
+    ${tw.length ? `<div class="docFix">
+      <b>🔗 ${tw.length} जोड़े — ये एक ही आदमी लगते हैं?</b>
+      <small>एक ही आदमी दो नामों से दर्ज हो जाए तो कल सर्च करने पर उसका
+        <b>आधा ही हिसाब</b> निकलेगा। मिलाने पर सारे पुराने बिल एक ही आदमी पर
+        चले जाएँगे और पुराना नाम उपनाम में रह जाएगा — <b>मिटेगा कुछ नहीं</b>।</small>
+      ${tw.slice(0, 6).map((x) => `
+        <div class="mrow">
+          <div class="mx"><b>${esc(x.keep.name)}</b> ← ${esc(x.lose.name)}
+            <br><span class="muted">रहेगा ${esc(phoneShow(x.keep.phone))}
+              (${x.keep.rows.length} बार) · मिलेगा ${esc(phoneShow(x.lose.phone))}
+              (${x.lose.rows.length} बार)</span>
+            <div class="pick" style="margin-top:6px">
+              <button type="button" class="mini primary"
+                onclick="doMergeContacts('${esc(x.lose.phone)}','${esc(x.keep.phone)}',this)">🔗 मिला दीजिए</button>
+            </div></div>
+        </div>`).join("")}
+    </div>` : ""}
+
+    <div class="akFind" style="margin-top:12px">
+      <input id="tmQ" placeholder="🔍 नाम, यूनिट या नंबर से खोजें…"
+        oninput="renderTeam()" value="${esc(q || "")}">
+    </div>
+
+    <div id="tmMsg" class="muted"></div>
+
+    ${rows.length ? rows.map((c) => `
+      <div class="tmRow">
+        ${gfx.avatar(c.name || "?", 42)}
+        <div class="tmWho">
+          <b>${esc(c.name || "नाम नहीं")} ${c.regular ? (ROLE_ICON[c.role] || "👑") : ""}</b>
+          <small>${esc(ROLE_NAME[c.role] || "दर्जा नहीं")}${
+            c.unit ? " · " + esc(c.unit) : ""}</small>
+          <small>💬 ${esc(phoneShow(c.phone))}${
+            c.callPhone && c.callPhone !== c.phone
+              ? " · 📞 " + esc(phoneShow(c.callPhone)) : " · 📞 वही"}</small>
+        </div>
+        <div class="tmSum">
+          <b>${c.rows.length} बार</b>
+          <small>${INR(c.sum)}</small>
+        </div>
+        <button type="button" class="mini" onclick="editTeam('${esc(c.phone)}')">✏️</button>
+      </div>`).join("")
+      : gfx.empty("seek", q ? "इस नाम/नंबर का कोई नहीं" : "टीम अभी ख़ाली है",
+          "➕ वाले बटन से नाम और WhatsApp नंबर भर दीजिए — एक बार का काम है।")}`;
+}
+
+/** ➕ / ✏️ — एक ही खाका, दोनों के लिए। */
+function editTeam(phone) {
+  TEAM_EDIT = phone || "";
+  const c = (phone && CONTACTS[phone]) || {};
+  $("teamBody").innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("card", 70)}</div>
+      <div class="toonSay"><b>${phone ? "✏️ " + esc(c.name || phone) : "➕ नया आदमी"}</b>
+        <p>💬 WhatsApp नंबर <b>ज़रूरी</b> है — वही पहचान है। कॉलिंग नंबर
+          ख़ाली छोड़ दीजिए तो WhatsApp वाला ही माना जाएगा।</p></div>
+    </div>
+    <label>🧑 नाम<input id="tmName" value="${esc(c.name || "")}"
+      placeholder="जैसे: नरपत मेघवाल"></label>
+    <label>💬 WhatsApp नंबर<input id="tmPhone" inputmode="numeric"
+      value="${esc(c.phone || "")}" placeholder="10 अंक"
+      ${phone ? "readonly style='opacity:.6'" : ""}></label>
+    ${phone ? `<div class="muted" style="margin-top:-6px;font-size:11.5px">
+      नंबर बदला नहीं जा सकता — वही पहचान है। नंबर ग़लत हो तो नया आदमी
+      जोड़कर 🔗 मिला दीजिए।</div>` : ""}
+    <label>📞 कॉलिंग नंबर (अलग हो तभी)<input id="tmCall" inputmode="numeric"
+      value="${esc(c.callPhone || "")}" placeholder="ख़ाली = WhatsApp वाला"></label>
+    <label>🎖️ दर्जा
+      <select id="tmRole">
+        <option value="staff"${c.role === "staff" ? " selected" : ""}>🧑‍🍳 स्टाफ़</option>
+        <option value="officer"${c.role === "officer" ? " selected" : ""}>🎖️ आर्मी ऑफ़िसर</option>
+      </select></label>
+    <label>🎯 यूनिट / जगह<input id="tmUnit" value="${esc(c.unit || "")}"
+      placeholder="जैसे: मारवाड़ रसोई, 110 Engineer"></label>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px">
+      <input type="checkbox" id="tmReg" ${c.regular ? "checked" : ""}
+        style="width:auto">
+      <span>👑 पक्का — «किसके कहने पर» में सबसे ऊपर रहे</span></label>
+    <div id="tmMsg" class="muted" style="margin-top:8px"></div>
+    <div class="pick" style="margin-top:12px">
+      <button type="button" class="primary" onclick="saveTeam(this)">💾 सहेजिए</button>
+      <button type="button" onclick="renderTeam('')">← वापस</button>
+    </div>`;
+}
+
+async function saveTeam(btn) {
+  const msg = $("tmMsg");
+  const name = String($("tmName").value || "").trim();
+  const ph = phoneKey($("tmPhone").value);
+  const call = phoneKey($("tmCall").value);
+  const bad = (t) => { msg.className = "bad"; msg.textContent = t; };
+
+  if (!name) return bad("नाम तो भरिए");
+  /* 📞 यही वह पहरा है जिसकी विक्रम जी ने माँग की थी: «बिना मोबाइल नंबर के
+     कोई भी चीज़ नहीं होनी चाहिए»। नाम अकेला पहचान नहीं है। */
+  if (!ph) return bad("💬 WhatsApp नंबर ज़रूरी है — 10 अंक, 6–9 से शुरू");
+  if ($("tmCall").value.trim() && !call) {
+    return bad("📞 कॉलिंग नंबर ठीक नहीं लग रहा — 10 अंक, 6–9 से शुरू");
+  }
+  if (!TEAM_EDIT && CONTACTS[ph]) {
+    return bad("यह नंबर पहले से «" + (CONTACTS[ph].name || ph) + "» पर है");
+  }
+
+  btn.disabled = true; btn.textContent = "… सहेज रहा हूँ";
+  try {
+    const doc = { phone: ph, name, nameByOwner: true,
+      callPhone: call || null, role: $("tmRole").value,
+      unit: String($("tmUnit").value || "").trim() || null,
+      regular: !!$("tmReg").checked };
+    await db.collection("vbe_contacts").doc(ph).set(doc, { merge: true });
+    CONTACTS[ph] = Object.assign({}, CONTACTS[ph], doc);
+    await auditLog(TEAM_EDIT ? "team_edit" : "team_add", null, doc);
+    saveCache();
+    toast("💾 सहेज दिया");
+    renderTeam("");
+    renderAll();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "💾 सहेजिए";
+    bad("नहीं सहेजा: " + e.message);
+  }
+}
+
+/* ── 🔗 हाथ से दो नाम मिलाना — लिपि जो भी हो ─────────────────────── */
+
+let TM_MG = { keep: "", lose: "" };
+
+function openTeamMerge() {
+  const tw = teamTwins()[0];
+  const ids = Object.keys(CONTACTS);
+  TM_MG = { keep: (tw && tw.keep.phone) || ids[0] || "",
+            lose: (tw && tw.lose.phone) || "" };
+  renderTeamMerge();
+}
+
+function setTmMg(which, v) { TM_MG[which] = v; renderTeamMerge(); }
+
+function renderTeamMerge() {
+  const box = $("teamBody");
+  if (!box) return;
+  const ids = Object.keys(CONTACTS);
+  const nOf = (p) => contactSpend(p).rows.length;
+  const opt = (sel, skip) => ids.filter((id) => id !== skip).map((id) =>
+    `<option value="${esc(id)}"${id === sel ? " selected" : ""}>${
+      esc(CONTACTS[id].name || id)} · ${esc(phoneShow(id))} — ${
+      nOf(id)} बार</option>`).join("");
+
+  if (ids.length < 2) {
+    box.innerHTML = gfx.empty("hello", "मिलाने के लिए दो नाम चाहिए",
+      "अभी टीम में एक ही आदमी है।",
+      `<button type="button" class="mini" onclick="renderTeam('')">← वापस</button>`);
+    return;
+  }
+  const { keep, lose } = TM_MG;
+  const n = (keep && lose && keep !== lose)
+    ? EXP.concat(EXP_OUT).filter((e) => e && phoneKey(e.requestedPhone) === lose).length
+    : null;
+
+  box.innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("seek", 70)}</div>
+      <div class="toonSay"><b>कौन-सा नाम किसमें मिलाना है?</b>
+        <p>वही आदमी दो नामों से दर्ज हो गया हो — जैसे एक बार हिंदी में, एक
+          बार अंग्रेज़ी में — तो यहाँ से मिला दीजिए। ऐप ऐसे जोड़े ख़ुद नहीं
+          पहचान सकता, क्योंकि लिपि अलग होती है।</p></div>
+    </div>
+    <label style="display:block;margin-top:14px">✅ यह नाम <b>रहेगा</b>
+      <select style="width:100%;margin-top:5px" onchange="setTmMg('keep',this.value)">
+        <option value="">— चुनिए —</option>${opt(keep, lose)}</select></label>
+    <label style="display:block;margin-top:12px">➡️ यह इसमें <b>मिल जाएगा</b>
+      <select style="width:100%;margin-top:5px" onchange="setTmMg('lose',this.value)">
+        <option value="">— चुनिए —</option>${opt(lose, keep)}</select></label>
+    ${n != null ? `<div class="docFix" style="margin-top:12px">
+      <b>📋 मिलाने पर क्या होगा</b>
+      <small><b>${n}</b> बिल «${esc(CONTACTS[lose].name || lose)}» से
+        «${esc(CONTACTS[keep].name || keep)}» पर चले जाएँगे। पुराना नाम
+        उपनाम में रह जाएगा, इसलिए उसी से खोजने पर भी मिलेगा।
+        <b>मिटेगा कुछ नहीं।</b></small></div>
+      <div class="pick" style="margin-top:12px">
+        <button type="button" class="primary"
+          onclick="doMergeContacts('${esc(lose)}','${esc(keep)}',this)">🔗 मिला दीजिए</button>
+        <button type="button" onclick="renderTeam('')">← वापस</button>
+      </div>` : `<div class="muted" style="margin-top:12px">ऊपर दोनों नाम चुन
+        लीजिए — फिर ब्योरा दिखेगा और मिलाने का बटन आएगा।</div>
+      <div class="pick" style="margin-top:10px">
+        <button type="button" onclick="renderTeam('')">← वापस</button></div>`}`;
+}
+
+async function doMergeContacts(losePhone, keepPhone, btn) {
+  const lose = CONTACTS[losePhone], keep = CONTACTS[keepPhone];
+  if (!lose || !keep) return;
+  if (!confirm("«" + (lose.name || losePhone) + "» को «" + (keep.name || keepPhone) +
+      "» में मिला दूँ?\n\nसारे पुराने बिल उसी एक आदमी पर चले जाएँगे।\n" +
+      "मिटेगा कुछ नहीं — पुराना नाम उपनाम में रहेगा।")) return;
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = "… मिला रहा हूँ";
+  try {
+    const r = await mergeContacts(losePhone, keepPhone);
+    if (!r) throw new Error("मिला नहीं");
+    toast("🔗 मिल गए — " + r.bills + " बिल एक ही आदमी पर आ गए");
+    renderTeam(""); renderAll();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = was;
+    toast("नहीं मिला: " + e.message);
+  }
+}
+
 function askedRows(q) {
   const pk = phoneKey(q), k = pKey(q);
   const digits = String(q || "").replace(/\D/g, "");
@@ -15752,6 +16141,10 @@ function openAsked(id) {
     </div>
     <div id="akList" class="akList"></div>
 
+    <div class="pick" style="margin-top:10px">
+      <button type="button" class="mini" onclick="closeSheet('askedSheet');openTeam()">👥 मेरी टीम खोलिए</button>
+    </div>
+
     <details class="akNew">
       <summary>➕ नया नंबर जोड़ें</summary>
       <label>🧑 नाम<input id="npName" placeholder="जैसे: मनोज भाई"></label>
@@ -15780,8 +16173,17 @@ function pickAsked(phone) {
 async function addAskedNew() {
   const name = String($("npName").value || "").trim();
   const ph = phoneKey($("npPhone").value);
-  if (!name && !ph) {
-    $("akMsg").className = "bad"; $("akMsg").textContent = "नाम या नंबर तो भरें"; return;
+  /* 📞 v41 — नाम अकेला काफ़ी नहीं। विक्रम जी: «बिना मोबाइल नंबर के कोई भी
+     चीज़ नहीं होनी चाहिए… मोबाइल नंबर के आधार पर ही detect किया जाता है और
+     वह एक बार ही होना चाहिए।» नाम से जोड़ने पर वही आदमी हर बार नया बन जाता
+     है — नरपत जी के तीन-चार contact इसी तरह बने थे। */
+  if (!ph) {
+    $("akMsg").className = "bad";
+    $("akMsg").textContent = "📞 मोबाइल नंबर ज़रूरी है — नाम से पहचान नहीं होती";
+    return;
+  }
+  if (!name) {
+    $("akMsg").className = "bad"; $("akMsg").textContent = "नाम भी भरिए"; return;
   }
   if ($("npPhone").value.trim() && !ph) {
     $("akMsg").className = "bad";
