@@ -1618,6 +1618,7 @@
         </div>
       </div>
 
+      <div id="accTwins" hidden></div>
       <!-- मेरे खाते — जोड़ना, सुधारना, और एक टैप में पूरी डिटेल भेजना -->
       <div class="card" style="margin-bottom:12px">
         <div class="itemsHead" style="margin-top:0">
@@ -2400,6 +2401,7 @@ function cachePayload(slim) {
     }),
     EXP_OUT: EXP_OUT.map((e) => tsClean(e)),
     ACCOUNTS: tsClean(ACCOUNTS),
+    ACC_OUT: tsClean(ACC_OUT),
     SALES: tsClean(SALES), PAYINS: tsClean(PAYINS), SHORTNAME, VY_LOADED,
     CONTACTS: tsClean(CONTACTS),
     BANKTXNS: tsClean(BANKTXNS),
@@ -2437,7 +2439,11 @@ function loadCache() {
     .map((e) => Object.assign({}, e, { _date: toDate(e.submittedAt) }));
   EXP_OUT = expAll.filter(expOut_);
   EXP = expAll.filter((e) => !expOut_(e));
-  ACCOUNTS = c.ACCOUNTS || {};
+  ACCOUNTS = {}; ACC_OUT = {};
+  const accAll = Object.assign({}, c.ACCOUNTS || {}, c.ACC_OUT || {});
+  Object.keys(accAll).forEach((id) => {
+    (accOut_(accAll[id]) ? ACC_OUT : ACCOUNTS)[id] = accAll[id];
+  });
   PRICEBOOK = c.PRICEBOOK || [];
   BANKTXNS = (c.BANKTXNS || []).filter((t) => !t.retired && !t.mergedInto);
   RETIRED = (c.RETIRED || []).concat((c.BANKTXNS || [])
@@ -2509,6 +2515,12 @@ let RETIRED = [];
 let EXP_OUT = [];
 const expOut_ = (e) => !!(e && (e.mergedIntoReceipt || e.retired));
 
+/* 🔁 v30 — और मिलाया हुआ **खाता** भी उसी तरह।
+   उस पर «दूसरे में मिल चुका» का निशान लगते ही वह हर सूची, हर picker,
+   हर पासबुक से हट जाता है — पर डेटाबेस में जस का तस पड़ा रहता है। */
+let ACC_OUT = {};
+const accOut_ = (a) => !!(a && a.mergedInto);
+
 /**
  * एक संग्रह पूरा पढ़ो — 500 का एक पन्ना, दस्तावेज़-नाम के पक्के क्रम में।
  * @param {string} col  संग्रह का नाम
@@ -2555,8 +2567,11 @@ async function fetchAll() {
   }).sort((a, b) => (b._date ? b._date.getTime() : 0) - (a._date ? a._date.getTime() : 0));
   EXP_OUT = expAll.filter(expOut_);
   EXP = expAll.filter((e) => !expOut_(e));
-  ACCOUNTS = {};
-  accSnap.docs.forEach(d => ACCOUNTS[d.id] = d.data());
+  ACCOUNTS = {}; ACC_OUT = {};
+  accSnap.docs.forEach(d => {
+    const a = d.data();
+    (accOut_(a) ? ACC_OUT : ACCOUNTS)[d.id] = a;
+  });
   PRICEBOOK = pbDocs
     .filter(d => d.id !== "_index")
     .map(d => ({ id: d.id, ...d.data() }))
@@ -5581,6 +5596,20 @@ async function openNewAccount(mapKey) {
     (m0 && m0.bank) || "") || "";
   const no = prompt("पूरा खाता नंबर — इसी से आगे पहचान होगी",
     (m0 && m0.tail) || "") || "";
+
+  /* 🛑 v30 — दूसरा दरवाज़ा, वही पहरा। statement की पर्ची से बनाया गया
+     खाता ही «sushila kanwar» बना था, जबकि «सुशीला कंवर AU-0481» पहले
+     से मौजूद था। अब वह खाता चुपचाप चुन लिया जाता है, नया नहीं बनता। */
+  const taken = no ? accNoTaken(no, "") : "";
+  if (taken) {
+    toast("🛑 यह नंबर पहले से «" + accLabel(taken) + "» पर है — वही चुन दिया");
+    ACCMAP.forEach((m) => {
+      if (mapKey && m.key !== mapKey) return;
+      if (!accMapClash(m, taken)) { m.pick = taken; m.auto = false; }
+    });
+    renderAccMap();
+    return;
+  }
 
   let id = pKey(label).slice(0, 20).toLowerCase() || ("acc" + Date.now());
   const base = id;
@@ -9178,6 +9207,7 @@ function renderDoctor(acc) {
   const bad = badUtrDocs(acc);
   const links = badLinks(acc);
   const twins = findTwins(acc);
+  const accTw = findAccTwins().filter((x) => x.keep === acc || x.lose === acc);
   const rows = pbTxns(acc);
 
   const checks = [
@@ -9196,7 +9226,13 @@ function renderDoctor(acc) {
       bad: links.length + " जोड़ ऐसे हैं जिनकी तारीख़ 2 दिन से ज़्यादा दूर है" },
     { on: !twins.length, icon: "👯", name: "एक ही पैसा दो जगह",
       ok: "हर सौदा सिर्फ़ एक बार दर्ज है",
-      bad: twins.length + " जोड़े ऐसे हैं जो एक ही पैसा लगते हैं" }
+      bad: twins.length + " जोड़े ऐसे हैं जो एक ही पैसा लगते हैं" },
+    /* 🔁 v30 — यह गड़बड़ महीनों छिपी रह गई थी: एक ही खाता दो बार बना
+       था, इसलिए आधे सौदे इधर थे और आधे उधर, और जंज़ीर कभी नहीं मिलती। */
+    { on: !accTw.length, icon: "🏦", name: "खाते आपस में अलग-अलग हैं",
+      ok: "हर असली बैंक खाता ऐप में एक ही बार दर्ज है",
+      bad: accTw.length + " खाते ऐसे हैं जो असल में एक ही खाता हैं — " +
+        "पैसा दो हिस्सों में बँटा हुआ है" }
   ];
   const gone = RETIRED.filter((t) => t.accountId === acc);
   const joined = gone.filter((t) => t.mergedInto).length;
@@ -9247,6 +9283,22 @@ function renderDoctor(acc) {
             बन जाएँगी। <b>मिटाया कुछ नहीं जाएगा</b> — बस निशान लगेगा।</small>
           <button type="button" class="mini primary" onclick="fixBadUtrs(this)"
             style="margin-top:9px">🔧 ${bad.length} को हिसाब से बाहर करें</button>
+        </div>` : ""}
+      ${accTw.length ? `
+        <div class="docFix">
+          <b>🏦 यह खाता ऐप में दो बार बना हुआ है</b>
+          <small>इसी वजह से ऊपर की जंज़ीर और गिनती अधूरी है — आधे सौदे
+            दूसरे खाते में पड़े हैं। मिलाने पर सब एक जगह आ जाएँगे,
+            <b>मिटेगा कुछ नहीं</b>।</small>
+          ${accTw.map((x) => `
+            <div class="mrow">
+              <div class="amt out">${x.loseN}</div>
+              <div class="mx"><span class="badge hi">${esc(x.why)}</span>
+                <br><span class="muted">रहेगा: <b>${esc(accLabel(x.keep))}</b> — ${x.keepN} सौदे
+                  <br>मिलेगा: ${esc(accLabel(x.lose))} — ${x.loseN} सौदे</span></div>
+            </div>`).join("")}
+          <button type="button" class="mini primary" style="margin-top:9px"
+            onclick="goTab('recon')">🔗 खाते मिलाने वाला पन्ना खोलिए</button>
         </div>` : ""}
       ${twins.length ? `
         <div class="docFix">
@@ -9549,9 +9601,24 @@ function renderAlerts() {
   const dup = findDupes().filter((d) => d.sure).length;
   const need = needUtr();
   const needSum = need.reduce((a, e) => a + (Number(e.billTotal) || 0), 0);
-  if (!dup && !need.length) { box.innerHTML = ""; return; }
+  /* 🔁 v30 — दोहरे बिल और दोहरे खाते भी यहीं। खाते वाली गड़बड़ 🏦 वाले
+     पन्ने पर बहुत नीचे पड़ी रहती थी, और वही सबसे भारी है: जब तक दो खाते
+     अलग हैं, बची रकम की जंज़ीर कभी नहीं मिलती। */
+  const bTw = findBillTwins().length;
+  const aTw = findAccTwins().length;
+  if (!dup && !need.length && !bTw && !aTw) { box.innerHTML = ""; return; }
 
   box.innerHTML = `<div class="alerts">
+    ${aTw ? `<button type="button" class="alert bad" onclick="goTab('recon')">
+      <span class="aIco">🏦</span>
+      <span class="aTxt"><b>${aTw} खाते असल में एक ही हैं</b>
+        <small>पैसा दो हिस्सों में बँटा है — मिलाइए, वरना हिसाब कभी नहीं मिलेगा</small></span>
+      <span class="aGo">›</span></button>` : ""}
+    ${bTw ? `<button type="button" class="alert bad" onclick="goTab('bills')">
+      <span class="aIco">🔁</span>
+      <span class="aTxt"><b>${bTw} बिल दोहरे हैं</b>
+        <small>वही UTR दो बिलों पर — एक ही पैसा दो बार चढ़ा हुआ है</small></span>
+      <span class="aGo">›</span></button>` : ""}
     ${dup ? `<button type="button" class="alert bad" onclick="openDupes()">
       <span class="aIco">🧹</span>
       <span class="aTxt"><b>${dup} entry दो बार दर्ज है</b>
@@ -10095,7 +10162,8 @@ function buildParties() {
 }
 
 let PARTIES = {}, VCARDS = {};
-const accLabel = (id) => (ACCOUNTS[id] && ACCOUNTS[id].label) || id || "—";
+const accLabel = (id) => (ACCOUNTS[id] && ACCOUNTS[id].label) ||
+  (ACC_OUT[id] && ACC_OUT[id].label) || id || "—";
 
 function renderParties() {
   const q = pKey($("pSearch").value);
@@ -10725,7 +10793,76 @@ function last4(n) {
   return s ? s.slice(-4) : "";
 }
 
+
+/* ── 🔁 «दो खाते एक ही हैं» — कार्ड और बटन ────────────────────────── */
+
+function renderAccTwins() {
+  const box = $("accTwins");
+  if (!box) return;
+  const tw = findAccTwins();
+  if (!tw.length) { box.innerHTML = ""; box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="card doc sick">
+      <div class="toonBox">
+        <div class="toonArt">${gfx.toon("alert", 66)}</div>
+        <div class="toonSay"><div class="docHead"><b>🔁 ${tw.length} खाते एक ही हैं</b></div>
+          <p>एक ही असली बैंक खाता ऐप में दो बार बना हुआ है — इसलिए पैसा दो
+            हिस्सों में बँटा है।</p></div>
+      </div>
+      <div class="docFix" style="margin-top:0">
+        <small>जब तक ये अलग हैं, <b>बची रकम की जंज़ीर कभी नहीं मिलेगी</b>
+          (आधे सौदे इधर, आधे उधर) और «एक ही पैसा दो जगह» भी नहीं पकड़ा
+          जाएगा। मिलाने पर सारी पंक्तियाँ, सारे बिल और पूरा लेखा एक ही खाते
+          में आ जाएँगे। <b>मिटेगा कुछ नहीं</b> — पुराने खाते पर सिर्फ़ «दूसरे
+          में मिल चुका» का निशान लगेगा।</small>
+      </div>
+      ${tw.map((x) => `
+        <div class="mrow">
+          <div class="amt out">${x.loseN}</div>
+          <div class="mx"><span class="badge hi">${esc(x.why)}</span>
+            <br><span class="muted">रहेगा: <b>${esc(accLabel(x.keep))}</b>
+              — ${x.keepN} सौदे
+              <br>मिलेगा: ${esc(accLabel(x.lose))} — ${x.loseN} सौदे</span>
+            <div class="pick" style="margin-top:7px">
+              <button type="button" class="mini primary"
+                onclick="doMergeAccounts('${esc(x.lose)}','${esc(x.keep)}',this)">🔗 मिला दीजिए</button>
+              <button type="button" class="mini"
+                onclick="goTab('pass');setPbAcc('${esc(x.lose)}')">👁️ देखिए</button>
+            </div>
+            <div class="muted accMsg" id="am_${esc(x.lose)}"></div></div>
+        </div>`).join("")}
+    </div>`;
+}
+
+/** 🔗 बटन — योजना दिखाओ, हाँ पूछो, फिर मिलाओ। */
+async function doMergeAccounts(loseId, keepId, btn) {
+  const p = accMergePlan(loseId, keepId);
+  const ok = confirm(
+    "«" + accLabel(loseId) + "» को «" + accLabel(keepId) + "» में मिला दूँ?\n\n" +
+    "• " + (p.move.length + p.recreate.length) + " बैंक-पंक्तियाँ आएँगी\n" +
+    "• " + p.dupe.length + " दोहरी पंक्तियाँ आपस में मिल जाएँगी\n" +
+    "• " + p.exps.length + " बिल का खाता ठीक होगा\n\n" +
+    "मिटेगा कुछ नहीं — हर क़दम लेखे में लिखा जाएगा।");
+  if (!ok) return;
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = "… मिला रहा हूँ";
+  const out = $("am_" + loseId);
+  try {
+    const r = await mergeAccounts(loseId, keepId,
+      (t) => { if (out) out.textContent = t; });
+    if (!r) throw new Error("खाता मिला नहीं");
+    toast("🔗 मिल गए — " + (r.moved + r.rebuilt) + " पंक्तियाँ आईं" +
+      (r.dedup ? ", " + r.dedup + " दोहरी मिलीं" : ""));
+    renderAccounts(); refreshAll();
+  } catch (err) {
+    btn.disabled = false; btn.textContent = was;
+    if (out) { out.className = "bad"; out.textContent = "नहीं मिला: " + err.message; }
+  }
+}
+
 function renderAccounts() {
+  renderAccTwins();
   const ids = Object.keys(ACCOUNTS);
   $("accList").innerHTML = ids.length ? ids.map((id) => {
     const a = ACCOUNTS[id] || {};
@@ -10763,10 +10900,235 @@ function openAccount(id) {
   });
 }
 
+
+/* ══════════ 🔗 एक असली खाता = ऐप में एक ही खाता ═════════════════════
+
+   विक्रम जी: «एक ही अकाउंट था, लेकिन उसमें डबल बार एंट्री हो गई है। इसको
+   मर्ज कैसे किया जा सकता है? बड़ी दिक्कत हो गई है।»
+
+   एक ही असली खाता — AU 2114229231850481 — ऐप में दो बार बना हुआ था:
+
+     सुशीला कंवर AU-0481    228 सौदे · गया ₹13,25,966
+     sushila kanwar         137 सौदे · गया ₹5,62,604
+
+   कारण मेरी ही लिखी दो जगहें थीं, और दोनों अंधी थीं:
+     saveAccount()     → नंबर `acc_` + नाम + समय से बनाता था
+     openNewAccount()  → नंबर सिर्फ़ नाम से बनाता था
+   **दोनों में से किसी ने भी यह नहीं देखा कि यह खाता नंबर पहले से किसी
+   खाते पर दर्ज है।**
+
+   नुक़सान गिनती का नहीं था, उससे कहीं बड़ा था: बची रकम की जंज़ीर कभी नहीं
+   मिलती (आधे सौदे इधर, आधे उधर), «एक ही पैसा दो जगह» कभी नहीं पकड़ा जाता,
+   और statement का मिलान हमेशा आधा-अधूरा रहता।
+
+   🔒 यह पूरा हिसाब सादे कोड से होता है — बैंक का कोई काग़ज़ AI तक नहीं जाता। */
+
+/** खाते का पहचान-नंबर — सिर्फ़ अंक। */
+const accNo_ = (a) => String((a && a.accountNumber) || "").replace(/\D/g, "");
+
+/**
+ * दो खाते एक ही असली खाते के हैं या नहीं।
+ * पूरा नंबर सबसे पक्का; न हो तो आख़िरी 6 अंक — बैंक की statement अक्सर
+ * पूरा नंबर छापती ही नहीं।
+ */
+function sameAccount(a, b) {
+  const x = accNo_(a), y = accNo_(b);
+  /* 🔒 6 अंक से कम पर कभी «एक ही खाता» मत कहो — «0481» दो अलग बैंकों के
+     दो अलग खातों का आख़िरी हिस्सा हो सकता है, और यहाँ ग़लती की क़ीमत बहुत
+     बड़ी है: मिलाने पर सचमुच पैसा एक खाते से दूसरे में चला जाता है।
+     (बिल वाली जाँच में झूठा रोक एक बटन से सुधर जाता था — यहाँ नहीं।) */
+  if (x.length < 6 || y.length < 6) return "";
+  /* 🔒 पूरा नंबर यहाँ कभी नहीं छपता। बाक़ी पूरे ऐप में खाता नंबर PIN के
+     पीछे है, और यह कार्ड पर्दे पर खुला पड़ा रहता है — इसलिए सिर्फ़
+     आख़िरी चार अंक, जितने से विक्रम जी पहचान लेंगे। */
+  if (x === y) return "🏦 वही खाता नंबर …" + x.slice(-4);
+  if (x.slice(-6) === y.slice(-6)) return "🏦 वही आख़िरी 6 अंक …" + x.slice(-4);
+  return "";
+}
+
+/**
+ * यह नंबर पहले से किसी और खाते पर है क्या?
+ * @returns {string} उस खाते की id, या ख़ाली
+ */
+function accNoTaken(number, exceptId) {
+  const probe = { accountNumber: number };
+  return Object.keys(ACCOUNTS).filter((id) =>
+    id !== exceptId && sameAccount(probe, ACCOUNTS[id]))[0] || "";
+}
+
+/** 🔁 कौन-कौन से खाते आपस में एक ही हैं। पहला «रहेगा», बाद वाला «मिलेगा»। */
+function findAccTwins() {
+  const ids = Object.keys(ACCOUNTS);
+  const n = (id) => BANKTXNS.filter((t) => t.accountId === id).length;
+  const out = [], seen = {};
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      const why = sameAccount(ACCOUNTS[ids[i]], ACCOUNTS[ids[j]]);
+      if (!why) continue;
+      // ज़्यादा सौदों वाला «रहेगा» — कम हिलाना पड़े, कम जोखिम
+      let keep = ids[i], lose = ids[j];
+      if (n(lose) > n(keep)) { keep = ids[j]; lose = ids[i]; }
+      const k = keep + "|" + lose;
+      if (seen[k]) continue;
+      seen[k] = 1;
+      out.push({ keep, lose, why, keepN: n(keep), loseN: n(lose) });
+    }
+  }
+  return out.sort((a, b) => b.loseN - a.loseN);
+}
+
+/**
+ * मिलाने की योजना — **कुछ लिखता नहीं, सिर्फ़ पर्चियाँ बनाता है।**
+ *
+ * यही वह जगह है जहाँ दस्तावेज़-नंबर की बारीक़ी सँभाली जाती है:
+ *
+ *   UTR वाली पंक्ति   → नंबर `utr-658120673715`, खाते से कोई मतलब नहीं।
+ *                       बस `accountId` बदल दो, नंबर वही रहेगा।
+ *   UTR के बिना       → नंबर `<खाता>-तारीख़-रकम-हैश`, यानी नंबर में **पुराना
+ *                       खाता जड़ा हुआ है**। वैसे ही छोड़ दें तो अगली बार वही
+ *                       statement डालने पर वह पंक्ति «नई» मानी जाएगी और
+ *                       दुबारा जुड़ जाएगी। इसलिए सही नंबर वाला नया दस्तावेज़
+ *                       बनता है और पुराने पर «मिल चुकी» का निशान लगता है।
+ *                       और अगर सही नंबर पर पंक्ति **पहले से बैठी है** — यानी
+ *                       वही सौदा दोनों statement में था — तो नई नहीं बनती,
+ *                       दोनों की जानकारी एक में मिल जाती है।
+ */
+function accMergePlan(loseId, keepId) {
+  const rows = BANKTXNS.filter((t) => t.accountId === loseId);
+  const move = [], recreate = [], dupe = [];
+  rows.forEach((t) => {
+    const want = txnId(keepId, t);
+    if (want === t._id) { move.push(t); return; }        // UTR वाली
+    if (existingTxn(want)) { dupe.push({ t, into: want }); return; }
+    recreate.push({ t, want });
+  });
+  // 🧾 बिल — «किस खाते से चुकाया», और अंदर हर पेमेंट का खाता
+  const exps = EXP.filter((e) => e.paidFromAccountId === loseId ||
+    (e.payments || []).some((p) => p && p.accountId === loseId));
+  return { loseId, keepId, move, recreate, dupe, exps,
+    total: move.length + recreate.length + dupe.length + exps.length + 1 };
+}
+
+/**
+ * 🔗 दो खाते मिला दो — गिनती के गट्ठरों में, एक-एक करके नहीं।
+ * (587 पंक्तियों वाली statement पर एक-एक लिखाई ऐप को जमा देती थी।)
+ */
+async function mergeAccounts(loseId, keepId, onStep) {
+  if (!loseId || !keepId || loseId === keepId) return null;
+  if (!ACCOUNTS[loseId] || !ACCOUNTS[keepId]) return null;
+  const p = accMergePlan(loseId, keepId);
+  const step = onStep || (() => {});
+  let done = 0;
+  const tick = (what) => { step(done + " / " + p.total + " — " + what); };
+
+  const B = batcher(() => tick("भेज रहा हूँ…"));
+  const TX = (id) => db.collection("vbe_bank_txns").doc(id);
+
+  // 1️⃣ UTR वाली पंक्तियाँ — नंबर वही, बस खाता बदल जाता है
+  for (const t of p.move) {
+    const patch = { accountId: keepId, accMovedFrom: loseId };
+    B.set(TX(t._id), patch, { merge: true });
+    memTxn(t._id, patch);
+    done++; if (done % 25 === 0) tick("पंक्तियाँ ला रहा हूँ…");
+    await B.flushIfFull();
+  }
+
+  // 2️⃣ बाक़ी पंक्तियाँ — सही नंबर वाला नया दस्तावेज़, पुराने पर निशान
+  for (const { t, want } of p.recreate) {
+    /* 🔒 योजना बनने के बाद यह नंबर भर चुका हो — यानी इसी चक्कर में बनी
+       किसी पंक्ति ने ले लिया हो — तो नई मत लिखो, वरना पहली वाली मिट
+       जाएगी। तब यह भी «दोहरी» है, और वैसे ही मिलनी चाहिए।             */
+    if (existingTxn(want)) { p.dupe.push({ t, into: want }); continue; }
+    const fresh = Object.assign({}, t, { accountId: keepId,
+      accMovedFrom: loseId, mergedFrom: [t._id] });
+    delete fresh._id;
+    B.set(TX(want), fresh, { merge: true });
+    const mark = { mergedInto: want, mergedWhy: "खाता मिलाया गया",
+      mergedAt: todayISO() };
+    B.set(TX(t._id), mark, { merge: true });
+    memTxn(want, Object.assign({ _id: want }, fresh));
+    retireLocal(t._id, mark);
+    done++; if (done % 25 === 0) tick("पंक्तियाँ ला रहा हूँ…");
+    await B.flushIfFull();
+  }
+
+  // 3️⃣ जो सौदा दोनों statement में था — दोनों की जानकारी एक में
+  const expFix = [];
+  for (const { t, into } of p.dupe) {
+    const mv = mergePatch(t._id, into, "खाता मिलाने पर वही सौदा दो जगह मिला");
+    if (!mv) { done++; continue; }
+    B.set(TX(into), mv.keep, { merge: true });
+    B.set(TX(t._id), mv.lose, { merge: true });
+    if (mv.expId) expFix.push(mv);
+    done++; if (done % 25 === 0) tick("दोहरी पंक्तियाँ मिला रहा हूँ…");
+    await B.flushIfFull();
+  }
+  expFix.forEach((mv) => {
+    B.update(db.collection("vbe_expenses").doc(mv.expId),
+      { matchedBankTxnId: mv.into });
+  });
+
+  // 4️⃣ बिल — «किस खाते से चुकाया» ठीक हो जाए, अंदर हर पेमेंट का भी
+  for (const e of p.exps) {
+    const pays = (e.payments || []).map((x) =>
+      (x && x.accountId === loseId) ? Object.assign({}, x, { accountId: keepId }) : x);
+    const patch = { paidFromAccountId:
+      e.paidFromAccountId === loseId ? keepId : (e.paidFromAccountId || null) };
+    if ((e.payments || []).length) patch.payments = pays;
+    B.update(db.collection("vbe_expenses").doc(e._id), patch);
+    Object.assign(e, patch);
+    done++; if (done % 25 === 0) tick("बिल ठीक कर रहा हूँ…");
+    await B.flushIfFull();
+  }
+
+  // 5️⃣ लेखा जुड़कर एक, और पुराने खाते पर निशान — **मिटता कुछ नहीं**
+  const lose = ACCOUNTS[loseId], keep = ACCOUNTS[keepId];
+  const ledger = (keep.ledger || []).concat(lose.ledger || []);
+  if ((lose.ledger || []).length) {
+    B.update(db.collection("vbe_accounts").doc(keepId), { ledger });
+  }
+  const mark = { mergedInto: keepId, mergedAt: todayISO(),
+    mergedWhy: sameAccount(lose, keep) || "एक ही खाता" };
+  B.set(db.collection("vbe_accounts").doc(loseId), mark, { merge: true });
+  done++;
+  tick("आख़िरी गट्ठर भेज रहा हूँ…");
+  await B.done();
+
+  // फ़ोन की याद भी वहीं की वहीं सुधर जाए
+  if ((lose.ledger || []).length) keep.ledger = ledger;
+  ACC_OUT[loseId] = Object.assign({}, lose, mark);
+  delete ACCOUNTS[loseId];
+
+  await auditLog("accounts_merged",
+    { lost: loseId, label: lose.label, rows: p.move.length + p.recreate.length + p.dupe.length },
+    { kept: keepId, label: keep.label, why: mark.mergedWhy,
+      moved: p.move.length, rebuilt: p.recreate.length,
+      dedup: p.dupe.length, bills: p.exps.length });
+
+  saveCache();
+  rebuildAccountPickers();
+  return { moved: p.move.length, rebuilt: p.recreate.length,
+    dedup: p.dupe.length, bills: p.exps.length };
+}
+
 async function saveAccount() {
   const msg = $("asMsg");
   const label = $("asLabel").value.trim();
   if (!label) { msg.className = "bad"; msg.textContent = "नाम तो भरें"; return; }
+  /* 🛑 v30 — यही वह जगह है जहाँ «सुशीला कंवर AU-0481» और «sushila kanwar»
+     दो अलग खाते बन गए थे। नंबर पहले से किसी और खाते पर हो तो नया बनता ही
+     नहीं — क्योंकि उसके बाद पैसा दो हिस्सों में बँट जाता है और बची रकम
+     की जंज़ीर कभी नहीं मिलती। */
+  const num = $("asNumber").value.replace(/\s/g, "");
+  const clash = num ? accNoTaken(num, ACC_EDIT || "") : "";
+  if (clash) {
+    msg.className = "bad";
+    msg.innerHTML = `🛑 <b>यह खाता नंबर पहले से दर्ज है</b><br>` +
+      `…${esc(String(num).replace(/\\D/g, "").slice(-6))} → <b>${esc(accLabel(clash))}</b>` +
+      `<br><span class="muted">नया खाता बनाने की ज़रूरत नहीं — उसी में` +
+      ` statement डाल दीजिए।</span>`;
+    return;
+  }
   const id = ACC_EDIT || "acc_" + pKey(label).slice(0, 18).toLowerCase() + "_" + Date.now().toString(36).slice(-4);
   const before = ACC_EDIT ? Object.assign({}, ACCOUNTS[ACC_EDIT]) : null;
   const doc = {
@@ -10774,7 +11136,7 @@ async function saveAccount() {
     holder: $("asHolder").value.trim() || null,
     bank: $("asBank").value.trim() || null,
     branch: $("asBranch").value.trim() || null,
-    accountNumber: $("asNumber").value.replace(/\s/g, "") || null,
+    accountNumber: num || null,
     ifsc: $("asIfsc").value.trim().toUpperCase() || null,
     upi: $("asUpi").value.trim() || null,
     note: $("asNote").value.trim() || null,
