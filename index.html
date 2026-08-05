@@ -10605,6 +10605,87 @@ function closeParty() { closeSheet("partySheet"); }
  * ऊपर का तारीख़-फ़िल्टर यहाँ भी लगता है, पर पूरा हिसाब भी दिखता रहे इसलिए
  * दोनों गिनतियाँ साथ बताई जाती हैं।
  */
+
+/* ══════════ 🧑 एक नाम — और सब कुछ सामने ═══════════════════════════
+
+   विक्रम जी: «समय पर सर्च करके बता सकूँ कि इस व्यक्ति को, इस नाम से,
+   मैंने किस-किस अकाउंट से पैसे ट्रांसफ़र कर रखे हैं — ताकि एक अच्छी,
+   यूनिवर्सल, इंटीग्रेटेड बैंकिंग और बिलिंग व्यवस्था रहे।»
+
+   पार्टी का पन्ना पहले भी था, पर उसमें सिर्फ़ **क़तार** थी — एक-एक करके
+   पंक्तियाँ। उससे यह कभी पता नहीं चलता था कि इस आदमी का पैसा **कहाँ-कहाँ
+   से** गया, **किसके कहने पर** गया, और **किस यूनिट को** गया।
+
+   अब तीनों सवालों का जोड़ सबसे ऊपर है। और जहाँ जवाब नहीं है, वहाँ
+   «भर दीजिए» का बटन — यानी पन्ना बताता ही नहीं, सुधारने भी देता है।     */
+
+/** एक पार्टी का हिसाब — खाते-वार, कहने-वाले-वार, यूनिट-वार। */
+function partyBreakdown(p) {
+  const rows = p.rows.filter((r) => r.dir !== "in" && inRange(r.date));
+  const total = rows.reduce((a, r) => a + (r.amount || 0), 0);
+  const bucket = (keyOf) => {
+    const m = {};
+    rows.forEach((r) => {
+      const k = keyOf(r) || "";
+      if (!m[k]) m[k] = { key: k, sum: 0, n: 0, last: "", utr: 0 };
+      m[k].sum += r.amount || 0;
+      m[k].n++;
+      if (r.utr || /UTR/.test(String(r.ref || ""))) m[k].utr++;
+      if (String(r.date) > m[k].last) m[k].last = String(r.date);
+    });
+    return Object.values(m).sort((a, b) => b.sum - a.sum);
+  };
+  /* 🙋 «किसके कहने पर» और 🎯 «यूनिट» सिर्फ़ बिल पर लिखे होते हैं, बैंक की
+     पंक्ति पर नहीं। इसलिए बैंक-पंक्ति का जुड़ा हुआ बिल ढूँढकर वहीं से लिया
+     जाता है — वही काम बहीखाता भी करता है। */
+  const expOf = (r) => {
+    if (r.kind === "bill" && r.id) {
+      return EXP.filter((e) => e._id === r.id)[0] || null;
+    }
+    const t = BANKTXNS.filter((x) => x._id === r.id)[0];
+    if (!t) return null;
+    const tw = twinOf(t);
+    return (tw && tw.exp) || null;
+  };
+  return {
+    total,
+    accounts: bucket((r) => r.account),
+    askers: bucket((r) => { const e = expOf(r); return e && e.requestedBy; }),
+    units: bucket((r) => { const e = expOf(r); return e && e.unit; })
+  };
+}
+
+/** खाते-वार / नाम-वार / यूनिट-वार — एक ही शक्ल में तीनों। */
+function pbBars(title, rows, total, opt) {
+  if (!rows.length) return "";
+  const o = opt || {};
+  return `
+    <div class="itemsHead" style="margin-top:14px"><span>${title}</span>
+      <span class="muted">${rows.length}</span></div>
+    ${rows.slice(0, 8).map((r) => {
+      const pct = total ? Math.round((r.sum / total) * 100) : 0;
+      const name = r.key ? (o.label ? o.label(r.key) : esc(r.key))
+        : `<span class="miss">— ${esc(o.blank || "नहीं लिखा")} —</span>`;
+      return `
+      <div class="mrow">
+        <div class="mx">
+          <div style="display:flex;gap:8px;align-items:baseline">
+            <b style="flex:1;min-width:0">${name}</b>
+            <span style="font-weight:800">${INR(r.sum)}</span>
+            <span class="muted">${r.n} बार</span>
+          </div>
+          <div class="bar" style="margin-top:6px"><i style="width:${pct}%;
+            background:${r.key ? gfx.C.out : gfx.C.warn}"></i></div>
+          <div class="muted" style="margin-top:4px">${pct}%${
+            r.last ? " · आख़िरी " + esc(dayLabel(String(r.last).slice(0, 10))) : ""}${
+            o.utr && r.utr ? " · 🔑 " + r.utr + " पर UTR" : ""}</div>
+        </div>
+      </div>`;
+    }).join("")}
+    ${rows.length > 8 ? `<div class="muted" style="padding:4px 0">… और ${
+      rows.length - 8}</div>` : ""}`;
+}
+
 function showParty(key) {
   const p = PARTIES[key];
   if (!p) { toast("इस नाम का कोई हिसाब नहीं मिला"); return; }
@@ -10639,6 +10720,16 @@ function showParty(key) {
       <button type="button" class="mini" onclick="editVcard()">💼 कार्ड भरें/सुधारें</button>
     </div>
     <div id="vcardBox"></div>
+    ${(() => {
+      const b = partyBreakdown(p);
+      if (!b.total) return "";
+      return pbBars("🏦 किस-किस खाते से गया", b.accounts, b.total,
+               { label: (k) => esc(accLabel(k)), blank: "खाता नहीं लिखा", utr: 1 }) +
+             pbBars("🙋 किसके कहने पर गया", b.askers, b.total,
+               { blank: "नाम नहीं लिखा" }) +
+             pbBars("🎯 किस यूनिट को गया", b.units, b.total,
+               { blank: "यूनिट नहीं लगी" });
+    })()}
     <div class="itemsHead"><span>📜 पुराने लेन-देन</span>
       <span class="muted">${rows.length || p.rows.length}</span></div>
     ${(rows.length ? rows : p.rows).slice(0, 200).map((r) => `
