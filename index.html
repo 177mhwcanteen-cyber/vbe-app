@@ -4125,7 +4125,11 @@ function parseStatement(text) {
     }
     if (!amount) continue;
 
-    const party = cell(row, c.party) || null;
+    let party = cell(row, c.party) || null;
+    /* 🔢 सिर्फ़ अंक कभी पार्टी का नाम नहीं होते। विक्रम जी की statement में
+       «5111478» और «6812014» पार्टी के नाम बनकर बैठे थे — वे खाता-नंबर के
+       टुकड़े हैं। narration वाले रास्ते पर यह पहरा था, CSV वाले पर नहीं। */
+    if (party && /^[\d\s.*-]+$/.test(String(party))) party = null;
     /* 🧾 चेक नंबर **सिर्फ़ वही** जो सचमुच चेक नंबर हो।
 
        विक्रम जी की AU statement में «Cheque/Reference No.» वाले खाने में
@@ -4153,8 +4157,10 @@ function parseStatement(text) {
       txnId: appRef,                       // 🔖 बैंक का अपना नंबर → appTxnId
       vpa: vpaOf(narration),               // 📇 «xyz@okaxis» — नाम न हो तो यही
       balance: c.bal >= 0 ? money(cell(row, c.bal)) : null,
-      // खाने का नाम «Party» लिखा है तो वह पूरा नाम है; «चेक 917568» नहीं
-      partyTruncated: !party,
+      /* ⚠️ पहले यहाँ लिखा था «खाने का नाम Party लिखा है तो वह पूरा नाम है»।
+         वह ग़लत था — यह CSV SBI की उसी PDF से बनी है जिसमें नाम पहले से कटा
+         हुआ छपता है। अब नाम की शक्ल देखी जाती है (looksCut देखें)। */
+      partyTruncated: !party || looksCut(party),
       /* 🗺️ «Account» का खाना — «SBI 0499» / «State Bank Of India - 89»।
          बैंक का नाम और अंक अलग करके रखो, ताकि नक़्शे वाली स्क्रीन उन्हें
          वैसे ही पहचाने जैसे PDF से आई पंक्तियों को।                    */
@@ -5967,6 +5973,37 @@ function txnDoc(t, accountId, receiptId, confidence, existing) {
     doc.matchedReceiptId = null;
   }
   return doc;
+}
+
+/**
+ * यह नाम कटा हुआ लगता है क्या?
+ *
+ * 🩸 v34 — विक्रम जी: «आपने पार्टी का नाम कहीं छोटा तो नहीं कर दिया है?
+ * फ़ोनपे से बड़ा नाम आता है और SBI की statement में छोटा — मैं चाहता हूँ
+ * बड़ा नाम रहे।»
+ *
+ * उनकी असली 587-पंक्ति वाली statement देखी तो शक़ सही निकला। नामों की
+ * लंबाई **7 अक्षर पर दीवार की तरह रुक जाती है** (94 नाम ठीक 7 के, आगे
+ * लगभग कुछ नहीं), और narration ख़ुद कटा हुआ छपता है:
+ *
+ *     DEP TFR UPI/CR/646169537222/ABHISHE     ← ABHISHEK
+ *     DEP TFR UPI/CR/175057993914/MANJIND     ← MANJINDER
+ *
+ * पर ऐप उनमें से सिर्फ़ 12 को «कटा हुआ» मानता था। वजह: CSV वाले रास्ते
+ * में लिखा था «खाने में नाम लिखा है तो वह पूरा नाम है» — और वह मान्यता
+ * ग़लत थी, क्योंकि वह CSV SBI की उसी कटी हुई PDF से बनी है।
+ *
+ * इसलिए अब नाम की **अपनी शक्ल** से पहचाना जाता है: एक ही शब्द, पूरा
+ * बड़े अक्षरों में, 6 या ज़्यादा अक्षर — यह SBI की कटाई का हुलिया है।
+ *
+ * 🛡️ «कटा हुआ» का ठप्पा लगाना **सुरक्षित** है: इसका मतलब सिर्फ़ इतना है
+ *    कि यह नाम किसी पूरे नाम को हटा नहीं सकता। नाम फिर भी दिखता है, और
+ *    «RAVI → RAVIKUM» जैसी बढ़त अब भी होती है (नीचे शुरुआत वाला नियम)।
+ */
+function looksCut(name) {
+  const x = String(name || "").trim();
+  if (!x || x.indexOf(" ") >= 0) return false;      // दो शब्द = पूरा नाम
+  return /^[A-Z][A-Z0-9]{5,}$/.test(x);
 }
 
 /**
