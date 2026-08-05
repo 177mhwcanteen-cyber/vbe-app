@@ -1268,6 +1268,16 @@
     </div>
   </div>
 
+  <!-- 🔗 दो खाते मिलाइए — हाथ से, जब ऐप ख़ुद न पहचान पाए -->
+  <div id="accMergeSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:480px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>🔗 दो खाते मिलाइए</h3>
+        <button class="x" onclick="closeSheet('accMergeSheet')">✕</button></div>
+      <div id="accMergeBody"></div>
+    </div>
+  </div>
+
   <!-- 🧠 Claude से — मुफ़्त रास्ता (चिपकाकर) -->
   <div id="claudeSheet" class="sheet" hidden>
     <div class="sheetBox" style="max-width:480px">
@@ -1623,6 +1633,7 @@
       <div class="card" style="margin-bottom:12px">
         <div class="itemsHead" style="margin-top:0">
           <span>🏦 मेरे खाते</span>
+          <button type="button" class="mini" onclick="openAccMerge()">🔗 दो खाते मिलाइए</button>
           <button type="button" class="primary mini" onclick="openAccount('')">➕ नया खाता</button>
         </div>
         <p class="muted" style="margin-bottom:10px">जो खाता यहाँ जुड़ेगा वह हर जगह के
@@ -10794,13 +10805,185 @@ function last4(n) {
 }
 
 
+
+/* ══════════ 🔗 हाथ से खाते मिलाना ═══════════════════════════════════
+
+   v30 में मिलाना बना था, पर वह **अपने-आप पहचानने** पर टिका था — और उसके
+   लिए दोनों खातों में पूरा नंबर भरा होना ज़रूरी था।
+
+   विक्रम जी के यहाँ वही नहीं था: «sushila kanwar» वाला खाता statement की
+   पर्ची से बना था और उसमें नंबर था ही नहीं। इसलिए ऐप उन्हें जोड़ ही नहीं
+   पाया और कार्ड कभी नहीं आया —
+
+     «मैंने पूरा ऐप अपडेट करके देखा, कहीं पर भी वह मिलने वाला आया नहीं है»
+
+   ठीक है। **पहचानना ऐप का काम है, जानना विक्रम जी का।** वे जानते हैं कि
+   दोनों एक ही खाता हैं — इसलिए अब वे ख़ुद दोनों चुनकर मिला सकते हैं, चाहे
+   नंबर भरा हो या न हो।
+
+   🔒 पर एक पहरा फिर भी रहता है: दोनों में **अलग-अलग पूरे नंबर** भरे हों तो
+      मिलाना मना है। वहाँ ग़लती की क़ीमत बहुत बड़ी है — पैसा सचमुच एक खाते
+      से दूसरे में चला जाता है।                                          */
+
+let ACC_MG = { keep: "", lose: "" };
+
+function openAccMerge() {
+  const ids = Object.keys(ACCOUNTS);
+  const tw = findAccTwins()[0];
+  ACC_MG = { keep: (tw && tw.keep) || ids[0] || "",
+             lose: (tw && tw.lose) || "" };
+  renderAccMerge();
+  openSheet("accMergeSheet");
+}
+
+const accRows_ = (id) => BANKTXNS.filter((t) => t.accountId === id).length;
+const accBills_ = (id) => EXP.filter((e) => e.paidFromAccountId === id ||
+  (e.payments || []).some((p) => p && p.accountId === id)).length;
+
+function setAccMg(which, v) { ACC_MG[which] = v; renderAccMerge(); }
+
+/** दोनों में अलग-अलग पूरे नंबर = अलग खाते। मिलाना मना। */
+function accMergeBlock(loseId, keepId) {
+  const a = ACCOUNTS[loseId] || {}, b = ACCOUNTS[keepId] || {};
+  const x = accNo_(a), y = accNo_(b);
+  if (x.length >= 6 && y.length >= 6 && !sameAccount(a, b)) {
+    return `दोनों के नंबर अलग हैं — <b>…${esc(x.slice(-4))}</b> और ` +
+      `<b>…${esc(y.slice(-4))}</b>। ये सचमुच दो अलग खाते हैं, इन्हें ` +
+      `मिलाना ठीक नहीं होगा।`;
+  }
+  return "";
+}
+
+function renderAccMerge() {
+  const box = $("accMergeBody");
+  if (!box) return;
+  const ids = Object.keys(ACCOUNTS);
+  const opt = (sel, skip) => ids.filter((id) => id !== skip).map((id) =>
+    `<option value="${esc(id)}"${id === sel ? " selected" : ""}>${
+      esc(accLabel(id))} — ${accRows_(id)} सौदे</option>`).join("");
+
+  if (ids.length < 2) {
+    box.innerHTML = gfx.empty("hello", "मिलाने के लिए दो खाते चाहिए",
+      "अभी ऐप में एक ही खाता है, इसलिए मिलाने को कुछ नहीं।");
+    return;
+  }
+
+  const { keep, lose } = ACC_MG;
+  const block = (keep && lose) ? accMergeBlock(lose, keep) : "";
+  const same = (keep && lose) ? sameAccount(ACCOUNTS[lose], ACCOUNTS[keep]) : "";
+  const p = (keep && lose && !block) ? accMergePlan(lose, keep) : null;
+
+  box.innerHTML = `
+    <div class="toonBox">
+      <div class="toonArt">${gfx.toon("seek", 72)}</div>
+      <div class="toonSay"><b>कौन-सा खाता किसमें मिलाना है?</b>
+        <p>एक ही असली बैंक खाता ऐप में दो बार बन गया हो तो यहाँ से मिला
+          दीजिए। <b>मिटेगा कुछ नहीं</b> — सारी पंक्तियाँ और बिल एक ही खाते
+          में आ जाएँगे, और पुराने पर «दूसरे में मिल चुका» का निशान लगेगा।</p></div>
+    </div>
+
+    <label style="display:block;margin-top:14px">✅ यह खाता <b>रहेगा</b>
+      <select id="mgKeep" style="width:100%;margin-top:5px"
+        onchange="setAccMg('keep',this.value)">
+        <option value="">— चुनिए —</option>${opt(keep, lose)}</select></label>
+
+    <label style="display:block;margin-top:12px">➡️ यह इसमें <b>मिल जाएगा</b>
+      <select id="mgLose" style="width:100%;margin-top:5px"
+        onchange="setAccMg('lose',this.value)">
+        <option value="">— चुनिए —</option>${opt(lose, keep)}</select></label>
+
+    ${block ? `<div class="docFix" style="margin-top:12px">
+        <b>🛑 ये दोनों एक खाता नहीं हैं</b>
+        <small>${block}</small></div>` : ""}
+
+    ${p ? `<div class="docFix" style="margin-top:12px">
+        <b>📋 मिलाने पर क्या-क्या होगा</b>
+        ${same ? `<small class="ok">✅ ${esc(same)} — यानी ऐप भी यही कहता है</small>`
+          : `<small>⚠️ इनमें से किसी में पूरा नंबर नहीं भरा, इसलिए ऐप ख़ुद
+               नहीं पहचान सकता। आप देख लीजिए कि दोनों सचमुच एक ही खाता हैं।</small>`}
+        <div class="mrow" style="margin-top:8px">
+          <div class="amt out">${p.move.length + p.recreate.length + p.dupe.length}</div>
+          <div class="mx"><b>बैंक-पंक्तियाँ</b> «${esc(accLabel(lose))}» से
+            «${esc(accLabel(keep))}» में आएँगी
+            ${p.dupe.length ? `<br><span class="badge hi">${p.dupe.length}
+              दोहरी पंक्तियाँ आपस में मिल जाएँगी</span>` : ""}</div>
+        </div>
+        <div class="mrow">
+          <div class="amt out">${p.exps.length}</div>
+          <div class="mx"><b>बिल</b> का «किस खाते से चुकाया» ठीक होगा</div>
+        </div>
+        <div class="muted accMsg" id="mgMsg" style="margin-top:8px"></div>
+      </div>
+      <div class="pick" style="margin-top:12px">
+        <button type="button" class="primary" onclick="runAccMerge(this)">🔗 मिला दीजिए</button>
+        <button type="button" onclick="closeSheet('accMergeSheet')">बाद में</button>
+      </div>` : ""}
+
+    ${(!keep || !lose) && !block ? `<div class="muted" style="margin-top:12px">
+      ऊपर दोनों खाते चुन लीजिए — फिर नीचे पूरा ब्योरा दिखेगा कि क्या-क्या
+      हिलेगा, और उसके बाद ही मिलाने का बटन आएगा।</div>` : ""}`;
+}
+
+async function runAccMerge(btn) {
+  const { keep, lose } = ACC_MG;
+  if (!keep || !lose || keep === lose) return;
+  if (accMergeBlock(lose, keep)) return;
+  const p = accMergePlan(lose, keep);
+  const ok = confirm(
+    "«" + accLabel(lose) + "» को «" + accLabel(keep) + "» में मिला दूँ?\n\n" +
+    "• " + (p.move.length + p.recreate.length) + " बैंक-पंक्तियाँ आएँगी\n" +
+    "• " + p.dupe.length + " दोहरी पंक्तियाँ आपस में मिल जाएँगी\n" +
+    "• " + p.exps.length + " बिल का खाता ठीक होगा\n\n" +
+    "मिटेगा कुछ नहीं — हर क़दम लेखे में लिखा जाएगा।");
+  if (!ok) return;
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = "… मिला रहा हूँ";
+  const msg = $("mgMsg");
+  try {
+    const r = await mergeAccounts(lose, keep, (t) => { if (msg) msg.textContent = t; });
+    if (!r) throw new Error("खाता मिला नहीं");
+    closeSheet("accMergeSheet");
+    toast("🔗 मिल गए — " + (r.moved + r.rebuilt) + " पंक्तियाँ आईं" +
+      (r.dedup ? ", " + r.dedup + " दोहरी मिलीं" : ""));
+    ACC_MG = { keep: "", lose: "" };
+    renderAccounts(); refreshAll();
+  } catch (err) {
+    btn.disabled = false; btn.textContent = was;
+    if (msg) { msg.className = "bad"; msg.textContent = "नहीं मिला: " + err.message; }
+  }
+}
+
 /* ── 🔁 «दो खाते एक ही हैं» — कार्ड और बटन ────────────────────────── */
 
 function renderAccTwins() {
   const box = $("accTwins");
   if (!box) return;
   const tw = findAccTwins();
-  if (!tw.length) { box.innerHTML = ""; box.hidden = true; return; }
+  if (!tw.length) {
+    /* 🔎 ऐप ख़ुद तभी पहचान सकता है जब दोनों खातों में पूरा नंबर भरा हो।
+       न भरा हो तो चुप मत रहो — कम से कम रास्ता दिखा दो, वरना विक्रम जी
+       पूरा ऐप छान मारेंगे और कुछ मिलेगा ही नहीं। */
+    const blank = Object.keys(ACCOUNTS).filter((id) => accNo_(ACCOUNTS[id]).length < 6);
+    if (Object.keys(ACCOUNTS).length > 1 && blank.length) {
+      box.hidden = false;
+      box.innerHTML = `
+        <div class="card doc">
+          <div class="docRow hm">
+            <span class="dIco">🔎</span>
+            <div class="dTxt"><b>${blank.length} खाते ऐसे हैं जिनमें पूरा नंबर नहीं भरा</b>
+              <small>इसलिए ऐप ख़ुद नहीं बता सकता कि कोई खाता दो बार बना है या
+                नहीं। नंबर भर दीजिए (✏️ सुधारें), या दोनों ख़ुद चुनकर
+                <b>🔗 दो खाते मिलाइए</b> से मिला दीजिए।</small></div>
+            <span class="dMark">•</span>
+          </div>
+          <div class="pick" style="margin-top:10px">
+            <button type="button" class="mini primary" onclick="openAccMerge()">🔗 दो खाते मिलाइए</button>
+          </div>
+        </div>`;
+      return;
+    }
+    box.innerHTML = ""; box.hidden = true; return;
+  }
   box.hidden = false;
   box.innerHTML = `
     <div class="card doc sick">
