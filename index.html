@@ -197,6 +197,76 @@
     background: linear-gradient(160deg, rgba(208,59,59,.14), transparent 72%); }
   .jobCard.dupe .jobTxt b { color: #ff9c9c; }
   .jobIco { font-size: 21px; flex: 0 0 auto; }
+
+  /* ── 📖 बहीखाता — CA को भेजने लायक़ काग़ज़ ───────────────────────── */
+  .bahiTop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    margin: 12px 0; }
+  .bahiTop > div { border: 1px solid var(--border); border-radius: 13px;
+    padding: 11px 10px; background: rgba(255,255,255,.03); }
+  .bahiTop .bk { font-size: 11.5px; color: var(--muted); }
+  .bahiTop .bv { font-size: 17px; font-weight: 800; margin-top: 3px;
+    letter-spacing: -.4px; }
+  .bahiTop .bs { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .bahiTop .in .bv { color: #58d858; }
+  .bahiTop .out .bv { color: #ff8a8a; }
+  .bahiChain { border: 1px solid var(--border); border-radius: 13px;
+    padding: 10px 12px; font-size: 12.5px; display: flex; gap: 8px;
+    align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .bahiChain.ok { border-color: rgba(12,163,12,.45);
+    background: linear-gradient(160deg, rgba(12,163,12,.10), transparent 70%); }
+  .bahiChain.no { border-color: rgba(208,59,59,.5);
+    background: linear-gradient(160deg, rgba(208,59,59,.12), transparent 70%); }
+
+  .bahiSec { margin-top: 16px; font-size: 13.5px; font-weight: 800;
+    display: flex; gap: 8px; align-items: center; }
+  .bahiSec small { font-weight: 500; color: var(--muted); font-size: 11.5px; }
+
+  .bRow { border: 1px solid var(--border); border-radius: 14px; padding: 11px;
+    margin-top: 9px; background: rgba(255,255,255,.025); }
+  .bRow.in { border-left: 3px solid #0ca30c; }
+  .bRow.out { border-left: 3px solid #d03b3b; }
+  .bHead { display: flex; gap: 9px; align-items: baseline; flex-wrap: wrap; }
+  .bHead .bAmt { font-size: 16px; font-weight: 800; letter-spacing: -.4px; }
+  .bRow.in .bAmt { color: #58d858; }
+  .bRow.out .bAmt { color: #ff8a8a; }
+  .bHead .bWho { font-weight: 700; flex: 1; min-width: 90px; }
+  .bHead .bWhen { font-size: 11.5px; color: var(--muted); }
+  .bKeys { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .bStory { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border);
+    display: grid; gap: 4px; font-size: 12.5px; }
+  .bStory .sl { display: flex; gap: 7px; }
+  .bStory .sl span:first-child { flex: 0 0 104px; color: var(--muted); }
+  .bStory .miss { color: #f0c064; }
+
+  /* 👑 पक्के लोग — ढूँढना नहीं पड़े, एक टैप */
+  .regWrap { margin: 4px 0 12px; }
+  .regGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 8px; margin-top: 8px; }
+  .regChip { border: 1px solid var(--border); border-radius: 14px; padding: 10px 8px;
+    text-align: center; cursor: pointer; background: rgba(255,255,255,.03);
+    transition: transform .12s ease, border-color .12s ease; }
+  .regChip:active { transform: scale(.95); border-color: var(--acc); }
+  .regChip b { display: block; font-size: 12.5px; margin-top: 5px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .regChip small { display: block; font-size: 10.5px; color: var(--muted); }
+  .regChip .rd { font-size: 15px; }
+
+  /* 🎨 डिब्बे एक-एक करके उभरें — सब एक साथ आना सपाट लगता है */
+  @keyframes riseIn { from { opacity: 0; transform: translateY(9px); }
+                        to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .tiles > .tile { animation: riseIn .34s cubic-bezier(.22,.9,.3,1) both; }
+    .tiles > .tile:nth-child(1) { animation-delay: 0ms; }
+    .tiles > .tile:nth-child(2) { animation-delay: 55ms; }
+    .tiles > .tile:nth-child(3) { animation-delay: 110ms; }
+    .tiles > .tile:nth-child(4) { animation-delay: 165ms; }
+    .tiles > .tile:nth-child(5) { animation-delay: 220ms; }
+    .tiles > .tile:nth-child(6) { animation-delay: 275ms; }
+    .tiles > .tile:nth-child(n+7) { animation-delay: 330ms; }
+  }
+  /* दबाने पर पता चले कि लगा — पुराने ऐप और नए ऐप का सबसे बड़ा फ़र्क़ यही है */
+  .tile.go:active, .bcard:active, .mrow.txn:active { transform: scale(.985); }
+  .tile, .bcard, .mrow.txn { transition: transform .12s ease; }
   .jobTxt { flex: 1; min-width: 0; font-size: 13.5px; }
   .jobTxt small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
   .jobTxt small.bad { color: #ff9c9c; }
@@ -1268,6 +1338,16 @@
     </div>
   </div>
 
+  <!-- 📖 बहीखाता — एक क्लिक पर पूरा खाता -->
+  <div id="bahiSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:560px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>📖 बहीखाता</h3>
+        <button class="x" onclick="closeSheet('bahiSheet')">✕</button></div>
+      <div id="bahiBody"></div>
+    </div>
+  </div>
+
   <!-- 🔗 दो खाते मिलाइए — हाथ से, जब ऐप ख़ुद न पहचान पाए -->
   <div id="accMergeSheet" class="sheet" hidden>
     <div class="sheetBox" style="max-width:480px">
@@ -1524,6 +1604,9 @@
         <div class="pbTop">
           <select id="pbAccount"></select>
           <select id="pbMonth"></select>
+        </div>
+        <div class="pick" style="margin-top:9px">
+          <button type="button" class="primary" onclick="openBahi()">📖 पूरा बहीखाता बनाइए</button>
         </div>
         <div id="pbHead"></div>
       </div>
@@ -14540,6 +14623,391 @@ const askedMissing = () => EXP.filter((e) =>
 let ASKED_FOR = "";
 
 /** «किसके कहने पर» के लिए संपर्क — खोज के साथ, सबसे ज़्यादा वाला ऊपर। */
+
+/* ══════════ 📖 बहीखाता — एक क्लिक पर पूरा खाता ═══════════════════════
+
+   विक्रम जी: «जब कभी भी किसी खाते के statement की ज़रूरत पड़े, एक क्लिक पर
+   बढ़िया, बिना किसी error का statement मिले — जिसमें आया-गया अलग-अलग हो,
+   और उसके नीचे क्या ख़रीदा, किसके कहने पर, किस यूनिट को… UTR सबसे
+   महत्वपूर्ण है, क्योंकि कोई ट्रांज़ैक्शन डबल न हो।»
+
+   पासबुक पहले से थी, पर वह सिर्फ़ **पैसे की क़तार** दिखाती है। बहीखाता
+   उसके नीचे का **क़िस्सा** दिखाता है — और वही CA को भेजने लायक़ काग़ज़ है।
+
+   🔒 पूरा हिसाब सादे कोड से — बैंक का काग़ज़ किसी AI के पास नहीं जाता। */
+
+/**
+ * इस पंक्ति का बिल होता ही नहीं — तो तक़ाज़ा भी मत करो।
+ *
+ * पहली बार बहीखाता असली statement पर चलाया तो हर पंक्ति पर चार «भर दीजिए»
+ * के बटन आ रहे थे — «CASH WITHDRAWAL SELF», «CMP CHARGE DR», «PMSBY
+ * RENEWAL» पर भी। ये न ख़रीद हैं, न किसी के कहने पर गए: अपनी ही निकासी,
+ * बैंक का अपना ख़र्च, और बीमे की क़िस्त।
+ *
+ * ऐसी पंक्ति पर तक़ाज़ा करना ऐप को «नाकाम काम की सूची» बना देता है, और
+ * फिर असली तक़ाज़े भी अनदेखे रह जाते हैं।
+ */
+const NO_BILL = [
+  [/CASH\s*WITHDRAWAL|WDL\s*SELF|ATM\s*(WDL|CASH)|SELF\s*AT\s*\d/i, "🏧 अपनी निकासी"],
+  [/CMP\s*CHARGE|SMS\s*CHARGE|ANNUAL\s*FEE|SERVICE\s*CHARGE|CHRG|CHARGES?\b/i, "🏦 बैंक का ख़र्च"],
+  [/PMSBY|PMJJBY|INSURANCE|PREMIUM/i, "🛡️ बीमे की क़िस्त"],
+  [/\bGST\b|\bTDS\b|INTEREST|INT\.?\s*CR/i, "🧮 कर / ब्याज"]
+];
+function noBillWhy(t) {
+  const hay = String((t && (t.narration || t.party)) || "");
+  for (const [re, why] of NO_BILL) if (re.test(hay)) return why;
+  return "";
+}
+
+/** एक बैंक-पंक्ति का पूरा क़िस्सा — बिल, कहने वाला, यूनिट, सामान, काग़ज़। */
+function bahiRow(t) {
+  const tw = twinOf(t);
+  let e = tw && tw.exp;
+  if (!e && t.matchedReceiptId) {
+    e = EXP.filter((x) => x.receiptId === t.matchedReceiptId)[0] || null;
+  }
+  const ph = e && phoneKey(e.requestedPhone);
+  const c = ph ? CONTACTS[ph] : null;
+  const photos = (e && e.photos) || [];
+  return {
+    t, e,
+    who: t.party || t.narration || null,
+    utr: txnUtr(t),
+    asker: (c && c.name) || (e && e.requestedBy) || null,
+    askerPhone: ph || null,
+    askerRole: c && c.role,
+    unit: (e && e.unit) || null,
+    items: (e && e.items) || [],
+    receiptId: (e && e.receiptId) || t.matchedReceiptId || null,
+    photos
+  };
+}
+
+/**
+ * 🔑 UTR की जाँच — यही वह पंक्ति है जिस पर भरोसा टिकता है।
+ * @returns {{n:number, withUtr:number, pct:number, dupes:Array}}
+ */
+function bahiUtrAudit(rows) {
+  const out = rows.filter((r) => r.t.type === "debit");
+  const seen = {}, dupes = [];
+  let withUtr = 0;
+  out.forEach((r) => {
+    if (!r.utr) return;
+    withUtr++;
+    if (seen[r.utr]) dupes.push({ utr: r.utr, a: seen[r.utr], b: r });
+    else seen[r.utr] = r;
+  });
+  return { n: out.length, withUtr, dupes,
+    pct: out.length ? Math.round((withUtr / out.length) * 100) : 100 };
+}
+
+/* 💰 बहीखाते की जंज़ीर वाली पंक्ति में **पैसे भी** दिखने चाहिए। बाक़ी ऐप में
+   रकम गोल कर दी जाती है (₹61.93 → ₹62), जो सूची में ठीक है — पर जिस पंक्ति
+   पर «हिसाब मिला» लिखा हो, वहाँ गोल अंक भरोसा तोड़ता है। */
+const INRp = (n) => "₹" + (Number(n) || 0).toLocaleString("en-IN",
+  { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+let BAHI_ACC = "";
+
+function openBahi() {
+  BAHI_ACC = ($("pbAccount") && $("pbAccount").value) ||
+    Object.keys(ACCOUNTS)[0] || "";
+  renderBahi();
+  openSheet("bahiSheet");
+}
+
+function renderBahi() {
+  const box = $("bahiBody");
+  if (!box) return;
+  const acc = BAHI_ACC;
+  const ids = Object.keys(ACCOUNTS);
+  const pick = `<label style="display:block">🏦 कौन-सा खाता
+    <select style="width:100%;margin-top:5px" onchange="BAHI_ACC=this.value;renderBahi()">
+      ${ids.map((id) => `<option value="${esc(id)}"${id === acc ? " selected" : ""}>${
+        esc(accLabel(id))}</option>`).join("")}
+    </select></label>`;
+
+  if (!acc) { box.innerHTML = pick + gfx.empty("hello", "पहले खाता जोड़िए",
+    "जिस खाते का बहीखाता चाहिए, वह पहले 🏦 मिलान वाले पन्ने पर जोड़ दीजिए।"); return; }
+
+  const all = pbTxns(acc).filter((t) => inRange(t.date));
+  if (!all.length) {
+    box.innerHTML = pick + gfx.empty("seek", "इस अवधि में कोई पंक्ति नहीं",
+      "ऊपर की तारीख़-पट्टी से दूसरी अवधि चुन लीजिए, या इस खाते की statement डाल दीजिए।");
+    return;
+  }
+  const rows = all.map(bahiRow);
+  const ins = rows.filter((r) => r.t.type === "credit");
+  const outs = rows.filter((r) => r.t.type !== "credit");
+  const sum = (a) => a.reduce((x, r) => x + (r.t.amount || 0), 0);
+  const inSum = sum(ins), outSum = sum(outs);
+  const aud = pbAudit(acc), op = pbOpening(acc);
+  const ua = bahiUtrAudit(rows);
+  const from = all[0].date, to = all[all.length - 1].date;
+
+  box.innerHTML = pick + `
+    <div class="bahiTop">
+      <div class="in"><div class="bk">🟢 आया</div>
+        <div class="bv">${INR(inSum)}</div><div class="bs">${ins.length} बार</div></div>
+      <div class="out"><div class="bk">🔴 गया</div>
+        <div class="bv">${INR(outSum)}</div><div class="bs">${outs.length} बार</div></div>
+      <div><div class="bk">⚖️ ${inSum - outSum >= 0 ? "बचा" : "घटा"}</div>
+        <div class="bv">${INR(inSum - outSum)}</div>
+        <div class="bs">${esc(dayLabel(String(from).slice(0, 10)))} →
+          ${esc(dayLabel(String(to).slice(0, 10)))}</div></div>
+    </div>
+
+    <div class="bahiChain ${aud && aud.ok ? "ok" : aud && aud.ok === false ? "no" : ""}">
+      <span>ओपनिंग <b>${op.value != null ? INRp(op.value) : "—"}</b>
+        → क्लोजिंग <b>${aud && aud.bank != null ? INRp(aud.bank) : "—"}</b></span>
+      <span>${aud && aud.ok ? "✅ हिसाब मिला"
+        : aud && aud.ok === false ? `🔴 ${INRp(Math.abs(aud.gap))} का फ़र्क़`
+        : "बैंक ने बची रकम लिखी ही नहीं"}</span>
+    </div>
+
+    <div class="bahiChain ${ua.dupes.length ? "no" : "ok"}" style="margin-top:9px">
+      <span>🔑 ${ua.withUtr} / ${ua.n} गए हुए पेमेंट पर UTR है (${ua.pct}%)</span>
+      <span>${ua.dupes.length ? `🔴 ${ua.dupes.length} UTR दो बार मिले`
+        : "✅ एक भी UTR दो बार नहीं"}</span>
+    </div>
+    ${ua.n - ua.withUtr ? `<div class="muted" style="margin-top:6px;font-size:12px">
+      ⚠️ ${ua.n - ua.withUtr} पंक्तियों पर UTR नहीं — इनका दुहराव पक्के तौर पर
+      नहीं पकड़ा जा सकता।</div>` : ""}
+    ${ua.dupes.map((d) => `<div class="docFix" style="margin-top:8px">
+      <b>🔴 वही UTR ${esc(d.utr)} दो बार</b>
+      <small>${esc(dayLabel(String(d.a.t.date).slice(0,10)))} · ${INR(d.a.t.amount)}
+        · ${esc(d.a.who || "—")}<br>
+        ${esc(dayLabel(String(d.b.t.date).slice(0,10)))} · ${INR(d.b.t.amount)}
+        · ${esc(d.b.who || "—")}</small></div>`).join("")}
+
+    <div class="pick" style="margin-top:12px">
+      <button type="button" class="mini" onclick="copyBahi()">📋 कॉपी</button>
+      <button type="button" class="mini" onclick="waBahi()">💬 WhatsApp</button>
+      <button type="button" class="mini" onclick="sheetBahi(this)">📊 Sheet में</button>
+    </div>
+
+    <div class="bahiSec">🔴 जो पैसा गया <small>${outs.length} पंक्तियाँ ·
+      ${INR(outSum)}</small></div>
+    ${outs.length ? outs.map(bahiCard).join("")
+      : `<div class="muted">इस अवधि में कुछ नहीं गया।</div>`}
+
+    <div class="bahiSec">🟢 जो पैसा आया <small>${ins.length} पंक्तियाँ ·
+      ${INR(inSum)}</small></div>
+    ${ins.length ? ins.map(bahiCard).join("")
+      : `<div class="muted">इस अवधि में कुछ नहीं आया।</div>`}`;
+}
+
+/** एक पंक्ति का कार्ड — ऊपर पैसा, नीचे पूरा क़िस्सा। */
+function bahiCard(r) {
+  const t = r.t;
+  const miss = (what, fix) => `<span class="miss">— ${what} —</span>${
+    fix ? ` <button type="button" class="mini" style="padding:1px 7px"
+      onclick="${fix}">भर दीजिए</button>` : ""}`;
+  const eid = r.e ? esc(r.e._id) : "";
+  /* बिल लगा ही न हो तो «सुधारें» का कोई मतलब नहीं — तब सीधे उसी बैंक-पंक्ति
+     पर बिल जोड़ने का रास्ता खुलना चाहिए। ख़ाली छोड़ना सबसे बुरा है। */
+  const fixExp = (what) => eid
+    ? `closeSheet('bahiSheet');${what}('${eid}')`
+    : `closeSheet('bahiSheet');openBillFor('${esc(t._id)}')`;
+  return `
+  <div class="bRow ${t.type === "credit" ? "in" : "out"}">
+    <div class="bHead">
+      <span class="bAmt">${INR(t.amount)}</span>
+      <span class="bWho">${esc(r.who || "—")}</span>
+      <span class="bWhen">${esc(dayLabel(String(t.date).slice(0, 10)))}${
+        t.time ? " · " + esc(t.time) : ""}</span>
+    </div>
+    <div class="bKeys">
+      ${r.utr ? `<span class="badge ok2">🔑 ${esc(r.utr)}</span>`
+        : `<span class="badge warn2">🔑 UTR नहीं</span>`}
+      ${t.chequeNo ? `<span class="badge">🧾 चेक ${esc(t.chequeNo)}</span>` : ""}
+      ${t.app ? `<span class="badge">📲 ${esc(t.app)}</span>` : ""}
+      <span class="badge">🏦 ${esc(accLabel(t.accountId))}</span>
+      ${r.receiptId ? `<span class="badge">🧾 ${esc(r.receiptId)}</span>` : ""}
+    </div>
+    ${t.type === "credit" ? "" : (!r.e && noBillWhy(t) ? `
+    <div class="bStory"><div class="sl"><span>${esc(noBillWhy(t))}</span>
+      <span class="muted">इसका बिल नहीं होता</span></div></div>` : `
+    <div class="bStory">
+      <div class="sl"><span>🙋 किसके कहने पर</span><span>${
+        r.asker ? esc(r.asker) + (r.askerPhone ? ` · ${esc(phoneShow(r.askerPhone))}` : "") +
+          (r.askerRole ? ` · ${r.askerRole === "officer" ? "🎖️ आर्मी ऑफ़िसर" : "🧑‍🍳 स्टाफ़"}` : "")
+          : miss("पता नहीं", fixExp("openAsked"))}</span></div>
+      <div class="sl"><span>🎯 किस यूनिट को</span><span>${
+        r.unit ? esc(r.unit)
+          : miss("यूनिट नहीं लगी", fixExp("editExpense"))}</span></div>
+      <div class="sl"><span>🛒 क्या ख़रीदा</span><span>${
+        r.items.length ? esc(r.items.map((i) => i.name +
+            (i.qty != null ? " " + i.qty + (i.unit ? " " + i.unit : "") : "")).join(" · "))
+          : miss("बिल नहीं लगा", fixExp("editExpense"))}</span></div>
+      <div class="sl"><span>📎 काग़ज़</span><span>${
+        r.photos.length
+          ? r.photos.map((p) => p && p.url
+              ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">${
+                  p.kind === "bill" ? "🧾 बिल" : p.kind === "payment" ? "📱 रसीद"
+                  : p.kind === "request" ? "💬 WhatsApp" : "📎 " + esc(p.kind || "काग़ज़")}</a>`
+              : "").filter(Boolean).join(" · ") || miss("कुछ नहीं लगा", fixExp("editExpense"))
+          : miss("कुछ नहीं लगा", fixExp("editExpense"))}</span></div>
+    </div>`)}
+  </div>`;
+}
+
+/** काग़ज़ को शब्दों में — कॉपी और WhatsApp दोनों के लिए वही। */
+function bahiText() {
+  const acc = BAHI_ACC;
+  const rows = pbTxns(acc).filter((t) => inRange(t.date)).map(bahiRow);
+  const ins = rows.filter((r) => r.t.type === "credit");
+  const outs = rows.filter((r) => r.t.type !== "credit");
+  const sum = (a) => a.reduce((x, r) => x + (r.t.amount || 0), 0);
+  const ua = bahiUtrAudit(rows);
+  const L = [`📖 बहीखाता — ${accLabel(acc)}`, rangeWords(), "",
+    `🟢 आया  ${INR(sum(ins))}  (${ins.length} बार)`,
+    `🔴 गया  ${INR(sum(outs))}  (${outs.length} बार)`,
+    `⚖️ ${sum(ins) - sum(outs) >= 0 ? "बचा" : "घटा"}  ${INRp(sum(ins) - sum(outs))}`,
+    "", `🔑 ${ua.withUtr}/${ua.n} पर UTR (${ua.pct}%)` +
+      (ua.dupes.length ? ` · 🔴 ${ua.dupes.length} दो बार` : " · ✅ एक भी दो बार नहीं"),
+    "", "── 🔴 जो पैसा गया ──"];
+  outs.forEach((r) => {
+    L.push(`${INR(r.t.amount)} · ${r.who || "—"} · ${dayLabel(String(r.t.date).slice(0,10))}${
+      r.t.time ? " " + r.t.time : ""}`);
+    if (r.utr) L.push(`   🔑 ${r.utr}`);
+    if (r.asker) L.push(`   🙋 ${r.asker}`);
+    if (r.unit) L.push(`   🎯 ${r.unit}`);
+    if (r.items.length) L.push("   🛒 " + r.items.map((i) => i.name).join(", "));
+  });
+  L.push("", "── 🟢 जो पैसा आया ──");
+  ins.forEach((r) => L.push(`${INR(r.t.amount)} · ${r.who || "—"} · ${
+    dayLabel(String(r.t.date).slice(0,10))}`));
+  return L.join("\n");
+}
+
+function copyBahi() {
+  copyText(bahiText());
+  toast("📋 बहीखाता कॉपी हो गया");
+}
+function waBahi() {
+  location.href = "https://wa.me/?text=" + encodeURIComponent(bahiText());
+}
+
+/** 📊 वही Sheet — पर अब पूरे क़िस्से के साथ। */
+async function sheetBahi(btn) {
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = "… बना रहा हूँ";
+  try {
+    const rows = pbTxns(BAHI_ACC).filter((t) => inRange(t.date)).map(bahiRow);
+    const body = {
+      label: accLabel(BAHI_ACC),
+      header: ["तारीख़", "समय", "किसे/किससे", "आया", "गया", "बची रकम",
+        "UTR", "चेक नं.", "किसके कहने पर", "यूनिट", "क्या ख़रीदा", "रसीद नं."],
+      rows: rows.map((r) => [r.t.date, r.t.time || "", r.who || "",
+        r.t.type === "credit" ? r.t.amount : "",
+        r.t.type === "credit" ? "" : r.t.amount,
+        r.t.balance != null ? r.t.balance : "",
+        r.utr || "", r.t.chequeNo || "", r.asker || "", r.unit || "",
+        r.items.map((i) => i.name).join(", "), r.receiptId || ""]),
+      note: "VBE बहीखाता · " + rangeWords() + " · बना " + todayISO()
+    };
+    const res = await botCall("sheet", body);
+    if (!res || !res.ok) throw new Error((res && res.error) || "Sheet नहीं बनी");
+    toast("📊 Sheet बन गई");
+    /* नए पन्ने में — वरना ऐप छूट जाता है और वापस आकर सब दुबारा पढ़ना
+       पड़ता है (मुफ़्त सीमा में वह महँगा है)। */
+    window.open(res.url, "_blank", "noopener");
+  } catch (e) {
+    toast("नहीं बनी: " + e.message);
+  } finally { btn.disabled = false; btn.textContent = was; }
+}
+
+/* ══════════ 👑 पक्के लोग ═══════════════════════════════════════════
+
+   विक्रम जी: «अधिकतम 10 लोग ऐसे हैं जिनके कहने पर ही मैं पेमेंट करता हूँ —
+   7-8 मेरे स्टाफ़ हैं और दूसरे आर्मी के ऑफ़िसर हैं। वे लोग परमानेंट होने
+   चाहिए, जिनके आधार पर मैं सर्च कर सकूँ।»
+
+   इसलिए «🙋 किसके कहने पर» खुलते ही सबसे ऊपर उन्हीं के बड़े चिप आते हैं —
+   ढूँढना नहीं पड़ता, एक टैप और नाम लग गया।
+
+   📞 और नंबर के बिना कोई नहीं जुड़ता। नाम अकेला पहचान नहीं है: «मनोज» दो
+      हो सकते हैं, नंबर एक ही होता है। यही वजह है कि पूरा संपर्क-संग्रह
+      नंबर से ही बना हुआ है (firestore.rules में भी वही जाँच है)।         */
+
+const ROLE_ICON = { staff: "🧑‍🍳", officer: "🎖️" };
+const ROLE_NAME = { staff: "स्टाफ़", officer: "आर्मी ऑफ़िसर" };
+
+/** पक्के लोग — सबसे ज़्यादा बार कहने वाले पहले। */
+function regulars() {
+  return Object.values(CONTACTS).filter((c) => c && c.regular && c.phone)
+    .map((c) => Object.assign({}, c, contactSpend(c.phone)))
+    .sort((a, b) => (b.rows.length - a.rows.length) || (b.sum - a.sum));
+}
+
+/** 👑 पक्का बनाओ या हटाओ — एक टैप। */
+async function toggleRegular(phone) {
+  const k = phoneKey(phone);
+  const c = CONTACTS[k];
+  if (!c) return;
+  const on = !c.regular;
+  c.regular = on;
+  CONTACTS[k] = c;
+  await db.collection("vbe_contacts").doc(k).set({ regular: on }, { merge: true })
+    .catch(() => {});
+  await auditLog(on ? "contact_pinned" : "contact_unpinned", null,
+    { phone: k, name: c.name || null });
+  toast(on ? "👑 पक्का कर दिया" : "हटा दिया");
+  renderAskedList(); renderRegulars();
+}
+
+/** 🧑‍🍳 स्टाफ़ या 🎖️ आर्मी ऑफ़िसर। */
+async function setRole(phone, role) {
+  const k = phoneKey(phone);
+  const c = CONTACTS[k];
+  if (!c) return;
+  c.role = role;
+  CONTACTS[k] = c;
+  await db.collection("vbe_contacts").doc(k).set({ role }, { merge: true })
+    .catch(() => {});
+  renderAskedList(); renderRegulars();
+}
+
+function renderRegulars() {
+  const box = $("akReg");
+  if (!box) return;
+  const reg = regulars();
+  /* 🔎 जिन्हें 3 बार से ज़्यादा नाम दिया जा चुका, उन्हें सुझा दो — पर
+     पक्का ख़ुद मत कर दो। यह विक्रम जी का फ़ैसला है, ऐप का नहीं। */
+  const sugg = Object.values(CONTACTS)
+    .filter((c) => c && c.phone && !c.regular)
+    .map((c) => Object.assign({}, c, contactSpend(c.phone)))
+    .filter((c) => c.rows.length >= 3)
+    .sort((a, b) => b.rows.length - a.rows.length).slice(0, 3);
+
+  if (!reg.length && !sugg.length) { box.innerHTML = ""; return; }
+  box.innerHTML = `
+    ${reg.length ? `<div class="regWrap">
+      <div class="bahiSec" style="margin-top:0">👑 पक्के लोग
+        <small>${reg.length} · एक टैप में नाम लग जाएगा</small></div>
+      <div class="regGrid">
+        ${reg.map((c) => `
+          <div class="regChip" onclick="pickAsked('${esc(c.phone)}')">
+            <div class="rd">${ROLE_ICON[c.role] || "🙋"}</div>
+            <b>${esc(c.name || phoneShow(c.phone))}</b>
+            <small>${esc(ROLE_NAME[c.role] || "—")}</small>
+            <small>${c.rows.length} बार कहा</small>
+          </div>`).join("")}
+      </div>
+    </div>` : ""}
+    ${sugg.length ? `<div class="docFix" style="margin-top:0;margin-bottom:12px">
+      <b>👑 इन्हें पक्का कर लीजिए?</b>
+      <small>इनके कहने पर पहले भी कई बार पैसा गया है। पक्का करने पर ये सबसे
+        ऊपर आ जाएँगे और ढूँढना नहीं पड़ेगा।</small>
+      <div class="pick" style="margin-top:8px">
+        ${sugg.map((c) => `<button type="button" class="mini"
+          onclick="toggleRegular('${esc(c.phone)}')">👑 ${esc(c.name || phoneShow(c.phone))}
+          · ${c.rows.length} बार</button>`).join("")}
+      </div>
+    </div>` : ""}`;
+}
+
 function askedRows(q) {
   const pk = phoneKey(q), k = pKey(q);
   const digits = String(q || "").replace(/\D/g, "");
@@ -14569,15 +15037,27 @@ function renderAskedList() {
     return;
   }
   box.innerHTML = rows.map((c) => `
-    <div class="akRow" onclick="pickAsked('${esc(c.phone)}')">
-      ${gfx.avatar(c.name || "?", 38)}
-      <div class="akWho">
-        <b>${esc(c.name || "नाम नहीं लिखा")}</b>
-        <small>${esc(phoneShow(c.phone))}${
-          c.rows.length ? " · " + c.rows.length + " बार कहा" : " · अभी कुछ नहीं"}</small>
+    <div class="akRow">
+      <div onclick="pickAsked('${esc(c.phone)}')" style="display:flex;gap:10px;
+        align-items:center;flex:1;min-width:0">
+        ${gfx.avatar(c.name || "?", 38)}
+        <div class="akWho">
+          <b>${esc(c.name || "नाम नहीं लिखा")}${
+            c.regular ? ` ${ROLE_ICON[c.role] || "👑"}` : ""}</b>
+          <small>${esc(phoneShow(c.phone))}${
+            c.rows.length ? " · " + c.rows.length + " बार कहा" : " · अभी कुछ नहीं"}</small>
+        </div>
       </div>
       ${c.sum ? `<div class="akSum">${INR(c.sum)}</div>` : ""}
+      <button type="button" class="mini" title="पक्का करें"
+        onclick="event.stopPropagation();toggleRegular('${esc(c.phone)}')">${
+          c.regular ? "👑" : "☆"}</button>
+      ${c.regular ? `<button type="button" class="mini"
+        onclick="event.stopPropagation();setRole('${esc(c.phone)}','${
+          c.role === "officer" ? "staff" : "officer"}')">${
+          ROLE_ICON[c.role] || "🙋"}</button>` : ""}
     </div>`).join("");
+  renderRegulars();
 }
 
 function openAsked(id) {
@@ -14599,6 +15079,7 @@ function openAsked(id) {
         <div style="margin-top:8px"><button type="button" class="mini primary"
           onclick="pickAsked('${esc(g.phone)}')">✅ हाँ, वही हैं</button></div></div>` : "";
     })()}
+    <div id="akReg"></div>
     <div class="akFind">
       <input id="akSearch" placeholder="🔍 नाम या नंबर से खोजें…"
         oninput="renderAskedList()">
