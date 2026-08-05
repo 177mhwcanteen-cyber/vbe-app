@@ -1346,6 +1346,7 @@
       <button data-v="ledger">📜 हिसाब</button>
       <button data-v="pass">🏦 पासबुक</button>
       <button data-v="party">🧑 पार्टी</button>
+      <button data-v="repeat">🔁 हर महीने</button>
       <button data-v="recon">🏦 मिलान</button>
       <button data-v="unit">🎯 यूनिट</button>
       <button data-v="staff">🧑‍🤝‍🧑 Staff</button>
@@ -1590,6 +1591,13 @@
     </section>
 
     <!-- ── मिलान: statement upload + auto-match (कोई AI नहीं, सब यहीं ब्राउज़र में) ── -->
+    <!-- ── 🔁 बार-बार जाने वाला पैसा ── -->
+    <section class="view" id="v-repeat">
+      <div class="dbar" data-dbar></div><div class="dsum" data-dsum></div>
+      <div class="tiles" id="rpTiles"></div>
+      <div id="rpBody"></div>
+    </section>
+
     <section class="view" id="v-recon">
       <div class="card tilt" id="dropZone">
         <div class="drop">
@@ -10176,6 +10184,218 @@ let PARTIES = {}, VCARDS = {};
 const accLabel = (id) => (ACCOUNTS[id] && ACCOUNTS[id].label) ||
   (ACC_OUT[id] && ACC_OUT[id].label) || id || "—";
 
+
+/* ══════════ 🔁 हर महीने — बार-बार जाने वाला पैसा ═══════════════════
+
+   विक्रम जी: «कौन-कौन सी चीज़ों को बार-बार पेमेंट किया जाता है, यह काम आप
+   कर सकते हो — ताकि और ज़्यादा महत्वपूर्ण चीज़ हो।»
+
+   अब तक ऐप बता सकता था कि **कितना गया** और **किसे गया**। पर सबसे काम की
+   बात वह नहीं है — सबसे काम की बात यह है कि **कौन-सा पैसा बँधा हुआ है**।
+
+   एक बार का ₹50,000 और हर महीने का ₹5,000 — काग़ज़ पर पहला बड़ा दिखता है,
+   पर साल भर में दूसरा ₹60,000 खा जाता है। यही फ़र्क़ यह पन्ना दिखाता है।
+
+   🔒 पूरा हिसाब सादे कोड से — कोई AI नहीं, कोई अंदाज़ा-लगाने वाला मॉडल नहीं। */
+
+/** बीच वाली क़ीमत — औसत नहीं, ताकि एक अजीब पेमेंट पूरा हिसाब न बिगाड़े। */
+function median_(a) {
+  if (!a.length) return 0;
+  const x = a.slice().sort((p, q) => p - q), m = x.length >> 1;
+  return x.length % 2 ? x[m] : (x[m - 1] + x[m]) / 2;
+}
+
+/** कितने दिन का फ़ासला, किस नाम से जाना जाता है। */
+const BEATS = [
+  { max: 3,   name: "क़रीब रोज़" },
+  { max: 10,  name: "हर हफ़्ते" },
+  { max: 20,  name: "हर पखवाड़े" },
+  { max: 38,  name: "हर महीने" },
+  { max: 75,  name: "हर 2 महीने" },
+  { max: 115, name: "हर तिमाही" },
+  { max: 220, name: "हर छमाही" },
+  { max: 500, name: "साल में एक बार" }
+];
+
+/* ⏳ इतने दिन का इतिहास न हो तो «ताल» कहना ही ग़लत है।
+
+   असली statement पर यही ग़लती पकड़ी गई: SAHID को एक हफ़्ते में 4 बार पैसा
+   गया था (एक ही बड़ी ख़रीद के टुकड़े), और ऐप ने उसे «क़रीब रोज़» मानकर
+   **₹3,93,750 महीना** बता दिया। एक हफ़्ते के झोंके को साल भर की रफ़्तार
+   मान लेना सबसे बड़ा झूठ होता — इसलिए कम से कम तीन हफ़्ते का इतिहास
+   ज़रूरी है।                                                          */
+const BEAT_MIN_DAYS = 21;
+const beatOf = (days) => BEATS.filter((b) => days <= b.max)[0] || null;
+
+/**
+ * एक पार्टी की «ताल» निकालो।
+ *
+ * नियम जान-बूझकर सख़्त हैं — ऐप अंदाज़ा लगाता है, दावा नहीं करता:
+ *   • कम से कम 3 पेमेंट, वरना ताल कहने का कोई मतलब नहीं
+ *   • फ़ासलों की **बीच वाली** क़ीमत (median), औसत नहीं
+ *   • और दो-तिहाई फ़ासले उसी के आस-पास (±40%) हों, तभी «ताल पक्की»
+ *
+ * @returns {null|object}
+ */
+function partyBeat(p) {
+  const rows = (p.rows || [])
+    .filter((r) => r.dir !== "in" && (Number(r.amount) || 0) > 0 && r.date)
+    .map((r) => ({ d: String(r.date).slice(0, 10), a: Number(r.amount) || 0 }))
+    .sort((x, y) => x.d.localeCompare(y.d));
+  if (rows.length < 3) return null;
+
+  const gaps = [];
+  for (let i = 1; i < rows.length; i++) {
+    const g = dayGap(rows[i - 1].d, rows[i].d);
+    if (isFinite(g) && g > 0) gaps.push(g);
+  }
+  if (gaps.length < 2) return null;
+
+  const med = median_(gaps);
+  const beat = beatOf(med);
+  if (!beat) return null;
+  // कितने फ़ासले ताल के आस-पास बैठते हैं
+  const near = gaps.filter((g) => Math.abs(g - med) <= med * 0.4).length;
+  const firm = near / gaps.length >= 0.66;
+
+  const amts = rows.map((r) => r.a);
+  const total = amts.reduce((a, b) => a + b, 0);
+  const last = rows[rows.length - 1].d;
+  const span = dayGap(rows[0].d, last) || 1;
+  const nextD = new Date(last + "T12:00:00");
+  nextD.setDate(nextD.getDate() + Math.round(med));
+  const next = nextD.toISOString().slice(0, 10);
+  const late = Math.round(dayGap(last, todayISO()) - med);
+
+  /* 💰 महीने का बोझ **जो सचमुच हुआ उससे** निकलता है, किसी गुणा से नहीं।
+     हर पेमेंट अपने एक चक्र का पैसा है, इसलिए नीचे (span + med) रखा जाता
+     है — वरना आख़िरी चक्र आधा गिना जाता और रकम बढ़ी हुई दिखती। */
+  const window = span + med;
+  const perMonth = window > 0 ? (total / window) * 30 : 0;
+
+  return {
+    key: p.key, name: p.name || p.key, rows, amts, n: rows.length,
+    total, avg: total / rows.length,
+    lo: Math.min(...amts), hi: Math.max(...amts),
+    med, beat: beat.name, near, gaps,
+    /* ⏳ ताल तभी «पक्की» है जब वह **पूरे इतिहास** को समझा दे। तीन शर्तें:
+         1. इतिहास कम से कम तीन हफ़्ते का हो
+         2. फ़ासले आपस में एक जैसे हों (ऊपर वाली जाँच)
+         3. और ताल × बार ≈ पूरा फैलाव — वरना यह «झुंड + एक दूर वाला» है
+
+       तीसरी शर्त असली statement से आई: SAHID के 4 पेमेंट में से 3 एक ही
+       दिन-दो दिन में थे और चौथा तीन हफ़्ते बाद। बीच वाला फ़ासला 2 दिन निकला
+       और ऐप ने «क़रीब रोज़» कह दिया — जबकि फैलाव 24 दिन का था। */
+    firm: firm && span >= BEAT_MIN_DAYS && span <= med * (rows.length - 1) * 2.5,
+    last, next, span,
+    perMonth, perYear: perMonth * 12,
+    // 🔴 अगली तारीख़ निकल गई और पैसा नहीं गया — पर छोटी-मोटी देर पर शोर नहीं
+    late: late > Math.max(7, med * 0.5) ? late : 0,
+    accounts: p.accounts || {}
+  };
+}
+
+/** सारी पार्टियों की ताल — सबसे भारी बोझ सबसे ऊपर। */
+function allBeats() {
+  return Object.values(PARTIES).map(partyBeat).filter(Boolean)
+    .sort((a, b) => b.perMonth - a.perMonth);
+}
+
+function renderRepeat() {
+  const all = allBeats();
+  const firm = all.filter((b) => b.firm);
+  const loose = all.filter((b) => !b.firm);
+  const mo = firm.reduce((a, b) => a + b.perMonth, 0);
+  const lateOnes = firm.filter((b) => b.late);
+  const byBeat = {};
+  firm.forEach((b) => { byBeat[b.beat] = (byBeat[b.beat] || 0) + 1; });
+  const beatWords = Object.keys(byBeat)
+    .map((k) => byBeat[k] + " " + k).join(" · ");
+
+  $("rpTiles").innerHTML = [
+    gfx.tile({ k: "🔁 हर महीने बँधा", v: INR(mo), n: mo,
+      s: firm.length + " पार्टियाँ", color: gfx.C.out,
+      spark: firm.slice(0, 14).map((b) => b.perMonth) }),
+    gfx.tile({ k: "📅 साल भर का बोझ", v: INR(mo * 12), n: mo * 12,
+      s: "यही रफ़्तार रही तो", color: gfx.C.warn, pct: 80 }),
+    gfx.tile({ k: "🔴 देर हो गई", v: String(lateOnes.length),
+      s: lateOnes.length ? "इनका पैसा अटका है" : "एक भी नहीं",
+      color: lateOnes.length ? gfx.C.out : "#199e70",
+      pct: firm.length ? 100 - (lateOnes.length / firm.length) * 100 : 100 })
+  ].join("");
+
+  const box = $("rpBody");
+  if (!firm.length && !loose.length) {
+    box.innerHTML = gfx.empty("seek", "अभी कोई ताल नहीं दिखी",
+      `किसी एक पार्टी को <b>कम से कम 3 बार</b> पैसा गया हो, तभी यह बताया जा
+       सकता है कि पैसा बँधा हुआ है या नहीं। statement डालते जाइए — यह
+       पन्ना अपने-आप भरता जाएगा।`,
+      `<button type="button" class="mini primary" onclick="goTab('recon')">📄 statement डालिए</button>`);
+    return;
+  }
+
+  const card = (b) => {
+    const acc = Object.keys(b.accounts)[0];
+    return `
+    <div class="mrow txn ${b.late ? "out" : ""}">
+      <div class="amt out">${INR(b.avg)}</div>
+      <div class="mx">
+        <b><span class="plink" onclick="showParty('${esc(b.key)}')">${esc(b.name)}</span></b>
+        <span class="badge ${b.late ? "warn2" : "ok2"}">${esc(b.beat)}</span>
+        ${b.firm ? "" : '<span class="badge lo">ताल पक्की नहीं</span>'}
+        <br><span class="muted">${b.n} बार · औसतन हर ${Math.round(b.med)} दिन
+          ${b.lo !== b.hi ? ` · ${INR(b.lo)}–${INR(b.hi)}` : ""}
+          ${acc ? " · " + esc(accLabel(acc)) : ""}</span>
+        <br><span class="muted">पिछली बार ${esc(dayLabel(b.last))}${
+          b.firm ? ` · अगली ${esc(dayLabel(b.next))}` : ""}</span>
+        ${b.late ? `<br><span class="badge warn2">🔴 ${b.late} दिन की देर —
+          या पेमेंट रह गया, या वह पंक्ति statement से छूटी है</span>` : ""}
+        <div class="muted" style="margin-top:5px">${b.firm
+          ? `महीने का बोझ <b>${INR(b.perMonth)}</b> · साल का <b>${INR(b.perYear)}</b>`
+          /* ⚠️ ताल पक्की नहीं — तो «महीने का बोझ» लिखना झूठ होगा। कुछ
+             पेमेंट एक ही हफ़्ते में हो जाते हैं (एक बड़ी ख़रीद के टुकड़े),
+             और उन्हें साल भर की रफ़्तार मान लेना सबसे बड़ी ग़लती होती। */
+          : `अब तक कुल <b>${INR(b.total)}</b> · ${b.n} बार —
+             <span class="badge lo">आगे का अंदाज़ा नहीं लगाया जा सकता</span>`}</div>
+        <div style="margin-top:6px">${gfx.spark(b.amts.slice(-14), gfx.C.out)}</div>
+      </div>
+    </div>`;
+  };
+
+  box.innerHTML = `
+    ${lateOnes.length ? `<div class="card doc sick">
+      <div class="toonBox">
+        <div class="toonArt">${gfx.toon("alert", 66)}</div>
+        <div class="toonSay"><div class="docHead"><b>🔴 ${lateOnes.length} जगह देर हो गई</b></div>
+          <p>इनका पैसा अपनी ताल से पीछे चल रहा है। दो ही वजहें हो सकती हैं —
+            या तो सचमुच पेमेंट रह गया, या वह पंक्ति statement से छूट गई और
+            हिसाब अधूरा है।</p></div>
+      </div>
+      ${lateOnes.map(card).join("")}
+    </div>` : ""}
+
+    <div class="card">
+      <div class="itemsHead" style="margin-top:0">
+        <span>🔁 बँधा हुआ पैसा</span>
+        <span class="muted">${esc(beatWords || "—")}</span>
+      </div>
+      <p class="muted" style="margin-bottom:10px">एक बार का ₹50,000 और हर
+        महीने का ₹5,000 — काग़ज़ पर पहला बड़ा दिखता है, पर साल भर में दूसरा
+        <b>₹60,000</b> खा जाता है। इसीलिए यहाँ क्रम <b>महीने के बोझ</b> से
+        है, कुल रकम से नहीं।</p>
+      ${firm.filter((b) => !b.late).map(card).join("") ||
+        `<div class="muted">अभी कोई पक्की ताल नहीं मिली।</div>`}
+    </div>
+
+    ${loose.length ? `<div class="card">
+      <div class="itemsHead" style="margin-top:0"><span>🌀 बेतरतीब</span></div>
+      <p class="muted" style="margin-bottom:10px">इन्हें बार-बार पैसा जाता तो
+        है, पर किसी ताल से नहीं। इसलिए अगली तारीख़ का दावा नहीं किया जाता —
+        सिर्फ़ बता दिया जाता है कि कितना और कितनी बार।</p>
+      ${loose.slice(0, 25).map(card).join("")}
+    </div>` : ""}`;
+}
+
 function renderParties() {
   const q = pKey($("pSearch").value);
   const sort = $("pSort").value;
@@ -10787,6 +11007,7 @@ function refreshAll() {
   try { PARTIES = buildParties(); renderParties(); } catch (e) {}
   try { renderMissing(); } catch (e) {}
   try { renderAccounts(); renderCoverage(); } catch (e) {}
+  try { renderRepeat(); } catch (e) {}
   try { renderUnitTab(); renderUnitWatch(); renderChallanWatch(); } catch (e) {}
   try { renderUdhaar(); renderCheques(); renderStaff(); } catch (e) {}
   try { if (PB_ACC) initPass(); } catch (e) {}
