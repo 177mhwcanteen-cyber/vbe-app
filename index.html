@@ -14302,11 +14302,28 @@ async function runOneJob(job) {
     photos.push({ kind, url, at: (sh.r && sh.r.time) || null });
     job.photos = photos;
     saveJobs();
+    /* 🩸 v37 — यहीं वह छेद था जिससे 43 फोटो हिसाब से कट गईं।
+
+       पहले यहाँ `catch (e) {}` लिखा था — यानी फोटो Drive पर चढ़ जाती, पर
+       उसका लिंक बिल में लिखने की कोशिश नाकाम हो जाए तो **चुपचाप** आगे बढ़
+       जाता। काम «✅ हो गया» मान लिया जाता, और लिंक हमेशा के लिए खो जाता।
+
+       विक्रम जी की Drive में इसी वजह से 43 ऐसी फोटो मिलीं जो «FST-26-27-
+       0009_bill.jpg» जैसी थीं — यानी बिल मौजूद था, बस उसकी फोटो का पता
+       बिल में लिखा ही नहीं गया। और जब काम दुबारा चला तो फोटो **दुबारा चढ़
+       गई** — 7 जोड़े इसी तरह बने।
+
+       अब नाकामी छिपाई नहीं जाती: काम रुक जाता है और बाद में फिर कोशिश
+       करता है। फोटो फ़ोन में सँभली रहती है, इसलिए कुछ खोता नहीं।        */
     try {
       await db.collection("vbe_expenses").doc(job.docId).update({ photos });
       const e = EXP.filter((x) => x._id === job.docId)[0];
       if (e) e.photos = photos;
-    } catch (e) {}
+    } catch (err) {
+      jobWait(job, "फोटो का पता बिल में नहीं लिखा जा सका — फिर कोशिश करूँगा");
+      renderFastSheet();
+      return;
+    }
   }
 
   job.status = "done"; job.err = null;
@@ -14690,7 +14707,14 @@ async function runDriveClean() {
 function driveKnownIds() {
   const ids = {};
   const add = (u) => {
-    const m = String(u || "").match(/[-\w]{25,}/);   // Drive की file id
+    const raw = String(u || "").trim();
+    if (!raw) return;
+    /* पूरा पता भी याद रखो, सिर्फ़ id नहीं। Drive के पते कई रूप में आते हैं
+       (/file/d/…/view · open?id=… · uc?export=…), और कल कोई नया रूप आ गया
+       तो id न निकल पाने पर फोटो «बिन-दर्ज» दिखने लगेगी — जबकि वह जुड़ी हुई
+       है। दोनों तरफ़ से मिलाने पर वह ग़लती हो ही नहीं सकती। */
+    ids[raw] = 1;
+    const m = raw.match(/[-\w]{25,}/);              // Drive की file id
     if (m) ids[m[0]] = 1;
   };
   EXP.concat(EXP_OUT).forEach((e) => {
@@ -14703,12 +14727,35 @@ function driveKnownIds() {
   return ids;
 }
 
+/**
+ * इस फ़ाइल का नाम किसी बिल की तरफ़ इशारा करता है क्या?
+ *
+ * 🩸 v37 — पहली सफ़ाई में 43 फ़ाइलें «ऐप में दर्ज नहीं» निकलीं और हर एक पर
+ * «⚡ इससे बिल बनाइए» का बटन आ गया। **यह ख़तरनाक था** — क्योंकि उनमें से
+ * लगभग सारी `FST-26-27-0009_bill.jpg` जैसी थीं, यानी बिल पहले से मौजूद है
+ * और यह उसी की फोटो है। वह बटन दबाने पर **वही बिल दुबारा बन जाता।**
+ *
+ * ⚡ फास्ट एंट्री फ़ाइल का नाम `<बिल की docId>_<किस्म>` रखती है, इसलिए नाम
+ * से ही पता चल जाता है कि यह किसकी फोटो है। तब सही काम बिल बनाना नहीं —
+ * **टूटी हुई कड़ी जोड़ना** है।
+ *
+ * @returns {null|{docId:string, kind:string, exp:object}}
+ */
+function drivePhotoOwner(name) {
+  const m = String(name || "").match(/^(.+?)_(bill|payment|request|cheque|slip|qr|other|delivery)\.\w+$/i);
+  if (!m) return null;
+  const docId = m[1];
+  const exp = EXP.concat(EXP_OUT).filter((e) => e && e._id === docId)[0];
+  return exp ? { docId, kind: m[2].toLowerCase(), exp } : null;
+}
+
 /** ऐप में दर्ज न हुई फ़ाइलें — सिर्फ़ फोटो/PDF, बाक़ी कूड़ा नहीं गिना जाता। */
 function driveOrphans() {
   if (!DC || !DC.files) return [];
   const known = driveKnownIds();
   return DC.files.filter((f) =>
-    !known[f.id] && /^(image\/|application\/pdf)/.test(String(f.mime || "")));
+    !known[f.id] && !known[String(f.url || "").trim()] &&
+    /^(image\/|application\/pdf)/.test(String(f.mime || "")));
 }
 
 function renderDriveClean() {
@@ -14742,7 +14789,12 @@ function renderDriveClean() {
     return;
   }
 
-  const orph = driveOrphans();
+  const all = driveOrphans();
+  /* 🔗 जिनका बिल मौजूद है वे «कड़ी टूटी» हैं — उन्हें जोड़ना है, बनाना नहीं।
+     बाक़ी सचमुच नई हैं। दोनों का इलाज अलग है, इसलिए सूची भी अलग। */
+  const lost = all.map((f) => Object.assign({}, f, { own: drivePhotoOwner(f.name) }))
+    .filter((f) => f.own);
+  const orph = all.filter((f) => !drivePhotoOwner(f.name));
   const dupes = DC.dupes || [];
   const files = DC.files || [];
 
@@ -14752,6 +14804,8 @@ function renderDriveClean() {
         <div class="bs">${DC.folders} फ़ोल्डर${DC.capped ? " · और भी हैं" : ""}</div></div>
       <div class="out"><div class="bk">🔁 दोहरी</div>
         <div class="bv">${dupes.length}</div><div class="bs">एक ही फ़ाइल दो बार</div></div>
+      <div class="out"><div class="bk">🔗 कड़ी टूटी</div>
+        <div class="bv">${lost.length}</div><div class="bs">बिल है, फोटो जुड़ी नहीं</div></div>
       <div class="out"><div class="bk">🕳️ बिन-दर्ज</div>
         <div class="bv">${orph.length}</div><div class="bs">ऐप में नहीं</div></div>
     </div>
@@ -14764,6 +14818,36 @@ function renderDriveClean() {
     <div class="pick" style="margin-top:10px">
       <button type="button" class="mini" onclick="DC=null;runDriveClean()">🔄 दुबारा देखिए</button>
     </div>
+
+    ${lost.length ? `
+      <div class="bahiSec">🔗 इनका बिल तो है, पर फोटो जुड़ी नहीं
+        <small>${lost.length}</small></div>
+      <div class="docFix" style="margin-top:8px">
+        <small>ये फोटो Drive पर चढ़ तो गईं, पर उनका पता बिल में लिखा नहीं
+          जा सका (नेट टूटने पर ऐसा होता था — <b>वह छेद अब बंद कर दिया है</b>)।
+          इनका बिल पहले से मौजूद है, इसलिए <b>नया बिल नहीं बनाना</b> —
+          सिर्फ़ कड़ी जोड़नी है। एक टैप, और फोटो अपने बिल में दिखने लगेगी।</small>
+        <div class="pick" style="margin-top:9px">
+          <button type="button" class="mini primary"
+            onclick="relinkAll(this)">🔗 सबकी कड़ी जोड़ दीजिए (${lost.length})</button>
+        </div>
+      </div>
+      ${lost.slice(0, 40).map((f) => `
+        <div class="mrow">
+          <div class="mx"><b>${esc(f.own.exp.receiptId || f.own.docId)}</b>
+            <span class="badge ok2">${esc(f.own.kind)}</span>
+            <br><span class="muted">${esc((f.own.exp.vendor && f.own.exp.vendor.name) || "—")}
+              · ${f.own.exp.billTotal != null ? INR(f.own.exp.billTotal) : "—"}
+              · ${esc(f.at)}</span>
+            <div class="pick" style="margin-top:6px">
+              <button type="button" class="mini primary"
+                onclick="relinkPhoto('${esc(f.id)}','${esc(f.own.docId)}','${esc(f.own.kind)}','${esc(f.url)}',this)">🔗 जोड़ दीजिए</button>
+              <a class="mini" href="${esc(f.url)}" target="_blank" rel="noopener"
+                style="text-decoration:none">👁️ देखिए</a>
+            </div></div>
+        </div>`).join("")}
+      ${lost.length > 40 ? `<div class="muted" style="padding:6px 0">… और ${
+        lost.length - 40}</div>` : ""}` : ""}
 
     ${orph.length ? `
       <div class="bahiSec">🕳️ ये फोटो ऐप में दर्ज ही नहीं हुईं
@@ -14787,9 +14871,9 @@ function renderDriveClean() {
             </div></div>
         </div>`).join("")}
       ${orph.length > 40 ? `<div class="muted" style="padding:6px 0">… और ${
-        orph.length - 40}</div>` : ""}` : `
+        orph.length - 40}</div>` : ""}` : (lost.length ? "" : `
       <div class="bahiSec">✅ एक भी फोटो छूटी नहीं</div>
-      <div class="muted">Drive की हर बिल-फोटो ऐप में दर्ज है।</div>`}
+      <div class="muted">Drive की हर बिल-फोटो ऐप में दर्ज है।</div>`)}
 
     ${dupes.length ? `
       <div class="bahiSec">🔁 एक ही फ़ाइल दो बार <small>${dupes.length} जोड़े</small></div>
@@ -14810,6 +14894,54 @@ function renderDriveClean() {
     ${(DC.empty || []).length ? `
       <div class="bahiSec">📂 खाली फ़ोल्डर <small>${DC.empty.length}</small></div>
       <div class="muted">${DC.empty.slice(0, 15).map(esc).join(" · ")}</div>` : ""}`;
+}
+
+/**
+ * 🔗 टूटी हुई कड़ी जोड़ो — फोटो का पता उसी बिल में लिख दो।
+ * नया बिल नहीं बनता, कुछ मिटता नहीं; सिर्फ़ photos में एक पंक्ति जुड़ती है।
+ */
+async function relinkPhoto(fileId, docId, kind, url, btn) {
+  const was = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "… जोड़ रहा हूँ"; }
+  try {
+    const e = EXP.concat(EXP_OUT).filter((x) => x && x._id === docId)[0];
+    if (!e) throw new Error("बिल नहीं मिला");
+    const photos = (e.photos || []).slice();
+    if (photos.some((p) => p && p.url === url)) {
+      if (btn) btn.textContent = "✅ पहले से जुड़ी है";
+      return true;
+    }
+    photos.push({ kind, url, at: null, relinked: true });
+    await db.collection("vbe_expenses").doc(docId).update({ photos });
+    e.photos = photos;
+    if (btn) btn.textContent = "✅ जुड़ गई";
+    return true;
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = was; }
+    toast("नहीं जुड़ी: " + err.message);
+    return false;
+  }
+}
+
+/** सबकी कड़ी एक साथ — एक-एक करके, ताकि कोई छूटे तो बाक़ी रुकें नहीं। */
+async function relinkAll(btn) {
+  const was = btn.textContent;
+  btn.disabled = true;
+  const list = driveOrphans()
+    .map((f) => Object.assign({}, f, { own: drivePhotoOwner(f.name) }))
+    .filter((f) => f.own);
+  let done = 0, failed = 0;
+  for (const f of list) {
+    btn.textContent = `… ${done + failed + 1} / ${list.length}`;
+    const ok = await relinkPhoto(f.id, f.own.docId, f.own.kind, f.url, null);
+    if (ok) done++; else failed++;
+  }
+  await auditLog("drive_relink", null, { done, failed });
+  saveCache();
+  toast(`🔗 ${done} फोटो अपने बिल में जुड़ गईं` +
+    (failed ? ` · ${failed} नहीं जुड़ीं` : ""));
+  btn.disabled = false; btn.textContent = was;
+  renderDriveClean(); renderAll();
 }
 
 /** ⚡ Drive की फ़ाइल सीधे फास्ट एंट्री की क़तार में। */
