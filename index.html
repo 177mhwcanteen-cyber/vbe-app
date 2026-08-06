@@ -950,6 +950,44 @@
   .flagRow .ft b { color: var(--ink); }
   .muted { color: var(--muted); font-size: 12.5px; }
 
+  /* ── 🪪 पार्टी Master ────────────────────────────────────────────── */
+  .pmAsk { border: 1px solid rgba(139,92,246,.5); border-radius: 18px;
+    padding: 16px; margin-bottom: 12px; text-align: center;
+    background: linear-gradient(160deg, rgba(139,92,246,.16), transparent 74%); }
+  .pmCode { display: inline-block; padding: 6px 15px; border-radius: 999px;
+    font-size: 15px; font-weight: 800; letter-spacing: .5px; margin: 6px 0 4px;
+    background: rgba(139,92,246,.22); color: #c4a8ff; }
+  .pmConf { font-size: 11.5px; color: var(--muted); }
+  .pmSide { display: flex; gap: 10px; align-items: flex-start; text-align: left;
+    padding: 12px; border-radius: 14px; margin-top: 10px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.035); }
+  .pmSide .ar { flex: 0 0 auto; font-size: 17px; }
+  .pmSide .tx { flex: 1; min-width: 0; }
+  .pmSide .tx b { display: block; font-size: 13.5px; line-height: 1.45;
+    word-break: break-word; }
+  .pmSide .tx small { display: block; color: var(--muted); font-size: 11.5px;
+    margin-top: 3px; }
+  .pmBtns { display: flex; gap: 10px; margin-top: 14px; }
+  .pmBtns button { flex: 1; padding: 13px; border-radius: 14px; font-size: 14px;
+    font-weight: 700; cursor: pointer; border: 1px solid var(--border);
+    background: rgba(255,255,255,.05); color: var(--ink); }
+  .pmBtns .yes { border-color: rgba(25,158,112,.55); color: #86e3bf;
+    background: rgba(25,158,112,.16); }
+  .pmBtns .no { border-color: rgba(208,59,59,.45); color: #ff9c9c;
+    background: rgba(208,59,59,.12); }
+
+  .pmRow { display: flex; gap: 11px; align-items: flex-start; padding: 12px 2px;
+    border-bottom: 1px solid var(--grid); }
+  .pmRow:last-child { border-bottom: 0; }
+  .pmRow .cd { flex: 0 0 auto; padding: 5px 10px; border-radius: 9px;
+    font-size: 11.5px; font-weight: 800; background: rgba(139,92,246,.18);
+    color: #c4a8ff; white-space: nowrap; }
+  .pmRow .cd.non { background: rgba(255,255,255,.06); color: var(--muted); }
+  .pmRow .nm { flex: 1; min-width: 0; font-size: 13.5px; }
+  .pmRow .nm small { display: block; color: var(--muted); font-size: 11px;
+    margin-top: 2px; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; }
+
   /* ── 🔔 घंटी और चेतावनियाँ ─────────────────────────────────────────
 
      विक्रम जी: «अभी जो परिवर्तन किए हैं वह कहीं पर भी दिखाई नहीं दे रहे —
@@ -1795,6 +1833,16 @@
        दूसरे टैब पर `hidden` हो जाता है, इसलिए पर्दा खुलता ही नहीं दिखता।
        बहीखाता बैंक वाले टैब से खुलता है, यानी पर्दा वहीं से बुलाया जाता है। -->
   <!-- 🔔 क्या-क्या अधूरा है -->
+  <!-- 🪪 पार्टी Master -->
+  <div id="pmSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:540px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3 id="pmTitle">🪪 पार्टी</h3>
+        <button class="x" onclick="closeSheet('pmSheet')">✕</button></div>
+      <div id="pmBody"></div>
+    </div>
+  </div>
+
   <div id="wdSheet" class="sheet" hidden>
     <div class="sheetBox" style="max-width:540px">
       <div class="grab"></div>
@@ -3050,7 +3098,7 @@ function cachePayload(slim) {
     ACCOUNTS: tsClean(ACCOUNTS),
     ACC_OUT: tsClean(ACC_OUT),
     VY: tsClean(VY), SALES: tsClean(SALES), PAYINS: tsClean(PAYINS),
-    VYLINKS, FIRM_ACC, SHORTNAME, VY_LOADED,
+    VYLINKS, FIRM_ACC, VYP, SHORTNAME, VY_LOADED,
     CONTACTS: tsClean(CONTACTS),
     BANKTXNS: tsClean(BANKTXNS),
     RETIRED: tsClean(RETIRED),
@@ -3101,6 +3149,7 @@ function loadCache() {
   CHEQUES = c.CHEQUES || {};
   VY = c.VY || []; SALES = c.SALES || []; PAYINS = c.PAYINS || [];
   VYLINKS = c.VYLINKS || {}; FIRM_ACC = c.FIRM_ACC || {};
+  VYP = c.VYP || { map: {}, canon: {}, no: {} };
   SHORTNAME = c.SHORTNAME || {}; VY_LOADED = !!c.VY_LOADED;
   CONTACTS = c.CONTACTS || {};
   LAST_SYNC = c.at;
@@ -8815,7 +8864,10 @@ function vyParties(firmId) {
   const rows = vyRows(null, firmId);
   const map = {};
   rows.forEach((x) => {
-    const k = pKey(x.party);
+    /* 🪪 अब जोड़ **पक्की पहचान** से होता है, कच्चे नाम से नहीं — इसलिए
+       «625 TPT PL ASC» और «625(I) Tpt Pl ASC» का हिसाब एक ही जगह दिखता
+       है (बशर्ते विक्रम जी ने «हाँ» कहा हो)। */
+    const k = vyCanon(x.party);
     if (!k) return;
     const m = map[k] = map[k] || { key: k, party: x.party, oldest: "",
       quote: { n: 0, sum: 0 }, challan: { n: 0, sum: 0 },
@@ -8890,6 +8942,15 @@ let SALES = [], PAYINS = [], SHORTNAME = {}, VY_LOADED = false, VY_VIEW = "home"
 function unitShort(name) {
   const k = pKey(name);
   if (SHORTNAME[k]) return SHORTNAME[k];
+  /* 🪪 विक्रम जी का रखा नाम सबसे ऊपर; उसके बाद **यूनिट कोड**, क्योंकि
+     «177 MH» और «625 TPT PL» वही हैं जो वे बोलते हैं — अंदाज़े से बने
+     छोटे नाम («17 Sir Guards» जैसे) उससे कमज़ोर हैं। */
+  try {
+    const c = vyCanon(name);
+    if (c && SHORTNAME[c]) return SHORTNAME[c];
+    const code = vyUnitCode(name);
+    if (code) return code;
+  } catch (e) {}
   return suggestShort(name);
 }
 
@@ -8963,17 +9024,20 @@ async function loadVyapar(force) {
   if (VY_LOADED && !force) return;
   try {
     // 🧱 यहाँ भी वही «दीवार» थी — 600 के बाद बिक्री चुपचाप कट जाती थी
-    const [vy, sa, pi, nm, lk, fa] = await Promise.all([
+    const [vy, sa, pi, nm, lk, fa, vp] = await Promise.all([
       pageAll("vbe_vy", 40000),
       pageAll("vbe_sales", 20000),
       pageAll("vbe_payins", 20000),
       db.collection("vbe_meta").doc("unit_names").get(),
       pageAll("vbe_vylinks", 20000),
-      db.collection("vbe_meta").doc("firm_accounts").get()
+      db.collection("vbe_meta").doc("firm_accounts").get(),
+      db.collection("vbe_meta").doc("vy_parties").get()
     ]);
     VYLINKS = {};
     lk.forEach((d) => { VYLINKS[d.id] = Object.assign({ _id: d.id }, d.data()); });
     FIRM_ACC = (fa.exists && fa.data().map) || {};
+    const vpd = (vp.exists && vp.data()) || {};
+    VYP = { map: vpd.map || {}, canon: vpd.canon || {}, no: vpd.no || {} };
     VY = markCapped("व्यापार", vy).map((d) => Object.assign({ _id: d.id }, d.data()));
     // पुराने दोनों संग्रह अब भी पढ़े जाते हैं — जो पहले डाला जा चुका है वह
     // कभी ग़ायब न हो। `vyAll()` दोनों को एक ही सूची में जोड़ता है।
@@ -9347,8 +9411,20 @@ function renderVyParties(box) {
       "रिपोर्ट डालते ही हर यूनिट का पूरा हिसाब यहाँ बन जाएगा।");
     return;
   }
-  box.innerHTML = `<div class="itemsHead"><span>🧑 किस यूनिट का क्या बाक़ी है</span>
-      <span class="muted">${rows.length}</span></div>` +
+  const pairs = vyPairs();
+  box.innerHTML = (pairs.length ? `
+      <div class="wdCard wd5" onclick="openVyPairs()">
+        <div class="wdIco">🪪</div>
+        <div class="wdTxt"><b>${plural(pairs.length, "जोड़ा", "जोड़े")} एक ही लग रहे हैं</b>
+          <span class="nums">${esc(pairs[0].code)}${pairs.length > 1
+            ? " और " + (pairs.length - 1) + " और" : ""}</span>
+          <small>एक ही यूनिट के दो नाम — देखकर बता दीजिए, जोड़ूँ या नहीं</small></div>
+        <div class="wdGo">›</div>
+      </div>` : "") +
+    `<div class="itemsHead"><span>🧑 किस यूनिट का क्या बाक़ी है</span>
+      <span class="muted">${rows.length}
+        <button type="button" class="mini" style="margin-left:6px"
+          onclick="openVyParties()">🪪 सूची</button></span></div>` +
     rows.map((r) => {
       const tot = Math.max(1, r.challan.sum, r.invoice.sum);
       const gp = (r.gap / tot) * 100, dp = (r.due / tot) * 100;
@@ -11079,7 +11155,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "aefe82135626";
+const APP_BUILD = "71c2b5fb874e";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -17434,6 +17510,301 @@ async function unlinkBank(btn) {
   }
 }
 
+
+
+/* ══════════ 🪪 पार्टी Master — यूनिट का नंबर ही असली पहचान ═══════════
+
+   विक्रम जी: «एक ही पार्टी का नाम अलग-अलग जगह अलग लिखा है… सब एक ही पार्टी
+   माने जाएँ। पर merge करने से पहले मुझसे पूछो, अपने-आप कभी merge मत करो।»
+
+   सेना के नाम एक ही यूनिट के लिए दस तरह से लिखे जाते हैं:
+
+       Officer Commanding,625 TPT PL ASC
+       Officer Commanding625(I) Tpt Pl ASC (Tk Tptr)     ← वही यूनिट
+
+   पर यह भी सच है, और यही सबसे ख़तरनाक जगह है:
+
+       CO,17 MECHANISED INFANTRY, Vill- Jalipa …
+       5 MECHANISED INFANTRY, Vill- Jalipa …             ← बिल्कुल अलग यूनिट
+
+   दोनों का पता एक ही चीज़ से चलता है — **नंबर**। इसलिए हर नाम से एक कोड
+   निकाला जाता है: क़िस्म वाले शब्द (MH · MECH INF · ARMD BDE · TPT PL…) से
+   ठीक पहले वाला 1–4 अंकों का समूह + क़िस्म। PIN (906340) और «56 apo» कभी
+   नहीं उठते, क्योंकि वे क़िस्म वाले शब्द के बाद आते हैं।
+
+   🛑 कोड सिर्फ़ **सुझाने** के लिए है। एक ही कोड होने पर भी ऐप जोड़ता नहीं —
+      पूछता है। और «नहीं» भी याद रखता है, वरना वही सवाल हर बार दोहराकर ऐप
+      बेकार हो जाएगा।                                                    */
+
+/* क़िस्म पहचानने वाले शब्द। हर एक के दो रूप: जगह वाला (जहाँ शब्द-सीमा चलती
+   है) और चिपका हुआ। ⚠️ चिपका हुआ रूप सिर्फ़ **लंबे** शब्दों के लिए है —
+   «GE» जैसे दो अक्षर चिपके नाम में कभी नहीं ढूँढे जाते, क्योंकि पहली कोशिश
+   में वह «MANAGER» के बीच मिल गया था और SBI वाली दोनों पार्टियाँ ग़लती से
+   «GE» बन गई थीं। */
+/* लेबल **दिखने** के रूप में लिखे हैं — «177 MH», «17 Mech Inf», «625 TPT
+   PL»। संक्षेप (MH · GE · ESG · NCC · BN · ECHS · MAC · SBI · TPT PL) बड़े
+   अक्षरों में ही रहते हैं; बाक़ी वैसे जैसे विक्रम जी बोलते हैं। पहले पूरा
+   कोड बड़े अक्षरों में था और «17 MECH INF» चिल्लाता हुआ लगता था। */
+const VY_TYPES = [
+  [/MILITARY ?HOSPITAL|MIL ?HOSP|\bMH\b/, /MILITARYHOSPITAL|MILHOSP/, "MH"],
+  [/MECHANISED ?INFANTRY|MECH ?INF/, /MECHANISEDINFANTRY|MECHINF/, "Mech Inf"],
+  [/MECH ?WKSP|MECH ?WORKSHOP/, /MECHWKSP|MECHWORKSHOP/, "Mech Wksp"],
+  [/ARMD ?WKSP|ARMOURED ?WKSP/, /ARMDWKSP/, "Armd Wksp"],
+  [/ARMD ?BDE|ARMOURED ?BDE/, /ARMDBDE|ARMOUREDBDE/, "Armd Bde"],
+  [/\bARMD\b|ARMOURED/, null, "Armd"],
+  [/TPT ?PL|\bTPT\b/, /TPTPL/, "TPT PL"],
+  [/GARRISON ?ENGINEER|\bGE\b/, /GARRISONENGINEER/, "GE"],
+  [/ENGINEER ?SQUADRON|ENGR ?SQN|ENGINEER|\bENGR\b/, /ENGINEERSQUADRON|ENGRSQN/, "Engr"],
+  [/ELINT ?SUB ?GP|\bESG\b/, /ELINTSUBGP/, "ESG"],
+  [/STN ?HQ|STATION ?HQ/, /STNHQ/, "Stn HQ"],
+  [/\bGUARDS\b/, /GUARDS/, "Guards"],
+  [/\bNCC\b/, null, "NCC"],
+  [/BATTALION|\bBN\b/, /BATTALION/, "BN"],
+  [/POLYCLINIC|\bECHS\b/, /POLYCLINIC/, "ECHS"],
+  [/\bMAC\b/, null, "MAC"],
+  [/STATE ?BANK|\bSBI\b/, /STATEBANK/, "SBI"]
+];
+
+/**
+ * नाम से यूनिट का कोड — «CO SIR, 177 Military Hospital» → «177 MH»।
+ * आदमी के नाम पर कुछ नहीं लौटता (कोई क़िस्म ही नहीं मिलती)।
+ */
+function vyUnitCode(name) {
+  const sp = String(name || "").toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
+  if (!sp) return null;
+  const sq = sp.replace(/ /g, "");
+  for (const [spat, gpat, lab] of VY_TYPES) {
+    const tries = gpat ? [[sp, spat], [sq, gpat]] : [[sp, spat]];
+    for (const [hay, pat] of tries) {
+      const m = hay.match(pat);
+      if (!m) continue;
+      // अंक क़िस्म वाले शब्द से **पहले** वाले हिस्से से — इसलिए PIN कभी नहीं
+      const nums = (hay.slice(0, m.index).match(/\d{1,4}/g) || [])
+        .filter((x) => !/^(19|20)\d\d$/.test(x));
+      return (nums.length ? nums[nums.length - 1] + " " : "") + lab;
+    }
+  }
+  return null;
+}
+
+/* ── संग्रह ───────────────────────────────────────────────────────────
+   25 पार्टियाँ ही हैं, इसलिए पूरा नक़्शा **एक ही दस्तावेज़** में — एक पढ़ाई
+   में सब आ जाता है। मुफ़्त सीमा (रोज़ 50,000) में यह मायने रखता है। */
+let VYP = { map: {}, canon: {}, no: {} };
+
+/** इस नाम की पक्की पहचान — मिलाया गया हो तो वही, वरना अपना ही। */
+function vyCanon(name) {
+  const k = pKey(name);
+  if (!k) return "";
+  return VYP.map[k] || k;
+}
+
+/** दिखाने वाला नाम — विक्रम जी का रखा छोटा नाम सबसे ऊपर, फिर यूनिट कोड। */
+function vyPartyName(canonId) {
+  const c = VYP.canon[canonId];
+  return (c && c.name) || canonId;
+}
+
+/** इस पहचान के सारे नाम (मूल + «और नाम»)। */
+function vyAliases(canonId) {
+  const c = VYP.canon[canonId];
+  return (c && c.aliases) || [];
+}
+
+/**
+ * 🤔 मिलते-जुलते जोड़े — **सिर्फ़ सुझाव**।
+ * एक ही कोड वाले दो अलग canon; जिनका जवाब आ चुका है वे छँट जाते हैं।
+ */
+function vyPairs() {
+  const byCode = {};
+  const seen = {};
+  vyAll().forEach((x) => {
+    const c = vyCanon(x.party);
+    if (!c || seen[c]) return;
+    seen[c] = 1;
+    const code = vyUnitCode(vyPartyName(c)) || vyUnitCode(x.party);
+    if (!code) return;                       // कोड ही नहीं — कोई सुझाव नहीं
+    (byCode[code] = byCode[code] || []).push({ id: c, code, name: x.party });
+  });
+  const out = [];
+  Object.keys(byCode).forEach((code) => {
+    const g = byCode[code];
+    for (let i = 0; i < g.length; i++) {
+      for (let j = i + 1; j < g.length; j++) {
+        const a = g[i], b = g[j];
+        if (VYP.no[pairKeyVy(a.id, b.id)]) continue;   // «नहीं» कह चुके हैं
+        out.push({ code, a, b, conf: vyPairConf(a, b) });
+      }
+    }
+  });
+  return out.sort((x, y) => y.conf - x.conf);
+}
+
+const pairKeyVy = (a, b) => [a, b].sort().join("|");
+
+/**
+ * भरोसा — कोड में अंक हो तो बहुत ऊँचा, न हो तो कम।
+ * «625 TPT PL» बनाम «625 TPT PL» पक्का है; «SBI» बनाम «SBI» सिर्फ़ शायद।
+ */
+function vyPairConf(a, b) {
+  const hasNum = /\d/.test(a.code);
+  let c = hasNum ? 90 : 55;
+  const wa = pKey(a.name), wb = pKey(b.name);
+  const sh = wa.length < wb.length ? wa : wb, lo = wa.length < wb.length ? wb : wa;
+  if (sh.length >= 6 && lo.indexOf(sh) >= 0) c += 8;
+  return Math.min(99, c);
+}
+
+/** एक पार्टी का हिसाब — कितने काग़ज़, कितनी रकम। */
+function vyPartyStat(canonId) {
+  const rows = vyAll().filter((x) => vyCanon(x.party) === canonId);
+  return { n: rows.length,
+    sum: rows.filter((x) => x.kind !== "payin")
+      .reduce((a, x) => a + (x.total || 0), 0) };
+}
+
+/* ── पक्का करना ─────────────────────────────────────────────────────── */
+
+async function saveVyp() {
+  await db.collection("vbe_meta").doc("vy_parties").set(VYP, { merge: true });
+  saveCache();
+}
+
+/**
+ * ✅ हाँ, एक ही — छोटी वाली पहचान बड़ी में मिल जाती है।
+ * कुछ मिटता नहीं: दूसरा नाम «और नाम» बनकर सँभल जाता है, और उसी से खोजने
+ * पर भी वही पार्टी मिलती है।
+ */
+async function vyJoin(loseId, keepId) {
+  if (!loseId || !keepId || loseId === keepId) return;
+  const names = [...new Set(
+    vyAll().filter((x) => vyCanon(x.party) === loseId).map((x) => x.party)
+      .concat(vyAliases(loseId)).filter(Boolean))];
+  const keep = VYP.canon[keepId] || { name: "", code: null, aliases: [] };
+  if (!keep.name) {
+    keep.name = (vyAll().filter((x) => vyCanon(x.party) === keepId)[0] || {}).party || keepId;
+  }
+  keep.code = keep.code || vyUnitCode(keep.name);
+  keep.aliases = [...new Set((keep.aliases || []).concat(names)
+    .filter((a) => pKey(a) !== pKey(keep.name)))].slice(0, 20);
+  VYP.canon[keepId] = keep;
+  // हर नाम की चाबी अब बड़ी पहचान की तरफ़
+  Object.keys(VYP.map).forEach((k) => { if (VYP.map[k] === loseId) VYP.map[k] = keepId; });
+  names.forEach((n) => { VYP.map[pKey(n)] = keepId; });
+  VYP.map[loseId] = keepId;
+  delete VYP.canon[loseId];
+  await saveVyp();
+  await auditLog("vy_party_join", { lose: loseId, names }, { keep: keepId });
+}
+
+/** ❌ नहीं, अलग — और यह याद रहता है, वरना वही सवाल दुबारा आएगा। */
+async function vyNotSame(a, b) {
+  VYP.no[pairKeyVy(a, b)] = true;
+  await saveVyp();
+  await auditLog("vy_party_not_same", null, { a, b });
+}
+
+/* ── 🖥️ पर्दा ────────────────────────────────────────────────────── */
+
+let PM_AT = 0, PM_LIST = [];
+
+function openVyPairs() {
+  PM_LIST = vyPairs();
+  PM_AT = 0;
+  renderVyPair();
+  openSheet("pmSheet");
+}
+
+function renderVyPair() {
+  const q = PM_LIST[PM_AT];
+  const box = $("pmBody");
+  $("pmTitle").textContent = "🪪 क्या ये एक ही हैं?";
+  if (!q) {
+    box.innerHTML = `
+      <div class="wdOk"><div class="big">🎉</div>
+        <b>सब पार्टियाँ साफ़ हैं</b>
+        <div class="muted">कोई दो नाम एक-दूसरे से मिलते-जुलते नहीं लगे।</div></div>
+      <button class="wide" style="margin-top:12px"
+        onclick="openVyParties()">🪪 पूरी सूची देखिए</button>`;
+    return;
+  }
+  const sa = vyPartyStat(q.a.id), sb = vyPartyStat(q.b.id);
+  box.innerHTML = `
+    <div class="muted" style="text-align:center;margin-bottom:8px">
+      ${PM_AT + 1} / ${PM_LIST.length}</div>
+    <div class="pmAsk">
+      <div style="font-size:13px;color:var(--muted)">दोनों का यूनिट कोड एक ही है</div>
+      <div class="pmCode">${esc(q.code)}</div>
+      <div class="pmConf">भरोसा ${q.conf}%${/\d/.test(q.code) ? ""
+        : " · <b>अंक नहीं है, इसलिए कम</b>"}</div>
+
+      <div class="pmSide"><span class="ar">⬅</span>
+        <div class="tx"><b>${esc(q.a.name)}</b>
+          <small>${sa.n} काग़ज़ · ${INR(sa.sum)}</small></div></div>
+      <div class="pmSide"><span class="ar">➡</span>
+        <div class="tx"><b>${esc(q.b.name)}</b>
+          <small>${sb.n} काग़ज़ · ${INR(sb.sum)}</small></div></div>
+
+      <div class="pmBtns">
+        <button type="button" class="yes" onclick="answerVyPair(true)">✅ हाँ, एक ही</button>
+        <button type="button" class="no" onclick="answerVyPair(false)">❌ नहीं, अलग</button>
+      </div>
+      <div class="muted" style="margin-top:10px;font-size:11.5px">
+        «नहीं» कहने पर यह जोड़ा <b>दुबारा कभी नहीं</b> पूछा जाएगा।</div>
+    </div>`;
+}
+
+async function answerVyPair(yes) {
+  const q = PM_LIST[PM_AT];
+  if (!q) return;
+  try {
+    if (yes) {
+      // जिसके काग़ज़ ज़्यादा हैं वही रहता है — कम वाला उसमें मिल जाता है
+      const sa = vyPartyStat(q.a.id), sb = vyPartyStat(q.b.id);
+      const keep = sa.n >= sb.n ? q.a : q.b, lose = sa.n >= sb.n ? q.b : q.a;
+      await vyJoin(lose.id, keep.id);
+      toast("🪪 एक ही पार्टी मान ली — " + q.code);
+    } else {
+      await vyNotSame(q.a.id, q.b.id);
+    }
+  } catch (e) { toast("नहीं हुआ: " + e.message); return; }
+  PM_LIST = vyPairs();
+  PM_AT = 0;
+  renderVyPair();
+  renderAll();
+}
+
+function openVyParties() {
+  const seen = {}, rows = [];
+  vyAll().forEach((x) => {
+    const c = vyCanon(x.party);
+    if (!c || seen[c]) return;
+    seen[c] = 1;
+    rows.push({ id: c, name: vyPartyName(c) === c ? x.party : vyPartyName(c),
+      code: vyUnitCode(x.party), al: vyAliases(c) });
+  });
+  rows.sort((a, b) => vyPartyStat(b.id).sum - vyPartyStat(a.id).sum);
+  $("pmTitle").textContent = "🪪 सारी पार्टियाँ";
+  $("pmBody").innerHTML = `
+    <div class="muted" style="margin-bottom:10px;line-height:1.6">
+      हर नाम से यूनिट का <b>कोड</b> निकाला जाता है — वही असली पहचान है।
+      एक ही कोड वाले नाम ऊपर सुझाए जाते हैं, पर जोड़ते आप ही हैं।</div>
+    ${PM_LIST.length ? `<button class="primary wide" style="margin-bottom:12px"
+      onclick="openVyPairs()">🤔 ${PM_LIST.length} जोड़े देखिए</button>` : ""}
+    <div class="card">${rows.map((r) => {
+      const st = vyPartyStat(r.id);
+      return `
+      <div class="pmRow">
+        <span class="cd${r.code ? "" : " non"}">${esc(r.code || "—")}</span>
+        <div class="nm"><b>${esc(unitShort(r.name))}</b>
+          <small>${esc(r.name)}</small>
+          ${r.al.length ? `<small>और नाम: ${esc(r.al.slice(0, 2).join(" · "))}${
+            r.al.length > 2 ? " +" + (r.al.length - 2) : ""}</small>` : ""}
+          <small>${st.n} काग़ज़ · ${INR(st.sum)}</small></div>
+      </div>`;
+    }).join("")}</div>`;
+  openSheet("pmSheet");
+}
 
 /* ══════════ ⚠️ चौकीदार — ऐप ख़ुद बताए, ढूँढना न पड़े ═══════════════════
 
