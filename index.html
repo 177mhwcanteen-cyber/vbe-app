@@ -950,6 +950,69 @@
   .flagRow .ft b { color: var(--ink); }
   .muted { color: var(--muted); font-size: 12.5px; }
 
+  /* ── 🔗 बैंक कनेक्टर ─────────────────────────────────────────────── */
+  .lkHead { border: 1px solid rgba(57,135,229,.5); border-radius: 16px;
+    padding: 13px; margin-bottom: 12px;
+    background: linear-gradient(150deg, rgba(57,135,229,.16), transparent 76%); }
+  .lkHead .amt { font-size: 25px; font-weight: 800; letter-spacing: -.6px; }
+  .lkHead .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .lkFirm { display: flex; gap: 9px; align-items: center; padding: 11px 12px;
+    border-radius: 13px; margin-bottom: 12px; font-size: 13px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.035); }
+  .lkFirm .k { flex: 1; min-width: 0; }
+  .lkFirm b { display: block; font-size: 14px; }
+
+  .lkRow { display: flex; gap: 10px; align-items: flex-start; padding: 12px 12px;
+    border-bottom: 1px solid var(--grid); cursor: pointer; }
+  .lkRow:last-child { border-bottom: 0; }
+  .lkRow .bx { flex: 0 0 22px; height: 22px; border-radius: 7px; margin-top: 2px;
+    border: 2px solid var(--border); display: grid; place-items: center;
+    font-size: 13px; color: transparent; transition: all .14s ease; }
+  .lkRow.on .bx { background: var(--s1); border-color: var(--s1); color: #fff; }
+  .lkRow .lt { flex: 1; min-width: 0; font-size: 13.5px; }
+  .lkRow .lt b { display: block; }
+  .lkRow .lt small { display: block; color: var(--muted); font-size: 11.5px;
+    margin-top: 2px; }
+  .lkRow .lr { flex: 0 0 auto; text-align: right; }
+  .lkRow .lr b { display: block; font-size: 14.5px; font-weight: 800; }
+  .lkFit { display: inline-block; margin-top: 3px; padding: 2px 8px;
+    border-radius: 999px; font-size: 10.5px; font-weight: 700; }
+  .lkFit.ex { background: rgba(25,158,112,.2); color: #86e3bf; }
+  .lkFit.cl { background: rgba(201,133,0,.2); color: #f0c064; }
+
+  .lkTot { display: flex; gap: 10px; align-items: center; margin: 12px 0;
+    padding: 13px; border-radius: 15px; font-size: 13.5px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.04); }
+  .lkTot .k { flex: 1; line-height: 1.6; }
+  .lkTot b { font-size: 16px; font-weight: 800; }
+  .lkTot.ok { border-color: rgba(25,158,112,.5);
+    background: linear-gradient(140deg, rgba(25,158,112,.15), transparent 78%); }
+  .lkTot.gap { border-color: rgba(201,133,0,.55);
+    background: linear-gradient(140deg, rgba(201,133,0,.15), transparent 78%); }
+  .lkTot.over { border-color: rgba(208,59,59,.55);
+    background: linear-gradient(140deg, rgba(208,59,59,.15), transparent 78%); }
+
+  /* 💸 TDS — यह डिब्बा **सिर्फ़ तब** बनता है जब पैसा कम आया हो */
+  .tdsBox { border: 1px solid rgba(201,133,0,.5); border-radius: 15px;
+    padding: 13px; margin-bottom: 12px; font-size: 13px; line-height: 1.6;
+    background: linear-gradient(150deg, rgba(201,133,0,.12), transparent 80%); }
+  .tdsPick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .tdsPct { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .tdsPct input { width: 74px; text-align: center; font: inherit; font-size: 15px;
+    padding: 9px; border-radius: 11px; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--border); }
+
+  /* जुड़ी हुई लकीर — बहीखाते में */
+  .lkDone { display: flex; gap: 9px; align-items: flex-start; margin-top: 8px;
+    padding: 10px 12px; border-radius: 13px; font-size: 12.5px; line-height: 1.55;
+    border: 1px solid rgba(25,158,112,.45);
+    background: linear-gradient(140deg, rgba(25,158,112,.13), transparent 80%); }
+  .lkDone b { color: #86e3bf; }
+  .lkAsk { display: flex; gap: 9px; align-items: center; margin-top: 8px;
+    padding: 9px 11px; border-radius: 13px; font-size: 12.5px;
+    border: 1px dashed var(--border); background: rgba(255,255,255,.025); }
+  .lkAsk .k { flex: 1; color: var(--muted); }
+
   /* ── 📦 सामान — एक चीज़, एक कार्ड ────────────────────────────────────
 
      विक्रम जी: «जैसे ही मैं किसी बिल पर क्लिक करूँगा… अभी एक लंबी सी लाइन
@@ -1653,6 +1716,21 @@
   </div>
 
   <!-- 📖 बहीखाता — एक क्लिक पर पूरा खाता -->
+  <!-- 🔗 बैंक की लकीर ↔ व्यापार का पेमेंट-इन
+
+       ⚠️ यह पर्दा जान-बूझकर **सबसे बाहर** है, किसी `section.view` के अंदर
+       नहीं। पहले मैंने इसे संपर्क वाले हिस्से में रख दिया था — और वह हिस्सा
+       दूसरे टैब पर `hidden` हो जाता है, इसलिए पर्दा खुलता ही नहीं दिखता।
+       बहीखाता बैंक वाले टैब से खुलता है, यानी पर्दा वहीं से बुलाया जाता है। -->
+  <div id="lkSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:560px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3 id="lkTitle">🔗 यह पैसा किसका है?</h3>
+        <button class="x" onclick="closeSheet('lkSheet')">✕</button></div>
+      <div id="lkBody"></div>
+    </div>
+  </div>
+
   <div id="bahiSheet" class="sheet" hidden>
     <div class="sheetBox" style="max-width:560px">
       <div class="grab"></div>
@@ -2888,7 +2966,7 @@ function cachePayload(slim) {
     ACCOUNTS: tsClean(ACCOUNTS),
     ACC_OUT: tsClean(ACC_OUT),
     VY: tsClean(VY), SALES: tsClean(SALES), PAYINS: tsClean(PAYINS),
-    SHORTNAME, VY_LOADED,
+    VYLINKS, FIRM_ACC, SHORTNAME, VY_LOADED,
     CONTACTS: tsClean(CONTACTS),
     BANKTXNS: tsClean(BANKTXNS),
     RETIRED: tsClean(RETIRED),
@@ -2938,6 +3016,7 @@ function loadCache() {
   STAFF = c.STAFF || {};
   CHEQUES = c.CHEQUES || {};
   VY = c.VY || []; SALES = c.SALES || []; PAYINS = c.PAYINS || [];
+  VYLINKS = c.VYLINKS || {}; FIRM_ACC = c.FIRM_ACC || {};
   SHORTNAME = c.SHORTNAME || {}; VY_LOADED = !!c.VY_LOADED;
   CONTACTS = c.CONTACTS || {};
   LAST_SYNC = c.at;
@@ -8800,19 +8879,24 @@ async function loadVyapar(force) {
   if (VY_LOADED && !force) return;
   try {
     // 🧱 यहाँ भी वही «दीवार» थी — 600 के बाद बिक्री चुपचाप कट जाती थी
-    const [vy, sa, pi, nm] = await Promise.all([
+    const [vy, sa, pi, nm, lk, fa] = await Promise.all([
       pageAll("vbe_vy", 40000),
       pageAll("vbe_sales", 20000),
       pageAll("vbe_payins", 20000),
-      db.collection("vbe_meta").doc("unit_names").get()
+      db.collection("vbe_meta").doc("unit_names").get(),
+      pageAll("vbe_vylinks", 20000),
+      db.collection("vbe_meta").doc("firm_accounts").get()
     ]);
+    VYLINKS = {};
+    lk.forEach((d) => { VYLINKS[d.id] = Object.assign({ _id: d.id }, d.data()); });
+    FIRM_ACC = (fa.exists && fa.data().map) || {};
     VY = markCapped("व्यापार", vy).map((d) => Object.assign({ _id: d.id }, d.data()));
     // पुराने दोनों संग्रह अब भी पढ़े जाते हैं — जो पहले डाला जा चुका है वह
     // कभी ग़ायब न हो। `vyAll()` दोनों को एक ही सूची में जोड़ता है।
     SALES = markCapped("बिक्री", sa).map((d) => Object.assign({ _id: d.id }, d.data()));
     PAYINS = markCapped("जो पैसा आया", pi).map((d) => Object.assign({ _id: d.id }, d.data()));
     SHORTNAME = (nm.exists && nm.data().map) || {};
-    readCount(VY.length + SALES.length + PAYINS.length + 1);
+    readCount(VY.length + SALES.length + PAYINS.length + lk.length + 2);
     VY_LOADED = true;
     saveCache();
   } catch (e) { /* कैश से जो है वही चले */ }
@@ -9269,12 +9353,14 @@ function openVyDoc(id) {
           <br><span class="muted">जोड़ी वही पार्टी + वही रकम देखकर बनती है — इस
           चालान की रकम से मिलता कोई बिल नहीं मिला।</span></div>`) : ""}
 
-    ${bank ? `<div class="brdg">🏦
+    ${x.kind === "payin" ? payinLinkLine(x) : ""}
+
+    ${bank && !payinLink(x) ? `<div class="brdg">🏦
         <div>यह पैसा <b>खाते में मिल गया</b>
           <br><span class="muted">${esc(accLabel(bank.accountId))} ·
           ${esc(dayLabel(String(bank.date).slice(0, 10)))}${
           bank.chequeNo ? " · चेक " + esc(bank.chequeNo) : ""}</span></div></div>`
-      : x.kind === "payin" ? `<div class="badge lo"
+      : x.kind === "payin" && !payinLink(x) ? `<div class="badge lo"
         style="display:block;line-height:1.7;margin-top:12px">
         🏦 यह रकम बैंक की किसी क्रेडिट लकीर से नहीं मिली। उस खाते की statement
         डाली गई है क्या?</div>` : ""}
@@ -9331,6 +9417,28 @@ function vyItemCards(x) {
           बिल ${INR(tot)} का है — <b>${INR(Math.abs(sum - tot))}</b> का फ़र्क़
           ${sum < tot ? "(ढुलाई/GST अलग जुड़ा हो सकता है)" : "(छूट लगी हो सकती है)"}</div>` : ""}</span>
       <b>${INR(sum)}</b>
+    </div>`;
+}
+
+/** यह पेमेंट-इन किसी बैंक-लकीर से हाथ से जोड़ा गया है क्या। */
+function payinLink(pi) {
+  return Object.values(VYLINKS).filter((l) => l && !l.removed &&
+    (l.payins || []).some((p) => p.id === pi._id))[0] || null;
+}
+
+/** जुड़ा हुआ पेमेंट-इन — बैंक की तरफ़ से पूरी बात, TDS समेत। */
+function payinLinkLine(pi) {
+  const L = payinLink(pi);
+  if (!L) return "";
+  const many = (L.payins || []).length > 1;
+  return `
+    <div class="lkDone" style="margin-top:12px">🏦
+      <div style="flex:1">खाते में <b>मिल गया</b> —
+        ${esc(accLabel(L.accountId))} · ${esc(dayLabel(L.date))}
+        <br><span class="muted">बैंक में ${INR(L.amount)} आए${
+          many ? ` · ${L.payins.length} पेमेंट-इन एक साथ` : ""}</span>
+        ${L.tds && L.tds.amount ? `<br>💸 <b>${INR(L.tds.amount)}</b> TDS कटा
+          (${L.tds.pct}%) · बिल पूरा चुका` : ""}</div>
     </div>`;
 }
 
@@ -10875,7 +10983,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "f312f58f3ca7";
+const APP_BUILD = "7c159e6c6557";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -16910,19 +17018,351 @@ function bahiCard(r) {
  * और जो क्रेडिट किसी पेमेंट-इन से नहीं मिलती, उस पर ऐप **कुछ नहीं लिखता।**
  * अंदाज़ा नहीं लगाता — बैंकिंग में अंदाज़ा सबसे महँगी चीज़ है।
  */
+
+/* ══════════ 🔗 बैंक की लकीर ↔ व्यापार का पेमेंट-इन ══════════════════
+
+   विक्रम जी: «जैसे पेमेंट-इन ₹35,000 आए हुए हैं तो उसके अंदर कनेक्ट का
+   बटन दबाऊँगा — क्योंकि वह खाता श्री हिंगलाज का है, तो व्यापार का भी
+   श्री हिंगलाज के अंदर जो पेमेंट-इन हो रखे हैं वह मेरे को दिख जाएँगे,
+   तो मैं उस हिसाब से उसे कनेक्ट कर दूँगा।»
+
+   🔑 **खाता ही फ़र्म बता देता है** — यही इस पूरे हिस्से की रीढ़ है।
+   उज्ज्वल भारत का पैसा AU में आता है, बाक़ी सब SBI में। इसलिए एक बार
+   बता देने पर सूची अपने-आप छँट जाती है, और **ग़लत फ़र्म से जुड़ने का
+   ख़तरा ही ख़त्म** हो जाता है।
+
+   🧱 जोड़ अलग संग्रह (`vbe_vylinks`) में रखा जाता है, बैंक की लकीर पर
+      नहीं — क्योंकि statement दुबारा import होने पर लकीरें फिर से लिखी
+      जाती हैं। अलग रखने से जोड़ कभी टूटता नहीं। (यही विक्रम जी की माँग
+      थी: «link टूटे नहीं, फिर से import करने पर भी बना रहे।»)          */
+
+let VYLINKS = {};                 // txnId → जोड़
+
+/** एक क्रेडिट पर एक ही जोड़ — हटाया हुआ नहीं गिना जाता। */
+function linkOf(txnId) {
+  const l = VYLINKS[txnId];
+  return l && !l.removed ? l : null;
+}
+
+/* ── 🏢 खाता किस फ़र्म का है ──────────────────────────────────────── */
+
+let FIRM_ACC = {};                // accountId → firmId
+
+/**
+ * खाते की फ़र्म। एक बार बता देने पर याद रह जाती है।
+ * पहली बार के लिए एक हल्का-सा अंदाज़ा: AU वाला खाता उज्ज्वल भारत का है
+ * (विक्रम जी ने यही बताया) — पर वह सिर्फ़ **सुझाव** है, पक्का वही करते हैं।
+ */
+function bankFirm(accountId) {
+  if (FIRM_ACC[accountId]) return FIRM_ACC[accountId];
+  return null;
+}
+function guessBankFirm(accountId) {
+  const a = ACCOUNTS[accountId] || {};
+  const t = (String(a.label || "") + " " + String(a.bank || "")).toUpperCase();
+  if (/\bAU\b|AU SMALL/.test(t)) return "ub";
+  return null;
+}
+async function setBankFirm(accountId, firmId) {
+  FIRM_ACC[accountId] = firmId;
+  await db.collection("vbe_meta").doc("firm_accounts")
+    .set({ map: FIRM_ACC }, { merge: true });
+  await auditLog("firm_account", null, { accountId, firmId });
+  saveCache();
+}
+
+/* ── 🎯 कौन-सा पेमेंट-इन सबसे संभावित है ──────────────────────────── */
+
+/**
+ * भरोसे का अंक — ऊपर वही आए जिसकी संभावना सबसे ज़्यादा।
+ *
+ *   रकम हूबहू वही            → 100
+ *   रकम 1–5% कम (TDS जैसा)   → 85
+ *   तारीख़ पास (±7 दिन)      → +10
+ *
+ * 🛑 यह सिर्फ़ **क्रम** तय करता है — जोड़ता कोई नहीं। जोड़ते विक्रम जी हैं।
+ */
+function linkScore(pi, txn) {
+  const amt = pi.received || pi.total || 0;
+  const bank = txn.amount || 0;
+  if (!amt || !bank) return 0;
+  let sc = 0;
+  const diff = amt - bank;                       // धन = बैंक में कम आया
+  if (Math.abs(diff) <= 1) sc = 100;
+  else if (diff > 0 && diff <= amt * 0.05) sc = 85;   // TDS जैसा
+  else if (Math.abs(diff) <= amt * 0.02) sc = 70;
+  else return 0;
+  const d1 = new Date(String(pi.date || "").slice(0, 10) + "T12:00:00");
+  const d2 = new Date(String(txn.date || "").slice(0, 10) + "T12:00:00");
+  if (!isNaN(d1) && !isNaN(d2) && Math.abs(d1 - d2) <= 7 * 86400000) sc += 10;
+  return sc;
+}
+
+/** इस क्रेडिट के लिए उस फ़र्म के पेमेंट-इन — जुड़े हुए हटाकर। */
+function linkChoices(txn, firmId) {
+  const used = {};
+  Object.values(VYLINKS).forEach((l) => {
+    if (!l || l.removed || l.txnId === txn._id) return;
+    (l.payins || []).forEach((p) => { used[p.id] = 1; });
+  });
+  return vyRows("payin", firmId || "")
+    .filter((pi) => !used[pi._id])
+    .map((pi) => Object.assign({ _sc: linkScore(pi, txn) }, pi))
+    .sort((a, b) => (b._sc - a._sc) ||
+      String(b.date).localeCompare(String(a.date)));
+}
+
+/* ── 🖥️ जोड़ने का पर्दा ──────────────────────────────────────────── */
+
+let LK = { txn: null, pick: {}, tds: null, firmAsk: false };
+
+function openBankLink(txnId) {
+  const t = BANKTXNS.filter((x) => x._id === txnId)[0];
+  if (!t) return;
+  const done = linkOf(txnId);
+  LK = { txn: t, pick: {}, tds: (done && done.tds) || null, firmAsk: false };
+  (done ? done.payins || [] : []).forEach((p) => { LK.pick[p.id] = 1; });
+  renderBankLink();
+  openSheet("lkSheet");
+}
+
+function lkPick(id) {
+  if (LK.pick[id]) delete LK.pick[id]; else LK.pick[id] = 1;
+  LK.tds = null;                   // चुनाव बदला तो TDS का फ़ैसला भी दुबारा
+  renderBankLink();
+}
+function lkFirm(f) { LK.firmAsk = false; setBankFirm(LK.txn.accountId, f).then(renderBankLink); }
+function lkAskFirm() { LK.firmAsk = true; renderBankLink(); }
+function lkTds(on) {
+  if (!on) { LK.tds = null; renderBankLink(); return; }
+  const t = LK.txn, sel = lkSelected();
+  const diff = Math.round((sel.sum - (t.amount || 0)) * 100) / 100;
+  const pct = sel.sum > 0 ? Math.round((diff / sel.sum) * 1000) / 10 : 0;
+  LK.tds = { pct, amount: diff };
+  renderBankLink();
+}
+function lkTdsPct(v) {
+  const sel = lkSelected();
+  const pct = Math.max(0, Math.min(50, Number(v) || 0));
+  LK.tds = { pct, amount: Math.round(sel.sum * pct) / 100 };
+  renderBankLink();
+}
+
+function lkSelected() {
+  const ids = Object.keys(LK.pick);
+  const rows = vyRows("payin", "").filter((p) => LK.pick[p._id]);
+  return { ids, rows, sum: rows.reduce((a, p) => a + (p.received || p.total || 0), 0) };
+}
+
+function renderBankLink() {
+  const t = LK.txn;
+  if (!t) return;
+  const fid = bankFirm(t.accountId);
+  const guess = guessBankFirm(t.accountId);
+  const sel = lkSelected();
+  const bank = t.amount || 0;
+  const diff = Math.round((sel.sum - bank) * 100) / 100;
+  const done = linkOf(t._id);
+
+  $("lkTitle").textContent = "🔗 यह " + INR(bank) + " किसका है?";
+
+  const needFirm = LK.firmAsk || !fid;
+  const rows = needFirm ? [] : linkChoices(t, fid);
+
+  $("lkBody").innerHTML = `
+    <div class="lkHead">
+      <div class="amt">+${INR(bank)}</div>
+      <div class="sub">${esc(dayLabel(String(t.date).slice(0, 10)))}
+        · ${esc(accLabel(t.accountId))}${
+        t.chequeNo ? " · चेक " + esc(t.chequeNo) : ""}${
+        t.party ? " · " + esc(t.party) : ""}</div>
+    </div>
+
+    ${needFirm ? `
+      <div class="itemsHead"><span>🏢 यह खाता किस फ़र्म का है?</span>
+        <span class="muted">एक बार का काम</span></div>
+      <div class="muted" style="margin-bottom:10px;line-height:1.6">
+        बता देने पर आगे इसी खाते की हर लकीर पर <b>उसी फ़र्म</b> के पेमेंट-इन
+        दिखेंगे — ग़लत फ़र्म से जुड़ने का ख़तरा ही नहीं रहेगा।</div>
+      <div class="fmBar">
+        ${/* सुझाई हुई फ़र्म सबसे पहले — वरना वह पाँचवीं जगह, पर्दे से बाहर
+             पड़ी रहती थी और सुझाव होने का कोई मतलब ही नहीं रहता। */
+          FIRMS.slice().sort((a, b) => (b.id === guess) - (a.id === guess))
+          .map((f) => `<button type="button" class="fmB${
+          guess === f.id ? " on" : ""}"
+          ${guess === f.id ? `style="background:${f.color}"` : ""}
+          onclick="lkFirm('${f.id}')">
+          <span class="dot" style="background:${f.color}"></span>${esc(f.name)}
+          ${guess === f.id ? "<small>सुझाव</small>" : ""}</button>`).join("")}
+      </div>`
+    : `
+      <div class="lkFirm">
+        <span class="dot" style="width:11px;height:11px;border-radius:50%;
+          background:${firmColor(fid)}"></span>
+        <div class="k">यह खाता — <b>${esc(firmName(fid))}</b></div>
+        <button type="button" class="mini" onclick="lkAskFirm()">बदलिए</button>
+      </div>
+
+      ${rows.length ? `
+        <div class="itemsHead"><span>📥 इसी फ़र्म के पेमेंट-इन</span>
+          <span class="muted">${rows.length}</span></div>
+        <div class="card" style="padding:0 2px;max-height:42vh;overflow:auto">
+          ${rows.slice(0, 60).map((pi) => {
+            const amt = pi.received || pi.total || 0;
+            const d = amt - bank;
+            return `
+            <div class="lkRow${LK.pick[pi._id] ? " on" : ""}"
+                 onclick="lkPick('${esc(pi._id)}')">
+              <span class="bx">✓</span>
+              <div class="lt"><b>${esc(unitShort(pi.party))}</b>
+                <small>${esc(dayLabel(pi.date))} · ${esc(pi.ref || "")}${
+                  pi.payType ? " · " + esc(pi.payType) : ""}</small></div>
+              <div class="lr"><b>${INR(amt)}</b>
+                ${Math.abs(d) <= 1 ? '<span class="lkFit ex">पूरा मिला</span>'
+                  : (d > 0 && d <= amt * 0.05
+                    ? `<span class="lkFit cl">${INR(d)} कम</span>` : "")}</div>
+            </div>`;
+          }).join("")}
+        </div>`
+        : `<div class="badge lo" style="display:block;line-height:1.7;margin:10px 0">
+            📥 इस फ़र्म का कोई खुला पेमेंट-इन नहीं मिला। व्यापार की
+            <b>All Transactions Report</b> डाली गई है क्या?</div>`}
+
+      ${sel.ids.length ? `
+        <div class="lkTot ${Math.abs(diff) <= 1 ? "ok" : diff > 0 ? "gap" : "over"}">
+          <span style="font-size:18px">${
+            Math.abs(diff) <= 1 ? "✅" : diff > 0 ? "⚠️" : "🔴"}</span>
+          <div class="k">चुना हुआ <b>${INR(sel.sum)}</b>
+            <div class="muted" style="font-size:11.5px">बैंक में ${INR(bank)}${
+              Math.abs(diff) <= 1 ? " — बराबर"
+              : diff > 0 ? ` — <b>${INR(diff)} कम आया</b>`
+              : ` — <b>${INR(-diff)} ज़्यादा आया</b>`}</div></div>
+        </div>` : ""}
+
+      ${/* 💸 यह डिब्बा **सिर्फ़ तब** बनता है जब पैसा कम आया हो।
+            विक्रम जी: «ऐसे नहीं कि हर चीज़ में आप TDS की entry लेने लग
+            जाओ।» — इसलिए पूरा मिलने पर इसका ज़िक्र तक नहीं आता। */
+        sel.ids.length && diff > 1 ? `
+        <div class="tdsBox">
+          <b>⚠️ ${INR(diff)} कम आया</b>
+          <span class="muted">(${(sel.sum ? (diff / sel.sum) * 100 : 0).toFixed(1)}%)</span>
+          — यह क्या है?
+          ${LK.tds ? `
+            <div class="tdsPct">
+              <span>💸 TDS</span>
+              <input type="number" step="0.1" value="${LK.tds.pct}"
+                onchange="lkTdsPct(this.value)">
+              <span>% = <b>${INR(LK.tds.amount)}</b></span>
+              <button type="button" class="mini" onclick="lkTds(false)">हटाइए</button>
+            </div>
+            <div class="muted" style="margin-top:8px">बिल <b>पूरा चुका</b> माना
+              जाएगा, और यह रकम TDS में दर्ज हो जाएगी।</div>`
+          : `<div class="tdsPick">
+              <button type="button" class="mini primary" onclick="lkTds(true)">💸 TDS कटा है</button>
+              <button type="button" class="mini" onclick="lkTds(false)">✅ नहीं, ऐसे ही जोड़िए</button>
+            </div>`}
+        </div>` : ""}
+
+      <button class="primary wide" ${sel.ids.length ? "" : "disabled"}
+        onclick="saveBankLink(this)">🔗 ${sel.ids.length > 1
+          ? sel.ids.length + " पेमेंट-इन जोड़ दीजिए" : "जोड़ दीजिए"}</button>
+      ${done ? `<div class="pick" style="margin-top:10px">
+        <button type="button" onclick="unlinkBank(this)">✂️ जोड़ हटाइए</button>
+      </div>` : ""}
+      <div id="lkMsg" class="muted" style="margin-top:8px"></div>`}`;
+}
+
+async function saveBankLink(btn) {
+  const t = LK.txn, sel = lkSelected();
+  if (!t || !sel.ids.length) return;
+  const fid = bankFirm(t.accountId);
+  const diff = Math.round((sel.sum - (t.amount || 0)) * 100) / 100;
+  btn.disabled = true; btn.textContent = "… जोड़ रहा हूँ";
+  try {
+    const doc = {
+      txnId: t._id, accountId: t.accountId || null, firmId: fid || null,
+      date: String(t.date || "").slice(0, 10), amount: t.amount || 0,
+      payins: sel.rows.map((p) => ({ id: p._id, ref: p.ref || null,
+        party: p.party || null, amount: p.received || p.total || 0 })),
+      tds: LK.tds && LK.tds.amount > 0
+        ? { pct: LK.tds.pct, amount: LK.tds.amount } : null,
+      diff, removed: false, at: new Date().toISOString()
+    };
+    await db.collection("vbe_vylinks").doc(t._id).set(doc, { merge: true });
+    VYLINKS[t._id] = doc;
+    await auditLog("bank_link", null,
+      { txn: t._id, firm: fid, n: doc.payins.length,
+        tds: doc.tds ? doc.tds.amount : 0 });
+    saveCache();
+    closeSheet("lkSheet");
+    renderBahi();
+    renderAll();
+    toast(`🔗 जुड़ गया${doc.tds ? ` · 💸 ${INR(doc.tds.amount)} TDS` : ""}`);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "🔗 जोड़ दीजिए";
+    const m = $("lkMsg"); if (m) { m.className = "bad"; m.textContent = "नहीं जुड़ा: " + e.message; }
+  }
+}
+
+/** जोड़ हटाना — मिटाना नहीं, «हटाया हुआ» लिखना। */
+async function unlinkBank(btn) {
+  const t = LK.txn;
+  if (!t) return;
+  btn.disabled = true;
+  try {
+    await db.collection("vbe_vylinks").doc(t._id)
+      .set({ removed: true, removedAt: new Date().toISOString() }, { merge: true });
+    if (VYLINKS[t._id]) VYLINKS[t._id].removed = true;
+    await auditLog("bank_unlink", { txn: t._id }, null);
+    saveCache();
+    closeSheet("lkSheet");
+    renderBahi();
+    renderAll();
+    toast("✂️ जोड़ हटा दिया");
+  } catch (e) {
+    btn.disabled = false;
+    toast("नहीं हटा: " + e.message);
+  }
+}
+
 function bahiBridge(t) {
+  /* 🚫 पहला पहरा यहीं, बुलाने वाले के भरोसे नहीं।
+     अभी `bahiCard` इसे सिर्फ़ क्रेडिट लकीर पर बुलाता है — पर नियम वहाँ
+     लगना चाहिए जहाँ वह **लागू** होता है, वरना कल कोई और जगह इसे डेबिट
+     पर बुला ले तो ऐप गए हुए पैसे को व्यापार के पेमेंट-इन से जोड़ने की
+     पेशकश कर बैठेगा। विक्रम जी का नियम एक ही है: पुल सिर्फ़ आए हुए पैसे
+     पर। */
+  if (!t || t.type !== "credit") return "";
+
+  /* 🔗 हाथ से जोड़ा हुआ सबसे ऊपर — वह विक्रम जी का पक्का किया हुआ है,
+     इसलिए ऐप के अपने अंदाज़े से हमेशा भारी पड़ता है। */
+  const L = linkOf(t._id);
+  if (L) {
+    const who = (L.payins || []).map((p) => unitShort(p.party)).filter(Boolean);
+    const one = [...new Set(who)];
+    return `
+      <div class="lkDone">🏛️
+        <div style="flex:1">यह पैसा <b>${esc(one.join(" · ") || "व्यापार")}</b> से आया${
+          L.firmId ? ` · ${esc((firmOf(L.firmId) || {}).short || "")}` : ""}
+          <br><span class="muted">${(L.payins || []).map((p) =>
+            esc(p.ref || "") + " " + INR(p.amount)).join(" · ")}</span>
+          ${L.tds && L.tds.amount ? `<br>💸 <b>${INR(L.tds.amount)}</b> TDS कटा
+            (${L.tds.pct}%) · बिल पूरा चुका` : ""}
+          <div style="margin-top:6px"><button type="button" class="mini"
+            onclick="openBankLink('${esc(t._id)}')">✏️ बदलिए</button></div></div>
+      </div>`;
+  }
+
+  /* ऐप का अपना अंदाज़ा — पर यह सिर्फ़ **इशारा** है, जोड़ नहीं। इसीलिए
+     साथ में «कनेक्ट» का बटन रहता है: पक्का विक्रम जी ही करते हैं। */
   const pi = bankIsPayin(t);
-  if (!pi) return "";
-  const inv = pi.saleRef
-    ? vyRows("invoice", "").filter((v) => vyRef(v.ref) === vyRef(pi.saleRef))[0]
-    : null;
   return `
-    <div class="brdg">🏛️
-      <div>यह पैसा <b>${esc(unitShort(pi.party))}</b> से आया —
-        व्यापार का पेमेंट-इन <b>${esc(pi.ref || "")}</b>${
-        pi.firmId ? ` · ${esc((firmOf(pi.firmId) || {}).short || "")}` : ""}
-        ${inv ? `<br><span class="muted">🧾 बिल ${esc(inv.ref || "")} · ${
-          INR(inv.total)}</span>` : ""}</div>
+    <div class="lkAsk">🏛️
+      <span class="k">${pi
+        ? `शायद <b>${esc(unitShort(pi.party))}</b> का — ${esc(pi.ref || "")}`
+        : "यह किस बिल का है?"}</span>
+      <button type="button" class="mini primary"
+        onclick="openBankLink('${esc(t._id)}')">🔗 कनेक्ट</button>
     </div>`;
 }
 
