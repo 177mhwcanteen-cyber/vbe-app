@@ -699,7 +699,13 @@
     letter-spacing: .3px; line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,.35);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 2px 6px rgba(0,0,0,.3); }
   .toonSay { flex: 1; min-width: 0; }
-  .toonSay b { display: block; font-size: 14.5px; margin-bottom: 4px; }
+  /* 🩸 यह `.toonSay b` था — यानी **हर** <b> अपनी लकीर ले लेता था, वाक्य के
+     बीच वाला भी। इसीलिए «जो नंबर <b>रहना</b> है» तीन लकीरों में टूट रहा
+     था, और v42 में «साथ चले आएँगे» के बाद अकेला दंड नीचे गिर गया था।
+     तब मैंने लक्षण ठीक किया था; जड़ यह है। सिर्फ़ **सीधा बच्चा** शीर्षक
+     है — वाक्य के अंदर का <b> मोटा अक्षर ही रहना चाहिए। */
+  .toonSay > b { display: block; font-size: 14.5px; margin-bottom: 4px; }
+  .toonSay p b { font-weight: 700; color: var(--ink); }
   .toonSay p { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: 0; }
   .toonAct { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 11px; }
   .toonBox.warn { border-color: rgba(208,59,59,.45); margin-bottom: 12px;
@@ -943,6 +949,186 @@
   .flagRow .ft { font-size: 13px; color: var(--ink-2); }
   .flagRow .ft b { color: var(--ink); }
   .muted { color: var(--muted); font-size: 12.5px; }
+
+  /* ── 📇 संपर्क — मिलाना और जोड़ना ─────────────────────────────────── */
+  .mgPick { display: flex; gap: 10px; align-items: center; padding: 12px 13px;
+    border-bottom: 1px solid var(--grid); cursor: pointer; }
+  .mgPick:last-child { border-bottom: 0; }
+  .mgPick .bx { flex: 0 0 22px; height: 22px; border-radius: 7px;
+    border: 2px solid var(--border); display: grid; place-items: center;
+    font-size: 13px; color: transparent; transition: all .14s ease; }
+  .mgPick.on .bx { background: var(--s1); border-color: var(--s1); color: #fff; }
+  .mgPick .mt { flex: 1; min-width: 0; font-size: 13.5px; }
+  .mgPick .mt small { display: block; color: var(--muted); font-size: 11.5px; }
+  .mgPick .mn { flex: 0 0 auto; font-size: 12px; color: var(--muted); }
+  .mgKeep { border: 1px solid rgba(25,158,112,.5); border-radius: 14px;
+    padding: 12px 13px; margin-bottom: 12px;
+    background: linear-gradient(150deg, rgba(25,158,112,.14), transparent 75%); }
+  .mgKeep b { font-size: 14.5px; }
+  .mgSum { border: 1px solid var(--border); border-radius: 14px; padding: 12px;
+    margin: 12px 0; font-size: 13px; line-height: 1.7;
+    background: rgba(255,255,255,.03); }
+
+  /* 🏷️ बिल पर लिखा नाम, जो किसी नंबर से नहीं जुड़ा */
+  .tagRow { display: flex; gap: 10px; align-items: center; padding: 12px 2px;
+    border-bottom: 1px solid var(--grid); }
+  .tagRow:last-child { border-bottom: 0; }
+  .tagRow .tn { flex: 1; min-width: 0; }
+  .tagRow .tn b { display: block; font-size: 13.5px; }
+  .tagRow .tn small { color: var(--muted); font-size: 11.5px; }
+
+  /* ── 🆕 «नया ऐप आ गया» — सबसे ऊपर, सबसे साफ़ ────────────────────── */
+  .newBar { position: sticky; top: 0; z-index: 60; display: flex; gap: 10px;
+    align-items: center; padding: 11px 13px; margin: -2px -2px 12px;
+    border-radius: 0 0 16px 16px; font-size: 13.5px; font-weight: 600;
+    color: #fff; border: 1px solid rgba(57,135,229,.55);
+    background: linear-gradient(115deg, #2c6fc4, #3987e5 55%, #5aa0f0);
+    box-shadow: 0 6px 22px rgba(57,135,229,.35);
+    animation: newSlide .4s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes newSlide { from { transform: translateY(-16px); opacity: 0 } }
+  .newBar .nt { flex: 1; min-width: 0; line-height: 1.45; }
+  .newBar .nt small { display: block; font-weight: 400; opacity: .85;
+    font-size: 11.5px; }
+  .newBar button { flex: 0 0 auto; padding: 9px 15px; border-radius: 999px;
+    font-size: 13px; font-weight: 800; color: #14406f; background: #fff;
+    border: 0; cursor: pointer; }
+  .newBar button:active { transform: scale(.95); }
+  /* 🔖 «मेरा खाता» में छाप */
+  .stampRow { display: flex; gap: 9px; align-items: center; margin-top: 10px;
+    padding: 10px 12px; border-radius: 13px; font-size: 12.5px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.03); }
+  .stampRow code { font-size: 12px; letter-spacing: .4px; }
+  .stampRow .ok2t { font-weight: 700; }
+
+  /* ── 🏛️ व्यापार — पाँच फ़र्म, चार काग़ज़ ───────────────────────────── */
+  /* पूरी चौड़ाई वाला badge चेतावनी की तरह पढ़ा जाता है — उसे लपेटना ही
+     चाहिए, वरना «नीचे 🚚 वा…» की तरह कटकर आधी बात रह जाती है। */
+  .badge[style*="display:block"] { white-space: normal; text-align: left; }
+  .fmBar { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .fmBar::-webkit-scrollbar { display: none; }
+  .fmB { flex: 0 0 auto; display: flex; gap: 8px; align-items: center;
+    padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 700;
+    border: 1px solid var(--border); background: rgba(255,255,255,.04);
+    color: var(--ink-2); cursor: pointer; white-space: nowrap;
+    transition: transform .12s ease, border-color .14s ease; }
+  .fmB:active { transform: scale(.96); }
+  .fmB .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+  .fmB.on { color: #fff; border-color: transparent; }
+  .fmB small { font-weight: 500; opacity: .75; font-size: 11px; }
+
+  .vyPartsWrap { position: relative; }
+  .vyPartsWrap::after { content: ""; position: absolute; right: 0; top: 0;
+    bottom: 12px; width: 34px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, var(--page)); }
+  .vyParts { display: flex; gap: 7px; overflow-x: auto; padding: 0 2px 12px;
+    scrollbar-width: none; }
+  .vyParts::-webkit-scrollbar { display: none; }
+  .vyP { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center;
+    gap: 3px; min-width: 76px; padding: 10px 12px; border-radius: 15px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.035);
+    cursor: pointer; transition: transform .12s ease; }
+  .vyP:active { transform: scale(.95); }
+  .vyP .ic { font-size: 19px; line-height: 1; }
+  .vyP .nm { font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
+  .vyP .ct { font-size: 12.5px; font-weight: 800; }
+  .vyP.on { border-color: var(--s1); background: rgba(57,135,229,.16); }
+  .vyP.on .nm { color: #fff; }
+
+  /* 🔴 «कितने का माल गया, कितने का बिल बना» — यही पूरा पन्ना है */
+  .gapCard { border: 1px solid var(--border); border-radius: 17px; padding: 14px;
+    margin-bottom: 11px; background: rgba(255,255,255,.03);
+    transition: transform .12s ease; cursor: pointer; }
+  .gapCard:active { transform: scale(.99); }
+  .gapCard.hot { border-color: rgba(208,59,59,.5);
+    background: linear-gradient(155deg, rgba(208,59,59,.15), transparent 72%); }
+  .gapTop { display: flex; gap: 10px; align-items: flex-start; }
+  .gapTop .nm { flex: 1; min-width: 0; font-size: 15px; font-weight: 800; }
+  .gapTop .nm small { display: block; font-weight: 400; font-size: 11px;
+    color: var(--muted); overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; margin-top: 2px; }
+  .gapTop .amt { font-size: 17px; font-weight: 800; letter-spacing: -.4px; }
+  .gapTop .amt small { display: block; text-align: right; font-size: 10.5px;
+    font-weight: 500; color: var(--muted); }
+  .gapLine { display: flex; gap: 12px; flex-wrap: wrap; margin: 9px 0 8px;
+    font-size: 11.5px; color: var(--ink-2); }
+  .gapLine b { font-weight: 700; }
+  .gapBar { height: 8px; border-radius: 999px; overflow: hidden; display: flex;
+    background: rgba(255,255,255,.07); }
+  .gapBar i { display: block; height: 100%; }
+
+  /* एक काग़ज़ = एक लकीर */
+  .vyDoc { display: flex; gap: 11px; align-items: center; padding: 12px 2px;
+    border-bottom: 1px solid var(--grid); cursor: pointer; }
+  .vyDoc:last-child { border-bottom: 0; }
+  .vyDoc .kd { flex: 0 0 40px; height: 40px; border-radius: 12px; display: grid;
+    place-items: center; font-size: 18px; }
+  .vyDoc .md { flex: 1; min-width: 0; }
+  .vyDoc .md b { display: block; font-size: 13.5px; }
+  .vyDoc .md small { display: block; font-size: 11px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vyDoc .rt { flex: 0 0 auto; text-align: right; }
+  .vyDoc .rt b { display: block; font-size: 14.5px; font-weight: 800; }
+  .vyDoc .rt small { font-size: 10.5px; }
+  .vySt { display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 700; margin-top: 3px; }
+  .vySt.no { background: rgba(201,133,0,.18); color: #f0c064; }
+  .vySt.ok { background: rgba(25,158,112,.18); color: #86e3bf; }
+  .vySt.due { background: rgba(208,59,59,.18); color: #ff9c9c; }
+
+  /* 🌉 अकेला पुल — बहीखाते की क्रेडिट लकीर पर */
+  .brdg { display: flex; gap: 8px; align-items: center; margin-top: 8px;
+    padding: 9px 11px; border-radius: 13px; font-size: 12.5px; line-height: 1.5;
+    border: 1px solid rgba(25,158,112,.42);
+    background: linear-gradient(140deg, rgba(25,158,112,.14), transparent 78%); }
+  .brdg b { color: #86e3bf; }
+
+  /* ── ✏️ ख़ाने — «हैवी क्वालिटी» ────────────────────────────────────
+
+     विक्रम जी का स्क्रीनशॉट: «नाम[ Santosh Ji Ca... ] टिप्पणी» — लेबल,
+     ख़ाना और अगला लेबल तीनों एक ही लकीर में। वजह यह थी कि पर्दे पर
+     `.form` लगा ही नहीं था, इसलिए `label` inline रह गया।
+
+     इसलिए अब ख़ाने की सजावट किसी बाहरी class के भरोसे नहीं — `.fx` ख़ुद
+     पूरी ज़िम्मेदारी लेता है: अपनी लकीर, 50px की ऊँचाई (अँगूठे के लायक़),
+     छूने पर चमकता किनारा, और ग़लत भरने पर ख़ाना ख़ुद लाल होकर काँपता है।  */
+  .fx { display: block; margin-bottom: 14px; }
+  .fx > span { display: flex; gap: 7px; align-items: center; margin-bottom: 7px;
+    font-size: 12.5px; font-weight: 700; color: var(--ink-2); letter-spacing: .2px; }
+  .fx > span i { font-style: normal; width: 6px; height: 6px; border-radius: 50%;
+    background: #ff7676; box-shadow: 0 0 7px rgba(255,118,118,.7); }
+  .fx input, .fx select, .fx textarea {
+    display: block; width: 100%; box-sizing: border-box; font: inherit;
+    font-size: 15.5px; color: var(--ink); min-height: 50px; padding: 13px 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+    border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease; }
+  .fx input::placeholder, .fx textarea::placeholder { color: #6d6b66; }
+  .fx input:focus, .fx select:focus, .fx textarea:focus {
+    outline: none; border-color: var(--s1);
+    background: linear-gradient(180deg, rgba(57,135,229,.10), rgba(255,255,255,.02));
+    box-shadow: 0 0 0 3px rgba(57,135,229,.22), inset 0 1px 0 rgba(255,255,255,.06); }
+  .fx small { display: block; margin-top: 7px; font-size: 11.5px; color: var(--muted);
+    line-height: 1.5; }
+  .fx.bad input, .fx.bad select { border-color: #ff7676;
+    box-shadow: 0 0 0 3px rgba(255,118,118,.20);
+    animation: fxShake .28s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes fxShake { 10%,90% { transform: translateX(-2px) }
+    30%,70% { transform: translateX(3px) } 50% { transform: translateX(-3px) } }
+  .fxRow { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  @media (max-width: 420px) { .fxRow { grid-template-columns: 1fr; } }
+  .fxChk { display: flex; gap: 11px; align-items: center; padding: 13px 14px;
+    margin-bottom: 14px; border: 1px solid var(--border); border-radius: 14px;
+    background: rgba(255,255,255,.03); font-size: 13.5px; cursor: pointer; }
+  .fxChk input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--s1); }
+  /* 🔀 नंबर बदलने की चेतावनी — सहेजने से *पहले* दिखे, बाद में नहीं */
+  .fxWarn { border: 1px solid rgba(201,133,0,.55); border-radius: 14px;
+    background: linear-gradient(150deg, rgba(201,133,0,.15), transparent 75%);
+    padding: 12px 13px; margin-bottom: 14px; font-size: 13px; line-height: 1.65; }
+  .fxWarn b { color: #f0c064; }
+  .fxWarn .ar { font-size: 15px; font-weight: 800; letter-spacing: .3px;
+    margin: 6px 0; display: block; }
 
   /* Entry form */
   .form label { display: block; font-size: 12px; color: var(--muted); }
@@ -1478,6 +1664,7 @@
         </div>
       </div>
       <div id="syncBar"></div>
+      <div id="meStamp"></div>
       <button class="wide danger" onclick="closeSheet('meSheet');signOut()">🚪 Logout</button>
     </div>
   </div>
@@ -1501,6 +1688,7 @@
   </div>
 
   <div id="app" hidden>
+    <div id="newBar"></div>
     <nav class="tabs" id="tabs">
       <button data-v="overview" class="active">📊 Overview</button>
       <button data-v="add">➕ नई एंट्री</button>
@@ -1942,16 +2130,25 @@ placeholder="917568 माजीसा डिस्पोजल
     <!-- ── 📇 संपर्क — नंबर ही पहचान ──────────────────────────────────
          एक नंबर दो बार दर्ज हो ही नहीं सकता: दस्तावेज़ का नाम ही नंबर है। -->
     <section class="view" id="v-contacts">
+      <!-- 🩸 पहले खोज, क्रम और दोनों बटन एक ही लकीर में थे — और वह लकीर
+           390px के फ़ोन पर बाहर निकल जाती थी: «जोड़ें» आधा कटा दिखता और
+           «मिलाइए» तो पर्दे से ही बाहर था, यानी वह काम पहुँच से बाहर।
+           अब खोज अपनी लकीर पर, बटन अपनी — दोनों पूरे दिखते हैं। -->
       <div class="filters">
-        <input id="cSearch" type="search" placeholder="🔍 नाम या नंबर…">
+        <input id="cSearch" type="search" placeholder="🔍 नाम या नंबर…"
+          style="flex:1 1 auto">
         <select id="cSort">
           <option value="sum">सबसे ज़्यादा रकम</option>
           <option value="last">सबसे हाल का</option>
           <option value="name">नाम से</option>
         </select>
-        <button type="button" class="primary" onclick="openContact('')">➕ जोड़ें</button>
+      </div>
+      <div class="pick" style="margin-bottom:12px">
+        <button type="button" class="primary" onclick="openContact('')">➕ नया आदमी</button>
+        <button type="button" onclick="openCtMerge()">🔗 कई एक में मिलाइए</button>
       </div>
       <div id="cBrain"></div>
+      <div id="cTags"></div>
       <div class="card"><div id="contactList"></div></div>
 
       <div id="ctSheet" class="sheet" hidden>
@@ -1959,12 +2156,43 @@ placeholder="917568 माजीसा डिस्पोजल
           <div class="grab"></div>
           <div class="sheetHead"><h3 id="ctTitle">📇 संपर्क</h3>
             <button class="x" onclick="closeSheet('ctSheet')">✕</button></div>
-          <label>📞 मोबाइल नंबर
-            <input id="ctPhone" inputmode="numeric" placeholder="10 अंक"></label>
-          <label>नाम<input id="ctName" placeholder="जैसे: दिनेश जी"></label>
-          <label>टिप्पणी<input id="ctNote" placeholder="जैसे: बजरी वाला"></label>
-          <div id="ctMsg" class="muted" style="margin-top:8px"></div>
+          <div class="toonBox" style="margin-bottom:14px">
+            <div class="toonArt" id="ctToon"></div>
+            <div class="toonSay"><b id="ctSay">संपर्क</b>
+              <p id="ctSay2">नाम भी बदल सकते हैं और नंबर भी — दोनों खुले हैं।</p></div>
+          </div>
+          <label class="fx" id="fxCtName"><span><i></i>🧑 नाम</span>
+            <input id="ctName" placeholder="जैसे: दिनेश जी"></label>
+          <label class="fx" id="fxCtPhone"><span><i></i>📞 मोबाइल नंबर</span>
+            <input id="ctPhone" inputmode="numeric" placeholder="10 अंक"
+              oninput="ctNumWatch()">
+            <small>यही इस आदमी की पहचान है। ग़लत लिखा गया हो तो यहीं सुधार
+              दीजिए — बाक़ी सब अपने-आप साथ चला आएगा।</small></label>
+          <div id="ctMove"></div>
+          <label class="fx"><span>🏷️ टिप्पणी</span>
+            <input id="ctNote" placeholder="जैसे: बजरी वाला"></label>
+          <div id="ctMsg" class="muted" style="margin-bottom:10px"></div>
           <button class="primary wide" onclick="saveContact()">💾 सहेजें</button>
+        </div>
+      </div>
+
+      <!-- 🔗 कई संपर्क एक में -->
+      <div id="ctMerge" class="sheet" hidden>
+        <div class="sheetBox" style="max-width:520px">
+          <div class="grab"></div>
+          <div class="sheetHead"><h3>🔗 कई संपर्क एक में मिलाइए</h3>
+            <button class="x" onclick="closeSheet('ctMerge')">✕</button></div>
+          <div id="cmBody"></div>
+        </div>
+      </div>
+
+      <!-- 🏷️ बिल पर लिखा नाम → पक्के नंबर से -->
+      <div id="ctTag" class="sheet" hidden>
+        <div class="sheetBox" style="max-width:520px">
+          <div class="grab"></div>
+          <div class="sheetHead"><h3 id="cgTitle">🏷️ किससे जोड़ें?</h3>
+            <button class="x" onclick="closeSheet('ctTag')">✕</button></div>
+          <div id="cgBody"></div>
         </div>
       </div>
 
@@ -1985,18 +2213,24 @@ placeholder="917568 माजीसा डिस्पोजल
       <div class="vyWall">🧱 यह हिस्सा <b>ख़रीद से बिल्कुल अलग</b> है — यहाँ का
         सामान, भाव और पार्टी Pricebook या ख़रीद की सूची में कभी नहीं मिलते।</div>
 
-      <div class="chips" id="vyChips"></div>
+      <div class="fmBar" id="vyFirms"></div>
+      <div class="vyPartsWrap"><div class="vyParts" id="vyChips"></div></div>
+      <div class="filters"><input id="vyQ" type="search"
+        placeholder="🔍 यूनिट · बिल नंबर · रकम · सामान"
+        oninput="renderVyapar()"></div>
       <div class="tiles" id="vyTiles"></div>
       <div id="vyBrain"></div>
 
       <!-- 📥 रिपोर्ट डालना -->
       <div class="card" style="margin-bottom:12px">
-        <div class="itemsHead"><span>📥 व्यापार की रिपोर्ट डालें</span>
-          <span class="muted">Sale या Payment-In</span></div>
-        <input type="file" id="vyFile" accept="application/pdf" hidden>
+        <div class="itemsHead"><span>📥 व्यापार की रिपोर्ट डालिए</span>
+          <span class="muted">All Transactions Report</span></div>
+        <input type="file" id="vyFile" hidden
+          accept=".xls,.xlsx,application/vnd.ms-excel,application/pdf">
         <div class="pick">
-          <button type="button" class="primary" onclick="pickPhoto('vyFile')">📄 PDF चुनें</button>
+          <button type="button" class="primary" onclick="pickPhoto('vyFile')">📊 फ़ाइल चुनिए</button>
           <button type="button" onclick="openSheet('vyHelpSheet')">❔ कैसे निकालें</button>
+          <button type="button" onclick="vyToDrive(this)">📁 Drive में रखिए</button>
         </div>
         <div id="vyMsg" class="muted" style="margin-top:8px"></div>
         <div id="vyPreview"></div>
@@ -2010,15 +2244,26 @@ placeholder="917568 माजीसा डिस्पोजल
           <div class="grab"></div>
           <div class="sheetHead"><h3>❔ व्यापार से रिपोर्ट कैसे निकालें</h3>
             <button class="x" onclick="closeSheet('vyHelpSheet')">✕</button></div>
+          <div class="toonBox" style="margin-bottom:12px">
+            <div class="toonArt" style="font-size:38px">📊</div>
+            <div class="toonSay"><b>एक ही रिपोर्ट, चारों काग़ज़</b>
+              <p>«All Transactions Report» में कोटेशन, चालान, इनवॉइस और
+                पेमेंट-इन — <b>चारों</b> एक साथ आते हैं। पहले वाली Custom
+                Report में चालान आते ही नहीं थे।</p></div>
+          </div>
           <ol class="steps">
             <li>व्यापार app खोलिए</li>
-            <li>नीचे <b>ज़्यादा</b> (More) दबाइए</li>
-            <li><b>रिपोर्ट</b> → <b>Custom Report</b> चुनिए</li>
-            <li>ऊपर <b>Transaction type</b> में <b>Sale</b> चुनिए (बिक्री के बिल)
-                या <b>Payment-In</b> (जो पैसा आया)</li>
-            <li>तारीख़ें चुनकर <b>PDF</b> पर दबाइए — फ़ाइल फ़ोन में सहेज लीजिए</li>
-            <li>यहाँ वापस आकर <b>📄 PDF चुनें</b> दबाइए</li>
+            <li>ऊपर से <b>फ़र्म चुनिए</b> — जैसे «श्री हिंगलाज»</li>
+            <li>बाएँ मेन्यू ☰ → <b>Reports</b></li>
+            <li><b>All Transactions Report</b> पर टैप कीजिए</li>
+            <li>तारीख़: <b>01/04/2026</b> से <b>आज तक</b></li>
+            <li>ऊपर दाईं तरफ़ 📤 → <b>Excel</b> चुनिए</li>
+            <li>यहाँ वापस आकर <b>📊 फ़ाइल चुनिए</b> दबाइए</li>
+            <li>ऐप पूछेगा «कौन-सी फ़र्म?» — एक टैप, और हो गया</li>
           </ol>
+          <div class="muted" style="margin:10px 0">पाँचों फ़र्म के लिए यही
+            दोहराइए। पुरानी PDF वाली रिपोर्ट भी चलती है, पर उसमें चालान
+            नहीं आते।</div>
           <div class="badge lo" style="display:block;line-height:1.6;margin-top:10px">
             🔒 यह रिपोर्ट <b>किसी AI को नहीं</b> भेजी जाती — पूरा पढ़ना आपके ही
             फ़ोन में होता है। दोनों रिपोर्ट अलग-अलग डालिए, दुबारा डालने से कुछ
@@ -2443,6 +2688,10 @@ placeholder="917568 माजीसा डिस्पोजल
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<!-- 📊 व्यापार की «All Transactions Report» Excel में आती है — पुराना
+     BIFF ढाँचा, इसलिए ख़ुद पढ़ना ठीक नहीं। यह सिर्फ़ फ़ोन के अंदर चलती है;
+     फ़ाइल कहीं नहीं भेजी जाती। -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ═══════════ CONFIG — यह दो चीज़ें भरें ═══════════
    1) Firebase console → Project settings (⚙️) → "Your apps" → Web app config से
@@ -2515,6 +2764,9 @@ auth.onAuthStateChanged(async user => {
     await loadData();
     renderAll();
     show("app");
+    /* 🔖 पन्ना दिखने के **बाद** जाँच — यह कभी ऐप को रोकती नहीं। नाकाम हो
+       जाए तो चुपचाप छूट जाती है; तब सब पहले जैसा ही चलता रहता है। */
+    checkNewApp().then((st) => { if (st) showNewApp(st); }).catch(() => {});
   } catch (e) {
     alert("Data load नहीं हुआ: " + e.message + "\n(firestore.rules में UID डाली है?)");
     show("gateLogin");
@@ -2591,7 +2843,8 @@ function cachePayload(slim) {
     EXP_OUT: EXP_OUT.map((e) => tsClean(e)),
     ACCOUNTS: tsClean(ACCOUNTS),
     ACC_OUT: tsClean(ACC_OUT),
-    SALES: tsClean(SALES), PAYINS: tsClean(PAYINS), SHORTNAME, VY_LOADED,
+    VY: tsClean(VY), SALES: tsClean(SALES), PAYINS: tsClean(PAYINS),
+    SHORTNAME, VY_LOADED,
     CONTACTS: tsClean(CONTACTS),
     BANKTXNS: tsClean(BANKTXNS),
     RETIRED: tsClean(RETIRED),
@@ -2640,7 +2893,7 @@ function loadCache() {
   VCARDS = c.VCARDS || {};
   STAFF = c.STAFF || {};
   CHEQUES = c.CHEQUES || {};
-  SALES = c.SALES || []; PAYINS = c.PAYINS || [];
+  VY = c.VY || []; SALES = c.SALES || []; PAYINS = c.PAYINS || [];
   SHORTNAME = c.SHORTNAME || {}; VY_LOADED = !!c.VY_LOADED;
   CONTACTS = c.CONTACTS || {};
   LAST_SYNC = c.at;
@@ -2862,6 +3115,44 @@ function renderSync(err) {
         '</small></span>' +
       '<i style="width:' + pct.toFixed(1) + '%"></i>' +
     '</div>';
+  renderStamp();
+}
+
+/**
+ * 🔖 «आपके पास कौन-सा ऐप है» — शक़ की कोई गुंजाइश न रहे।
+ *
+ * यही वह पंक्ति है जिसकी कमी दो दिन खली। अब विक्रम जी इसे पढ़कर बता सकते
+ * हैं, और मैं मिलाकर देख सकता हूँ — अंदाज़ा किसी को नहीं लगाना पड़ेगा।
+ */
+function renderStamp() {
+  const box = $("meStamp");
+  if (!box) return;
+  box.innerHTML = `
+    <div class="stampRow">
+      <span style="font-size:17px">🔖</span>
+      <div style="flex:1;min-width:0">ऐप: <code>${esc(APP_BUILD)}</code>
+        <div class="muted" id="stampSay">देख रहा हूँ…</div></div>
+    </div>`;
+  checkNewApp().then((st) => {
+    const el = $("stampSay");
+    if (!el) return;
+    if (st) {
+      el.innerHTML = `🆕 नया आ गया है — <b>${esc(st)}</b>`;
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "mini primary";
+      b.textContent = "लीजिए";
+      b.style.marginTop = "6px";
+      b.onclick = takeNewApp;
+      el.appendChild(document.createElement("br"));
+      el.appendChild(b);
+      showNewApp(st);
+    } else {
+      el.innerHTML = '<span class="ok2t">✅ यही सबसे नया है</span>';
+    }
+  }).catch(() => {
+    const el = $("stampSay");
+    if (el) el.textContent = "जाँच नहीं हो पाई — net देखिए";
+  });
 }
 
 async function refreshData(btn) {
@@ -8001,7 +8292,380 @@ function parseVyapar(pages) {
   };
 }
 
-/* ══════════ 🏛️ व्यापार — बिक्री का अलग संसार ═══════════════════════
+
+/* ══════════ 🏛️ व्यापार — पाँच फ़र्म, चार काग़ज़ ═══════════════════════
+
+   विक्रम जी: «व्यापार का जो पार्ट है उसको पूरा रीडिज़ाइन करिए… डिलीवरी
+   चालान अलग बनेंगे, टैक्स इनवॉइस अलग बनेंगे, पेमेंट-इन का अलग पार्ट होगा।»
+
+   पुराना व्यापार वाला हिस्सा सिर्फ़ **बिक्री के बिल** और **पेमेंट-इन**
+   जानता था, और वह भी PDF की «Custom Report» से — एक बार में एक क़िस्म।
+   इसलिए सबसे बड़ी बात दिखती ही नहीं थी।
+
+   श्री हिंगलाज की पूरी रिपोर्ट पढ़ने पर जो निकला:
+
+       🚚 डिलीवरी चालान   108   ₹52,43,304
+       🧾 टैक्स इनवॉइस     11   ₹ 1,51,395
+       📥 पेमेंट-इन         6   ₹   75,330
+
+   यानी **₹50.9 लाख का माल जा चुका है जिसका बिल ही नहीं बना।** यही वह
+   जवाब है जिसके लिए अब तक हर फ़र्म अलग-अलग खोलनी पड़ती थी।
+
+   🧱 पक्का नियम — बैंक से मिलन सिर्फ़ **एक** जगह:
+        ✅ पेमेंट-इन ↔ बैंक का क्रेडिट        (`payinInBank()`)
+        🚫 चालान / इनवॉइस / कोटेशन ↔ बैंक     — कभी नहीं
+        🚫 व्यापार की पार्टी ↔ ख़रीद की पार्टी  — कभी नहीं
+        🚫 व्यापार का सामान ↔ Pricebook       — कभी नहीं
+
+   🔒 और रिपोर्ट कभी AI को नहीं जाती — पूरा पढ़ना यहीं, फ़ोन के अंदर।     */
+
+/** विक्रम जी की पाँचों फ़र्म। `pre` = बिल-नंबर में आने वाले उनके कोड। */
+const FIRMS = [
+  { id: "vbe", short: "VBE", name: "वंदे भारत इंटरप्राइजेज",
+    en: "VANDE BHARAT ENTERPRISES", pre: ["VBE", "VB"], color: "#3987e5" },
+  { id: "sh", short: "SH", name: "श्री हिंगलाज इन्फोटेक",
+    en: "SHREE HINGLAJ INFRATECH", pre: ["SH", "SHI", "HINGLAJ"], color: "#d55181" },
+  { id: "bc", short: "BC", name: "बेस्ट चॉइस ट्रेडर",
+    en: "BEST CHOICE TRADER", pre: ["BC", "BCT"], color: "#c98500" },
+  { id: "bi", short: "BI", name: "ब्राइट इंडिया इंटरप्राइजेज",
+    en: "BRIGHT INDIA ENTERPRISES", pre: ["BI", "BIE"], color: "#0ca30c" },
+  { id: "ub", short: "UB", name: "उज्जवल भारत इन्फोटेक",
+    en: "UJJWAL BHARAT INFOTECH", pre: ["UB", "UBI"], color: "#8b5cf6" }
+];
+const firmOf = (id) => FIRMS.filter((f) => f.id === id)[0] || null;
+const firmName = (id) => { const f = firmOf(id); return f ? f.name : "बिना फ़र्म"; };
+const firmColor = (id) => { const f = firmOf(id); return f ? f.color : "#898781"; };
+
+/**
+ * बिल-नंबर से फ़र्म का अंदाज़ा — «SH/2026-27/08» → श्री हिंगलाज,
+ * «TX/UBI/25-26/1276» → उज्जवल भारत।
+ * यह सिर्फ़ **सुझाव** है; पक्का विक्रम जी ही करते हैं।
+ */
+function firmFromRef(ref) {
+  const parts = String(ref || "").toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  for (const p of parts) {
+    if (/^\d/.test(p)) continue;
+    const hit = FIRMS.filter((f) => f.pre.indexOf(p) >= 0)[0];
+    if (hit) return hit.id;
+  }
+  return null;
+}
+
+/** रिपोर्ट के सिर पर छपे नाम से फ़र्म — «SHREE HINGLAJ INFRATECH»। */
+function firmFromName(name) {
+  const k = String(name || "").toUpperCase().replace(/[^A-Z]/g, "");
+  if (!k) return null;
+  const hit = FIRMS.filter((f) => {
+    const e = f.en.replace(/[^A-Z]/g, "");
+    return k.indexOf(e) >= 0 || e.indexOf(k) >= 0;
+  })[0];
+  return hit ? hit.id : null;
+}
+
+/** चार काग़ज़ — क्रम वही जो असल ज़िंदगी में है। */
+const VY_PARTS = [
+  { k: "quote", ic: "📐", nm: "कोटेशन", color: "#898781" },
+  { k: "challan", ic: "🚚", nm: "चालान", color: "#3987e5" },
+  { k: "invoice", ic: "🧾", nm: "इनवॉइस", color: "#8b5cf6" },
+  { k: "payin", ic: "📥", nm: "पेमेंट-इन", color: "#0ca30c" }
+];
+const partOf = (k) => VY_PARTS.filter((p) => p.k === k)[0] || VY_PARTS[1];
+
+/** व्यापार जो लिखता है ↔ ऐप जो समझता है। बाक़ी सब छोड़ दिया जाता है। */
+function vyKindOf(t) {
+  const x = String(t || "").toLowerCase().replace(/[^a-z]/g, "");
+  if (/estimate|quotation/.test(x)) return "quote";
+  if (/deliverychallan|challan/.test(x)) return "challan";
+  if (/^sale$|saleinvoice|taxinvoice|^invoice$/.test(x)) return "invoice";
+  if (/paymentin/.test(x)) return "payin";
+  return null;
+}
+
+/* ── 📊 «All Transactions Report» पढ़ना ──────────────────────────────
+
+   यह Excel पुराने BIFF ढाँचे में आती है, इसलिए SheetJS से पढ़ी जाती है।
+   खाने **नाम से** पहचाने जाते हैं, जगह से नहीं — व्यापार कल कोई खाना
+   जोड़ दे या हटा दे तो भी पढ़ना टूटे नहीं।                            */
+
+const vyNum = (v) => {
+  const t = String(v == null ? "" : v).replace(/[₹,\s]/g, "");
+  if (!t) return null;
+  const m = t.match(/-?\d+(?:\.\d+)?/);
+  return m ? Number(m[0]) : null;
+};
+
+const vyDay = (v) => {
+  const m = String(v || "").match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+  if (m) return `${m[3]}-${String(m[2]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`;
+  const i = String(v || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return i ? i[0] : null;
+};
+
+const hKey = (s) => String(s || "").toLowerCase().replace(/[^a-z]/g, "");
+
+/** जिस लकीर पर सबसे ज़्यादा जाने-पहचाने खाने मिलें, वही header है। */
+function vyHeaderAt(rows, want) {
+  for (let i = 0; i < Math.min(rows.length, 25); i++) {
+    const keys = (rows[i] || []).map(hKey);
+    if (want.every((w) => keys.indexOf(w) >= 0)) return i;
+  }
+  return -1;
+}
+
+function vyColMap(head) {
+  const m = {};
+  head.forEach((h, i) => { const k = hKey(h); if (k && m[k] === undefined) m[k] = i; });
+  return m;
+}
+
+/**
+ * Excel की दोनों शीट पढ़ो।
+ * @returns {{src:string, rows:Array, skipped:number, period:object}}
+ */
+function parseVyXlsx(buf) {
+  if (!window.XLSX) throw new Error("Excel reader लोड नहीं हुआ — internet देखिए");
+  const wb = XLSX.read(new Uint8Array(buf), { type: "array", cellDates: false });
+  const grid = (name) => XLSX.utils.sheet_to_json(wb.Sheets[name],
+    { header: 1, raw: false, defval: "" });
+
+  const main = grid(wb.SheetNames[0]);
+  const hi = vyHeaderAt(main, ["date", "partyname", "transactiontype"]);
+  if (hi < 0) throw new Error("यह «All Transactions Report» नहीं लगती");
+  const C = vyColMap(main[hi]);
+  const at = (r, k) => (C[k] === undefined ? "" : String(r[C[k]] == null ? "" : r[C[k]]).trim());
+
+  // 📦 दूसरी शीट «Item Details» — बिल नंबर से जोड़ी जाती है
+  const items = {};
+  wb.SheetNames.slice(1).forEach((nm) => {
+    const g = grid(nm);
+    const j = vyHeaderAt(g, ["itemname"]);
+    if (j < 0) return;
+    const D = vyColMap(g[j]);
+    const iat = (r, k) => (D[k] === undefined ? "" : String(r[D[k]] == null ? "" : r[D[k]]).trim());
+    for (let i = j + 1; i < g.length; i++) {
+      const r = g[i] || [];
+      const ref = refKey(iat(r, "invoiceno") || iat(r, "refno"));
+      const name = iat(r, "itemname");
+      if (!ref || !name) continue;
+      (items[ref] = items[ref] || []).push({
+        name, qty: vyNum(iat(r, "quantity")), unit: iat(r, "unit") || null,
+        rate: vyNum(iat(r, "priceunit")), amount: vyNum(iat(r, "amount"))
+      });
+    }
+  });
+
+  const rows = [];
+  let skipped = 0, lo = "", hiD = "";
+  for (let i = hi + 1; i < main.length; i++) {
+    const r = main[i] || [];
+    const date = vyDay(at(r, "date"));
+    const kind = vyKindOf(at(r, "transactiontype"));
+    if (!date || !kind) { if (at(r, "partyname")) skipped++; continue; }
+    const ref = at(r, "refno");
+    const total = vyNum(at(r, "amount"));
+    const got = vyNum(at(r, "receivedamount"));
+    const bal = vyNum(at(r, "balanceamount"));
+    if (!lo || date < lo) lo = date;
+    if (date > hiD) hiD = date;
+    rows.push({
+      kind, date, party: at(r, "partyname") || null, ref: ref || null,
+      status: at(r, "paymentstatus") || null,
+      payType: at(r, "paymenttype") || null,
+      note: at(r, "description") || null,
+      total: total, received: got == null ? (kind === "payin" ? total : 0) : got,
+      balance: bal, items: items[refKey(ref)] || []
+    });
+  }
+  if (!rows.length) throw new Error("कोई सौदा नहीं मिला — दूसरी अवधि देखिए");
+  return { src: "xlsx", rows, skipped, period: { from: lo, to: hiD } };
+}
+
+/* ── 🗄️ व्यापार का संग्रह ───────────────────────────────────────────
+
+   🔒 पहचान = **फ़र्म + नंबर**, अकेला नंबर नहीं। दो फ़र्म में एक ही नंबर का
+   चालान बन सकता है (`DC/2026-27/01` दोनों में) — अकेला नंबर पहचान मानने
+   पर वे एक-दूसरे को खा जाते।                                          */
+
+let VY = [], VY_FIRM = "", VY_PARSED = null, VY_ASKFIRM = "";
+
+const vyId = (firmId, ref) => (firmId || "x") + "-" + (refKey(ref) || hash36(String(ref)));
+
+/**
+ * पूरी व्यापार-सूची — नया `vbe_vy` **और** पुराने `vbe_sales`/`vbe_payins`।
+ * पुराना कुछ भी छोड़ा नहीं जाता; जो नए संग्रह में आ चुका है वही हटता है।
+ */
+function vyAll() {
+  const out = VY.slice();
+  const seen = {};
+  out.forEach((x) => { seen[x._id] = 1; });
+  const fold = (arr, kind) => arr.forEach((x) => {
+    const fid = x.firmId || firmFromRef(x.ref) || firmFromName(x.firm) || "";
+    const id = vyId(fid, x.ref);
+    if (seen[id]) return;
+    seen[id] = 1;
+    out.push(Object.assign({}, x, { _id: id, kind, firmId: fid, legacy: true }));
+  });
+  fold(SALES, "invoice");
+  fold(PAYINS, "payin");
+  return out;
+}
+
+/** चुनी हुई फ़र्म के काग़ज़ (ख़ाली = सारी फ़र्म)। */
+function vyRows(kind, firmId) {
+  const f = firmId === undefined ? VY_FIRM : firmId;
+  return vyAll().filter((x) =>
+    (!kind || x.kind === kind) && (!f || (x.firmId || "") === f));
+}
+
+/**
+ * 🔍 «मेरे को हर फ़र्म को खोलकर चेक करना पड़ता है कि किस व्यक्ति के कितने
+ * बिल बाक़ी हैं।» — अब एक ख़ाना, चार तरह की खोज:
+ *
+ *   «17 mech»          → यूनिट के नाम से (पूरा सरकारी नाम **और** छोटा नाम)
+ *   «DC/2026-27/012»   → बिल नंबर से
+ *   «24500»            → रकम से (±₹1, टुकड़ा-मिलान नहीं)
+ *   «cheque» / «SH»    → भुगतान की क़िस्म या फ़र्म
+ *
+ * रकम खोजते समय **अंकों का टुकड़ा-मिलान नहीं** होता — «11000» लिखने पर
+ * ₹1,10,000 वाला काग़ज़ नहीं आएगा। यही ग़लती v18 में पकड़ी गई थी।
+ */
+function vyHit(x, q) {
+  if (!q) return true;
+  const t = String(q).trim().toLowerCase();
+  if (!t) return true;
+  const num = Number(t.replace(/[₹,\s]/g, ""));
+  if (/^[\d,₹.\s]+$/.test(t) && !isNaN(num) && num > 0) {
+    return Math.abs((x.total || 0) - num) <= 1 ||
+      Math.abs((x.received || 0) - num) <= 1;
+  }
+  /* 🩸 «17 mech» लिखने पर «5 MECHANISED INFANTRY» और «6340 mech wksp» भी
+     आ जाते थे। दो अलग-अलग वजहें थीं, और दोनों वही पुरानी ग़लती हैं जो v18
+     में रकम के साथ पकड़ी गई थी — **अंक बीच में से मिला लेना**:
+
+       • `DC/2026-27/017` के अंदर «17» पड़ा है
+       • सामान का नाम «REMI FARATA FAN ( 17 APRIL )» है
+
+     इसलिए अब दो अलग ढेर हैं। **अंक सिर्फ़ पहचान वाले ढेर में** ढूँढा जाता
+     है (यूनिट का नाम, छोटा नाम, बिल नंबर, फ़र्म) और वह भी पूरा शब्द बनकर।
+     सामान के नाम में पड़ा «17» किसी यूनिट का नंबर नहीं होता — वह तारीख़
+     होती है, नाप होती है। अक्षर वाला टुकड़ा दोनों ढेरों में चलता है।    */
+  const who = [x.party, unitShort(x.party), x.ref,
+    firmName(x.firmId), (firmOf(x.firmId) || {}).short].join(" ").toLowerCase();
+  const what = (who + " " + [x.payType, x.status,
+    (x.items || []).map((i) => i.name).join(" ")].join(" ")).toLowerCase();
+  return t.split(/\s+/).every((w) => /^\d+$/.test(w)
+    ? new RegExp("(^|[^0-9a-z])" + w + "([^0-9a-z]|$)").test(who)
+    : what.indexOf(w) >= 0);
+}
+
+const vyQ = () => ($("vyQ") && $("vyQ").value) || "";
+
+const vySum = (rows) => rows.reduce((a, x) => a + (x.total || 0), 0);
+const vyGot = (rows) => rows.reduce((a, x) => a + (x.received || 0), 0);
+
+/** कितने दिन पुराना। */
+function vyAge(d) {
+  const t = new Date(String(d || "").slice(0, 10) + "T12:00:00");
+  return isNaN(t) ? null : Math.round((Date.now() - t) / 86400000);
+}
+
+/**
+ * 🔗 कौन-सा चालान किस बिल में बदला।
+ *
+ * व्यापार यह नहीं बताता — इसलिए ऐप जोड़ता है: वही फ़र्म, वही पार्टी, वही
+ * रकम (±₹1)। एक बिल एक ही चालान का होता है, इसलिए जुड़ा हुआ बिल दुबारा
+ * नहीं गिना जाता। हाथ से लिखी जोड़ी (`linkRef`) हमेशा ऊपर रहती है।
+ *
+ * 🧱 यह जोड़ **व्यापार के अंदर** है — बैंक इसमें कहीं नहीं आता।
+ */
+function vyLinks() {
+  const map = {};                       // challan._id → invoice
+  const inv = vyRows("invoice", "");
+  const taken = {};
+  const ch = vyRows("challan", "");
+
+  ch.forEach((c) => {
+    if (!c.linkRef) return;
+    const hit = inv.filter((v) => refKey(v.ref) === refKey(c.linkRef))[0];
+    if (hit) { map[c._id] = hit; taken[hit._id] = 1; }
+  });
+  ch.forEach((c) => {
+    if (map[c._id] || c.total == null) return;
+    const hit = inv.filter((v) => !taken[v._id] &&
+      (v.firmId || "") === (c.firmId || "") &&
+      sameParty(v.party, c.party) &&
+      Math.abs((v.total || 0) - c.total) <= 1)[0];
+    if (hit) { map[c._id] = hit; taken[hit._id] = 1; map["auto:" + c._id] = 1; }
+  });
+  return map;
+}
+
+/**
+ * 🧑 पार्टी-वार पूरा हिसाब — «किसके कितने बिल बाक़ी हैं» का जवाब।
+ * @returns {Array} सबसे ज़्यादा «बिल बनना बाक़ी» वाली ऊपर
+ */
+function vyParties(firmId) {
+  const rows = vyRows(null, firmId);
+  const map = {};
+  rows.forEach((x) => {
+    const k = pKey(x.party);
+    if (!k) return;
+    const m = map[k] = map[k] || { key: k, party: x.party, oldest: "",
+      quote: { n: 0, sum: 0 }, challan: { n: 0, sum: 0 },
+      invoice: { n: 0, sum: 0 }, payin: { n: 0, sum: 0 } };
+    // सबसे लंबा नाम रखो — व्यापार कहीं छोटा, कहीं पूरा लिखता है
+    if (String(x.party || "").length > String(m.party || "").length) m.party = x.party;
+    const b = m[x.kind];
+    b.n++;
+    b.sum += (x.kind === "payin" ? (x.received || x.total || 0) : (x.total || 0));
+    if (x.kind === "challan" && (!m.oldest || x.date < m.oldest)) m.oldest = x.date;
+  });
+  return Object.values(map).map((m) => {
+    m.gap = Math.max(0, Math.round(m.challan.sum - m.invoice.sum));
+    m.due = Math.max(0, Math.round(m.invoice.sum - m.payin.sum));
+    m.total = m.challan.sum + m.invoice.sum;
+    return m;
+  }).sort((a, b) => (b.gap + b.due) - (a.gap + a.due));
+}
+
+/**
+ * 🌉 अकेला पुल — पेमेंट-इन बैंक में कहाँ दिखा।
+ *
+ * विक्रम जी का साफ़ आदेश: «बैंक और व्यापार का डाटा एक-दूसरे से मिलान मत
+ * करिए। केवल एक जगह मिलन हो सकता है — जो पेमेंट मेरे खाते में आ गया और जो
+ * व्यापार में पेमेंट-इन हुआ।»
+ *
+ * इसलिए पूरे ऐप में **यही अकेला function** बैंक और व्यापार को छूता है, और
+ * वह भी सिर्फ़ **क्रेडिट** लकीर पर। और कहीं `BANKTXNS` को व्यापार से जोड़ा
+ * गया तो वह नियम का उल्लंघन है।
+ */
+function payinInBank(pi) {
+  const amt = pi.received || pi.total || 0;
+  if (!amt) return null;
+  const day = new Date(String(pi.date || "").slice(0, 10) + "T12:00:00");
+  if (isNaN(day)) return null;
+  return BANKTXNS.filter((t) => {
+    if (t.type !== "credit") return false;
+    if (Math.abs((t.amount || 0) - amt) > 1) return false;
+    const d = new Date(String(t.date || "").slice(0, 10) + "T12:00:00");
+    return !isNaN(d) && Math.abs(d - day) <= 3 * 86400000;
+  })[0] || null;
+}
+
+/** उल्टी तरफ़ — यह बैंक-क्रेडिट किस पेमेंट-इन की है। वही एक पुल, वही जाँच। */
+function bankIsPayin(t) {
+  if (!t || t.type !== "credit") return null;
+  const day = new Date(String(t.date || "").slice(0, 10) + "T12:00:00");
+  if (isNaN(day)) return null;
+  return vyRows("payin", "").filter((pi) => {
+    const amt = pi.received || pi.total || 0;
+    if (Math.abs((t.amount || 0) - amt) > 1) return false;
+    const d = new Date(String(pi.date || "").slice(0, 10) + "T12:00:00");
+    return !isNaN(d) && Math.abs(d - day) <= 3 * 86400000;
+  })[0] || null;
+}
+
+/* ══════════ 🏛️ पुराना व्यापार — अब भी वहीं ═══════════════════════
    ख़रीद (यह app) और बिक्री (व्यापार) का स्वभाव ही अलग है: यहाँ सामान का नाम
    वैसा है जैसा दुकान पर बोला जाता है, वहाँ GeM का पूरा सरकारी नाम; यहाँ पैसा
    जाता है, वहाँ आता है। अगर ये आपस में मिल गए तो Pricebook झूठा हो जाएगा और
@@ -8013,8 +8677,7 @@ function parseVyapar(pages) {
 
    HARD RULE: व्यापार का कोई सामान कभी pricebookAdd() से नहीं गुज़रता।       */
 
-let SALES = [], PAYINS = [], SHORTNAME = {}, VY_LOADED = false, VY_VIEW = "sales";
-let VY_PARSED = null;
+let SALES = [], PAYINS = [], SHORTNAME = {}, VY_LOADED = false, VY_VIEW = "home";
 
 /** व्यापार के लंबे सरकारी नाम की जगह अपना छोटा नाम — जहाँ तय हो चुका हो। */
 function unitShort(name) {
@@ -8052,7 +8715,7 @@ function suggestShort(name) {
   const hit = UNIT_WORDS.filter(([re]) => re.test(squash))[0];
   if (hit) return (num + " " + hit[1]).trim();
 
-  const drop = /^(CO|OC|OFFICER|COMMANDING|ADM|COMMANDANT|CDR|THE|OF|VILL|TEH|DITT|DIST|INDIA|RAJASTHAN|BARMER|PIN|STATE)$/;
+  const drop = /^(CO|OC|SIR|OFFICER|COMMANDING|ADM|ADMINISTRATIVE|COMMANDANT|CDR|GE|THE|OF|FOR|VILL|TEH|DITT|DIST|DISTT|INDIA|RAJASTHAN|BARMER|PIN|STATE|CANTT|MILITARY|STATION)$/;
   const words = raw.toUpperCase().replace(/[^A-Z0-9\s]/g, " ").split(/\s+/)
     .filter((w) => w && !drop.test(w) && !/^\d+$/.test(w))
     .slice(0, 2)
@@ -8093,15 +8756,19 @@ async function loadVyapar(force) {
   if (VY_LOADED && !force) return;
   try {
     // 🧱 यहाँ भी वही «दीवार» थी — 600 के बाद बिक्री चुपचाप कट जाती थी
-    const [sa, pi, nm] = await Promise.all([
+    const [vy, sa, pi, nm] = await Promise.all([
+      pageAll("vbe_vy", 40000),
       pageAll("vbe_sales", 20000),
       pageAll("vbe_payins", 20000),
       db.collection("vbe_meta").doc("unit_names").get()
     ]);
+    VY = markCapped("व्यापार", vy).map((d) => Object.assign({ _id: d.id }, d.data()));
+    // पुराने दोनों संग्रह अब भी पढ़े जाते हैं — जो पहले डाला जा चुका है वह
+    // कभी ग़ायब न हो। `vyAll()` दोनों को एक ही सूची में जोड़ता है।
     SALES = markCapped("बिक्री", sa).map((d) => Object.assign({ _id: d.id }, d.data()));
     PAYINS = markCapped("जो पैसा आया", pi).map((d) => Object.assign({ _id: d.id }, d.data()));
     SHORTNAME = (nm.exists && nm.data().map) || {};
-    readCount(SALES.length + PAYINS.length + 1);
+    readCount(VY.length + SALES.length + PAYINS.length + 1);
     VY_LOADED = true;
     saveCache();
   } catch (e) { /* कैश से जो है वही चले */ }
@@ -8111,32 +8778,16 @@ const vyRef = (r) => String(r || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 /** बिक्री का बिल कितना चुका — पेमेंट-इन जोड़कर, रिपोर्ट के आँकड़े के साथ। */
 function saleGot(sale) {
-  const own = PAYINS.filter((x) => x.saleRef && vyRef(x.saleRef) === vyRef(sale.ref))
+  const own = vyRows("payin", "")
+    .filter((x) => x.saleRef && vyRef(x.saleRef) === vyRef(sale.ref))
     .reduce((a, x) => a + (x.received || 0), 0);
   const got = Math.max(own, sale.received || 0);
   return { got, due: Math.max(0, Math.round(((sale.total || 0) - got) * 100) / 100) };
 }
 
-/** कितने दिन से बकाया। */
-function vyAge(d) {
-  const t = new Date(String(d || "").slice(0, 10) + "T12:00:00");
-  return isNaN(t) ? null : Math.round((Date.now() - t) / 86400000);
-}
-
-/** पेमेंट-इन बैंक में कहाँ दिखा — रकम + तारीख़ (±3 दिन) मिलाकर। */
-function payinInBank(pi) {
-  const day = new Date(String(pi.date || "").slice(0, 10) + "T12:00:00");
-  return BANKTXNS.filter((t) => {
-    if (t.type !== "credit") return false;
-    if (Math.abs((t.amount || 0) - (pi.received || 0)) > 1) return false;
-    const d = new Date(String(t.date || "").slice(0, 10) + "T12:00:00");
-    return !isNaN(d) && !isNaN(day) && Math.abs(d - day) <= 3 * 86400000;
-  })[0] || null;
-}
-
 /** एक पेमेंट-इन किस बिक्री-बिल का था — पार्टी + रकम + बकाया मिलाकर। */
 function guessSaleFor(pi) {
-  const cand = SALES.filter((sa) => sameParty(sa.party, pi.party));
+  const cand = vyRows("invoice", "").filter((sa) => sameParty(sa.party, pi.party));
   const exact = cand.filter((sa) => Math.abs((sa.total || 0) - (pi.received || 0)) <= 1);
   if (exact.length === 1) return exact[0];
   const openOnes = cand.filter((sa) => saleGot(sa).due > 0.5)
@@ -8144,7 +8795,16 @@ function guessSaleFor(pi) {
   return exact[0] || openOnes[0] || null;
 }
 
-/* ── रिपोर्ट डालना ─────────────────────────────────────────────────── */
+/* ── 📥 रिपोर्ट डालना ───────────────────────────────────────────────
+
+   दो रास्ते, एक ही मंज़िल:
+     📊 Excel «All Transactions Report» — चारों काग़ज़ एक साथ  ← अब यही माँगी जाती है
+     📄 PDF  «Custom Report»            — पुराना रास्ता, चालान नहीं आते
+
+   फ़र्म कैसे तय होती है — तीन सीढ़ियाँ: PDF के सिर पर छपा नाम → बिल-नंबर
+   का कोड (`SH/2026-27/08`) → और आख़िर में विक्रम जी का एक टैप। तीसरी सीढ़ी
+   कभी छोड़ी नहीं जाती: **पाँच फ़र्म में ग़लत फ़र्म का हिसाब सबसे बुरी चीज़
+   होगी।**                                                             */
 
 $("vyFile").addEventListener("change", async (e) => {
   const f = e.target.files[0];
@@ -8158,313 +8818,492 @@ async function handleVyaparFile(file) {
   msg.className = "muted";
   msg.innerHTML = '<span class="thinking"></span> रिपोर्ट पढ़ रहा हूँ…';
   try {
-    if (!window.pdfjsLib) throw new Error("PDF reader लोड नहीं हुआ — internet देखें");
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
-    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
-    const pages = [];
-    for (let i = 1; i <= Math.min(doc.numPages, 200); i++) {
-      const pg = await doc.getPage(i);
-      pages.push((await pg.getTextContent()).items);
-      pg.cleanup();
+    const buf = await file.arrayBuffer();
+    const isPdf = /\.pdf$/i.test(file.name) ||
+      new Uint8Array(buf.slice(0, 4)).join(",") === "37,80,68,70";
+    let r;
+    if (isPdf) {
+      if (!window.pdfjsLib) throw new Error("PDF reader लोड नहीं हुआ — internet देखिए");
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+      const pages = [];
+      for (let i = 1; i <= Math.min(doc.numPages, 200); i++) {
+        const pg = await doc.getPage(i);
+        pages.push((await pg.getTextContent()).items);
+        pg.cleanup();
+      }
+      if (!isVyapar(pages)) throw new Error("यह व्यापार की रिपोर्ट नहीं लगती");
+      const old = parseVyapar(pages);
+      r = { src: "pdf", skipped: 0, period: old.period, headName: old.firm.name,
+        rows: old.rows.map((x) => Object.assign({}, x,
+          { kind: old.kind === "payin" ? "payin" : "invoice" })) };
+    } else {
+      r = parseVyXlsx(buf);
     }
-    if (!isVyapar(pages)) throw new Error("यह व्यापार की Custom Report नहीं लगती");
-    const r = parseVyapar(pages);
-    if (!r.rows.length) throw new Error("कोई सौदा नहीं मिला — दूसरी अवधि की रिपोर्ट देखें");
+    r.fileName = file.name;
     VY_PARSED = r;
-
-    const sum = r.rows.reduce((a, x) => a + (x.total || 0), 0);
-    const kindName = r.kind === "payin" ? "📥 पेमेंट-इन" : "🧾 बिक्री के बिल";
-    const known = r.rows.filter((x) => (r.kind === "payin" ? PAYINS : SALES)
-      .some((y) => vyRef(y.ref) === vyRef(x.ref))).length;
-
-    msg.className = "ok";
-    msg.innerHTML = `${kindName} पढ़ ली — <b>${r.rows.length}</b> सौदे, कुल <b>${INR(sum)}</b>`;
-    box.innerHTML = gfx.insight({ icon: "🛡️", tone: known ? "ai" : "down",
-      title: `${r.rows.length} सौदे · ${INR(sum)}`,
-      body: `${esc(r.period.from || "—")} से ${esc(r.period.to || "—")} तक · ` +
-        `<b>${r.rows.length - known}</b> नए, <b>${known}</b> पहले से` +
-        `<br><span class="muted">पहले से भरी कोई चीज़ मिटाई नहीं जाएगी।</span>` }) + `
-      <div class="vyRows">${r.rows.slice(0, 8).map((x) => `
-        <div class="vyPr"><b>${INR(x.total)}</b>
-          <span>${esc(unitShort(x.party))}</span>
-          <small>${esc(dayLabel(x.date).replace(/\s\d{4}$/, ""))} · ${esc(x.ref || "")}</small></div>`).join("")}
-        ${r.rows.length > 8 ? `<div class="muted">…और ${r.rows.length - 8}</div>` : ""}</div>
-      <button class="primary wide" id="vySave" onclick="saveVyapar(this)">💾 जोड़ दें</button>`;
+    VY_ASKFIRM = firmFromName(r.headName) ||
+      firmFromRef((r.rows.filter((x) => x.ref)[0] || {}).ref) || "";
+    renderVyPreview();
   } catch (err) {
     msg.className = "bad";
     msg.textContent = "नहीं पढ़ पाया: " + err.message;
   }
 }
 
-async function saveVyapar(btn) {
+function pickVyFirm(id) { VY_ASKFIRM = id; renderVyPreview(); }
+
+function renderVyPreview() {
   const r = VY_PARSED;
   if (!r) return;
+  const msg = $("vyMsg"), box = $("vyPreview");
+  const by = {};
+  VY_PARTS.forEach((p) => { by[p.k] = r.rows.filter((x) => x.kind === p.k); });
+  const known = {};
+  vyAll().forEach((x) => { known[x._id] = 1; });
+  const fresh = VY_ASKFIRM
+    ? r.rows.filter((x) => !known[vyId(VY_ASKFIRM, x.ref)]).length : 0;
+
+  msg.className = "ok";
+  msg.innerHTML = `📊 पढ़ ली — <b>${r.rows.length}</b> काग़ज़` +
+    (r.skipped ? ` · <span class="muted">${r.skipped} और क़िस्म की लकीरें छोड़ दीं</span>` : "");
+
+  box.innerHTML = `
+    <div class="tiles" style="margin:10px 0">
+      ${VY_PARTS.map((p) => gfx.tile({ k: p.ic + " " + p.nm,
+        v: INR(vySum(by[p.k])), n: vySum(by[p.k]),
+        s: by[p.k].length + " काग़ज़", color: p.color,
+        pct: by[p.k].length ? 100 : 4 })).join("")}
+    </div>
+    <div class="itemsHead"><span>🏢 यह किस फ़र्म की रिपोर्ट है?</span>
+      <span class="muted">${r.headName ? esc(r.headName) : "फ़ाइल में नहीं लिखा"}</span></div>
+    <div class="fmBar">
+      ${FIRMS.map((f) => `<button type="button" class="fmB${
+        VY_ASKFIRM === f.id ? " on" : ""}"
+        ${VY_ASKFIRM === f.id ? `style="background:${f.color}"` : ""}
+        onclick="pickVyFirm('${f.id}')">
+        <span class="dot" style="background:${f.color}"></span>${esc(f.name)}</button>`).join("")}
+    </div>
+    ${VY_ASKFIRM ? `
+      <div class="badge lo" style="display:block;line-height:1.7;margin:10px 0">
+        ${esc(r.period.from || "—")} से ${esc(r.period.to || "—")} तक ·
+        <b>${fresh}</b> नए, <b>${r.rows.length - fresh}</b> पहले से।
+        <br>पहले से भरी कोई चीज़ मिटाई नहीं जाएगी।</div>
+      <button class="primary wide" onclick="saveVyapar(this)">💾 ${
+        esc(firmName(VY_ASKFIRM))} में जोड़ दीजिए</button>`
+      : `<div class="badge lo" style="display:block;line-height:1.7;margin-top:10px">
+        👆 ऊपर से फ़र्म चुनिए — तभी जोड़ा जाएगा। <b>ग़लत फ़र्म में जाने से
+        पूरा हिसाब गड़बड़ा जाएगा</b>, इसलिए यह ऐप ख़ुद तय नहीं करता।</div>`}`;
+  gfx.fit(box);
+  gfx.countUp(box);
+}
+
+async function saveVyapar(btn) {
+  const r = VY_PARSED, fid = VY_ASKFIRM;
+  if (!r || !fid) return;
   const msg = $("vyMsg");
   btn.disabled = true; btn.textContent = "सहेज रहा हूँ…";
-  const col = r.kind === "payin" ? "vbe_payins" : "vbe_sales";
-  let added = 0, kept = 0, linked = 0;
+  let added = 0, kept = 0, done = 0;
   try {
+    const have = {};
+    vyAll().forEach((x) => { have[x._id] = x; });
+    const B = batcher(() => {
+      btn.textContent = `… ${Math.min(++done * 400, r.rows.length)} / ${r.rows.length}`;
+    });
     for (const x of r.rows) {
-      const id = vyRef(x.ref) || ("v" + hash36(JSON.stringify(x)));
-      const mine = (r.kind === "payin" ? PAYINS : SALES).filter((y) => y._id === id)[0];
-      const doc = Object.assign({}, x, { firm: r.firm.name || null, at: new Date().toISOString() });
-      // पेमेंट-इन को उसके बिक्री-बिल से जोड़ो — सिर्फ़ सुझाव, बदला जा सकता है
-      if (r.kind === "payin" && !(mine && mine.saleRef)) {
-        const sa = guessSaleFor(x);
-        if (sa) { doc.saleRef = sa.ref; doc.saleGuess = true; linked++; }
-      }
-      // पहले से भरी चीज़ मिटती नहीं — merge, और ख़ाली खाने नहीं लिखे जाते
+      const id = vyId(fid, x.ref);
+      const doc = {
+        firmId: fid, kind: x.kind, date: x.date, party: x.party || null,
+        partyKey: pKey(x.party) || null, ref: x.ref || null,
+        status: x.status || null, payType: x.payType || null,
+        total: x.total == null ? null : x.total,
+        received: x.received == null ? null : x.received,
+        balance: x.balance == null ? null : x.balance,
+        items: (x.items || []).slice(0, 120),
+        note: x.note || null,
+        /* 🔮 GeM का ख़ाना अभी ख़ाली रखा जा रहा है — कल GeM की रिपोर्ट आते
+           ही जोड़ना सिर्फ़ भरने का काम रह जाए, ढाँचा बदलने का नहीं। */
+        gemContract: (have[id] && have[id].gemContract) || null,
+        src: r.src, at: new Date().toISOString()
+      };
       Object.keys(doc).forEach((k) => { if (doc[k] == null) delete doc[k]; });
-      await db.collection(col).doc(id).set(doc, { merge: true });
-      if (mine) { Object.assign(mine, doc); kept++; }
-      else { (r.kind === "payin" ? PAYINS : SALES).push(Object.assign({ _id: id }, doc)); added++; }
+      B.set(db.collection("vbe_vy").doc(id), doc, { merge: true });
+      if (have[id]) { kept++; } else { added++; }
+      const mine = VY.filter((y) => y._id === id)[0];
+      if (mine) Object.assign(mine, doc);
+      else VY.push(Object.assign({ _id: id }, doc));
+      await B.flushIfFull();
     }
-    await auditLog("vyapar_import", null,
-      { kind: r.kind, rows: r.rows.length, added, kept, linked, firm: r.firm.name });
+    await B.done();
+    await auditLog("vyapar_import", null, { firm: fid, src: r.src,
+      rows: r.rows.length, added, kept, file: r.fileName || null });
     saveCache();
     VY_PARSED = null;
     $("vyPreview").innerHTML = "";
     msg.className = "ok";
-    msg.innerHTML = `✅ <b>${added}</b> नए जुड़े · <b>${kept}</b> पहले से थे` +
-      (linked ? ` · 🔗 <b>${linked}</b> बिल से जुड़े` : "");
+    msg.innerHTML = `✅ <b>${added}</b> नए जुड़े · <b>${kept}</b> पहले से थे — ` +
+      esc(firmName(fid));
+    VY_FIRM = fid;
     renderVyapar();
-    toast("🏛️ व्यापार का हिसाब जुड़ गया");
+    toast("🏛️ " + firmName(fid) + " का हिसाब जुड़ गया");
   } catch (err) {
     msg.className = "bad";
     msg.textContent = "नहीं सहेजा: " + err.message;
   } finally {
-    btn.disabled = false; btn.textContent = "💾 जोड़ दें";
+    btn.disabled = false; btn.textContent = "💾 जोड़ दीजिए";
   }
 }
 
-/* ── व्यापार का अपना डैशबोर्ड ───────────────────────────────────────── */
+/* ── 🖥️ व्यापार का पन्ना ────────────────────────────────────────────── */
 
 function setVyView(v) { VY_VIEW = v; renderVyapar(); }
+function setVyFirm(f) { VY_FIRM = f; renderVyapar(); }
 
 function renderVyapar() {
-  const chips = [["sales", "🧾 बिक्री के बिल"], ["payins", "📥 पेमेंट-इन"],
-    ["parties", "🧑 पार्टी-वार"], ["units", "🎯 छोटे नाम"]];
-  $("vyChips").innerHTML = chips.map(([k, t]) =>
-    `<button type="button" class="chipBtn${VY_VIEW === k ? " on" : ""}"
-      onclick="setVyView('${k}')">${t}</button>`).join("");
+  const all = vyAll();
 
-  const total = SALES.reduce((a, x) => a + (x.total || 0), 0);
-  const got = SALES.reduce((a, x) => a + saleGot(x).got, 0);
-  const due = SALES.reduce((a, x) => a + saleGot(x).due, 0);
-  const openOnes = SALES.filter((x) => saleGot(x).due > 0.5)
-    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  /* 🏢 फ़र्म की पट्टी — जिस फ़र्म का एक भी काग़ज़ है वही दिखती है, ताकि
+     ख़ाली फ़र्मों की क़तार जगह न खाए। */
+  const cnt = {};
+  all.forEach((x) => { cnt[x.firmId || ""] = (cnt[x.firmId || ""] || 0) + 1; });
+  const live = FIRMS.filter((f) => cnt[f.id]);
+  $("vyFirms").innerHTML = (live.length > 1 || cnt[""] ? [{ id: "", name: "सारी फ़र्म",
+      color: "#898781" }].concat(live) : live)
+    .map((f) => `<button type="button" class="fmB${VY_FIRM === f.id ? " on" : ""}"
+      ${VY_FIRM === f.id ? `style="background:${f.color}"` : ""}
+      onclick="setVyFirm('${f.id}')">
+      <span class="dot" style="background:${f.color}"></span>${esc(f.name)}
+      <small>${f.id ? cnt[f.id] : all.length}</small></button>`).join("");
+
+  const by = {};
+  VY_PARTS.forEach((p) => { by[p.k] = vyRows(p.k); });
+
+  $("vyChips").innerHTML =
+    `<button type="button" class="vyP${VY_VIEW === "home" ? " on" : ""}"
+       onclick="setVyView('home')">
+       <span class="ic">🏛️</span><span class="nm">घर</span></button>` +
+    VY_PARTS.map((p) => `<button type="button" class="vyP${
+      VY_VIEW === p.k ? " on" : ""}" onclick="setVyView('${p.k}')">
+      <span class="ic">${p.ic}</span><span class="nm">${p.nm}</span>
+      <span class="ct" style="color:${p.color}">${by[p.k].length}</span></button>`).join("") +
+    `<button type="button" class="vyP${VY_VIEW === "party" ? " on" : ""}"
+       onclick="setVyView('party')">
+       <span class="ic">🧑</span><span class="nm">पार्टी</span>
+       <span class="ct">${vyParties().length}</span></button>`;
+
+  const chSum = vySum(by.challan), inSum = vySum(by.invoice);
+  const gapSum = Math.max(0, chSum - inSum);
+  const gotSum = vyGot(by.payin);
+  const links = vyLinks();
+  const unbilled = by.challan.filter((c) => !links[c._id]);
 
   $("vyTiles").innerHTML = [
-    gfx.tile({ k: "🧾 बेचा", v: INR(total), n: total,
-      s: SALES.length + " बिल", color: gfx.C.bill, pct: 100 }),
-    gfx.tile({ k: "🟢 आया", v: INR(got), n: got,
-      s: PAYINS.length + " पेमेंट-इन", color: gfx.C.in,
-      pct: total ? (got / total) * 100 : 0 }),
-    gfx.tile({ k: "🔴 बाकी", v: INR(due), n: due,
-      s: openOnes.length + " बिलों का", color: gfx.C.out,
-      pct: total ? (due / total) * 100 : 0 })
+    gfx.tile({ k: "🚚 माल गया", v: INR(chSum), n: chSum,
+      s: by.challan.length + " चालान", color: "#3987e5", pct: 100,
+      onclick: "setVyView('challan')" }),
+    gfx.tile({ k: "🧾 बिल बना", v: INR(inSum), n: inSum,
+      s: by.invoice.length + " इनवॉइस", color: "#8b5cf6",
+      pct: chSum ? (inSum / chSum) * 100 : 0, onclick: "setVyView('invoice')" }),
+    gfx.tile({ k: "🔴 बिल बाक़ी", v: INR(gapSum), n: gapSum,
+      s: unbilled.length + " चालान पर", color: "#d03b3b",
+      pct: chSum ? (gapSum / chSum) * 100 : 0, onclick: "setVyView('party')" }),
+    gfx.tile({ k: "🟢 पैसा आया", v: INR(gotSum), n: gotSum,
+      s: by.payin.length + " पेमेंट-इन", color: "#0ca30c",
+      pct: inSum ? (gotSum / inSum) * 100 : 0, onclick: "setVyView('payin')" })
   ].join("");
   attachTilt();
   gfx.fit($("vyTiles"));
   gfx.countUp($("vyTiles"));
 
-  if (!SALES.length && !PAYINS.length) {
-    $("vyBrain").innerHTML = gfx.empty("hello", "व्यापार का हिसाब यहाँ आएगा",
-      `व्यापार app से <b>Sale</b> और <b>Payment-In</b> की रिपोर्ट निकालकर नीचे
-       डाल दीजिए। फिर मैं बता दूँगा — किस यूनिट को कितना बेचा, कितना आया,
-       और कितना कितने दिन से बाकी है।`,
-      `<button type="button" class="mini primary" onclick="pickPhoto('vyFile')">📄 PDF चुनें</button>
-       <button type="button" class="mini" onclick="openSheet('vyHelpSheet')">❔ कैसे निकालें</button>`);
-  }
-  const oldest = openOnes[0];
-  const dup = vySameTwice();
-  if (SALES.length || PAYINS.length) $("vyBrain").innerHTML =
-    (dup.length ? gfx.insight({ icon: "⚠️", tone: "warn",
-        title: plural(dup.length, "बिल", "बिल") + " दो बार लगता है",
-        body: dup.slice(0, 2).map((g) =>
-          `<b>${esc(unitShort(g[0].party))}</b> · ${INR(g[0].total)} — ` +
-          `${esc(g[0].ref)} और ${esc(g[1].ref)}`).join("<br>") +
-          `<br><span class="muted">दोनों के Ref अलग हैं — व्यापार में देख लीजिए।</span>` }) : "") +
-    (oldest ? gfx.insight({ icon: "⏳", tone: "warn",
-        title: `सबसे पुराना बकाया — ${INR(saleGot(oldest).due)}`,
-        body: `<b>${esc(unitShort(oldest.party))}</b> · ${esc(dayLabel(oldest.date))} · ` +
-          `<b>${vyAge(oldest.date)} दिन</b> हो गए · ${esc(oldest.ref || "")}` }) : "");
+  const P = vyParties();
+  const top = P.filter((p) => p.gap > 0)[0];
+  $("vyBrain").innerHTML = !all.length
+    ? gfx.empty("hello", "व्यापार का हिसाब यहाँ आएगा",
+        `व्यापार से <b>All Transactions Report</b> निकालकर नीचे डाल दीजिए —
+         कोटेशन, चालान, इनवॉइस और पेमेंट-इन <b>चारों</b> एक साथ आ जाएँगे।
+         फिर एक ही पन्ने पर दिख जाएगा कि किस यूनिट का कितने का माल गया और
+         कितने का बिल बनना बाक़ी है।`,
+        `<button type="button" class="mini primary" onclick="pickPhoto('vyFile')">📊 फ़ाइल चुनिए</button>
+         <button type="button" class="mini" onclick="openSheet('vyHelpSheet')">❔ कैसे निकालें</button>`)
+    : (gapSum > 0 ? gfx.insight({ icon: "🔴", tone: "down",
+        title: `${INR(gapSum)} का माल जा चुका, बिल नहीं बना`,
+        body: (top ? `सबसे ऊपर <b>${esc(unitShort(top.party))}</b> — ${INR(top.gap)}` : "") +
+          `<br><span class="muted">${unbilled.length} चालान ऐसे हैं जिनके सामने
+           कोई टैक्स इनवॉइस नहीं मिला।</span>` }) : "") +
+      (P.filter((p) => p.due > 0).length ? gfx.insight({ icon: "⏳", tone: "warn",
+        title: `बिल बन गया पर पैसा नहीं आया — ${INR(P.reduce((a, p) => a + p.due, 0))}`,
+        body: P.filter((p) => p.due > 0).slice(0, 2).map((p) =>
+          `<b>${esc(unitShort(p.party))}</b> · ${INR(p.due)}`).join("<br>") }) : "");
 
   const box = $("vyList");
-  if (VY_VIEW === "payins") return renderVyPayins(box);
-  if (VY_VIEW === "parties") return renderVyParties(box);
-  if (VY_VIEW === "units") return renderVyUnits(box);
-  renderVySales(box);
+  if (VY_VIEW === "party") return renderVyParties(box);
+  if (VY_VIEW === "home") return renderVyHome(box);
+  renderVyDocs(box, VY_VIEW);
 }
 
-/** वही पार्टी, वही रकम, 7 दिन के अंदर — दो बार बना बिल। */
-function vySameTwice() {
-  const seen = {}, out = [];
-  SALES.forEach((x) => {
-    const k = pKey(x.party) + "|" + Math.round(x.total || 0);
-    (seen[k] = seen[k] || []).push(x);
-  });
-  Object.values(seen).forEach((g) => {
-    if (g.length < 2) return;
-    g.sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    for (let i = 1; i < g.length; i++) {
-      const d1 = new Date(String(g[i - 1].date) + "T12:00:00");
-      const d2 = new Date(String(g[i].date) + "T12:00:00");
-      if (Math.abs(d2 - d1) <= 7 * 86400000) out.push([g[i - 1], g[i]]);
-    }
-  });
-  return out;
-}
-
-function renderVySales(box) {
-  if (!SALES.length) {
-    box.innerHTML = gfx.empty("hello", "अभी कोई बिक्री का बिल नहीं",
-      `व्यापार की <b>Sale</b> रिपोर्ट डाल दीजिए — फिर बता दूँगा कि किस यूनिट
-       का कितना बकाया है और कितने दिन से।`,
-      `<button type="button" class="mini primary" onclick="pickPhoto('vyFile')">📄 PDF चुनें</button>
-       <button type="button" class="mini" onclick="openSheet('vyHelpSheet')">❔ कैसे निकालें</button>`);
+/** 🏛️ घर — सबसे नए काग़ज़, चारों क़िस्म एक साथ, तारीख़ के क्रम में। */
+function renderVyHome(box) {
+  const q = vyQ();
+  const all = vyRows().filter((x) => vyHit(x, q));
+  const rows = all.slice()
+    .sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 40);
+  if (!rows.length) {
+    box.innerHTML = gfx.empty("seek", "इस फ़र्म का अभी कुछ नहीं",
+      "ऊपर से दूसरी फ़र्म चुनिए, या इस फ़र्म की रिपोर्ट डाल दीजिए।");
     return;
   }
-  const rows = SALES.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  box.innerHTML = rows.map((x) => {
+  const links = vyLinks();
+  box.innerHTML = `<div class="itemsHead"><span>${q ? "🔍 जो मिला" : "🕒 सबसे नए काग़ज़"}</span>
+      <span class="muted">${all.length}${all.length > rows.length ? " · ऊपर के " + rows.length : ""}</span></div>` +
+    rows.map((x) => vyDocRow(x, links)).join("");
+}
+
+/** एक क़िस्म के सारे काग़ज़। */
+function renderVyDocs(box, kind) {
+  const p = partOf(kind);
+  const q = vyQ();
+  const rows = vyRows(kind).filter((x) => vyHit(x, q)).slice()
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  if (!rows.length) {
+    box.innerHTML = gfx.empty("seek", p.ic + " अभी कोई " + p.nm + " नहीं",
+      `व्यापार की <b>All Transactions Report</b> डालिए — उसमें चारों काग़ज़
+       एक साथ आते हैं।`,
+      `<button type="button" class="mini primary" onclick="pickPhoto('vyFile')">📊 फ़ाइल चुनिए</button>`);
+    return;
+  }
+  const links = vyLinks();
+  const sum = vySum(rows);
+  box.innerHTML = `<div class="itemsHead"><span>${p.ic} ${p.nm}</span>
+      <span class="muted">${rows.length} · ${INR(sum)}</span></div>` +
+    rows.map((x) => vyDocRow(x, links)).join("");
+}
+
+/** एक काग़ज़ = एक लकीर। हालत हमेशा दिखती है — ख़ाली कभी नहीं छोड़ी जाती। */
+function vyDocRow(x, links, opt) {
+  const p = partOf(x.kind);
+  const o = opt || {};
+  let tag = "";
+  if (x.kind === "challan") {
+    const v = links && links[x._id];
+    tag = v ? `<span class="vySt ok">🧾 बिल बन गया</span>`
+            : `<span class="vySt no">🧾 बिल बाक़ी</span>`;
+  } else if (x.kind === "invoice") {
     const g = saleGot(x);
-    const cls = g.due <= 0.5 ? "paid" : g.got > 0.5 ? "part" : "unpaid";
-    const age = vyAge(x.date);
-    return `
-    <div class="vyRow ${cls}" onclick="openSale('${esc(x._id)}')">
-      <div class="vyAmt">${INR(x.total)}</div>
-      <div class="vyMid">
-        <div class="vyName">${esc(unitShort(x.party))}</div>
-        <div class="vySub">${esc(dayLabel(x.date))} · ${esc(x.ref || "")}${
-          (x.items || []).length ? " · " + (x.items || []).length + " चीज़ें" : ""}</div>
-      </div>
-      <div class="vyTag">${g.due <= 0.5 ? "✅ आ गया"
-        : g.got > 0.5 ? "🟡 " + INR(g.due) + " बाकी"
-        : "🔴 " + INR(g.due)}${age > 30 && g.due > 0.5 ? `<small>${age} दिन</small>` : ""}</div>
-    </div>`;
-  }).join("");
-}
-
-function renderVyPayins(box) {
-  if (!PAYINS.length) {
-    box.innerHTML = gfx.empty("money", "अभी कोई पेमेंट-इन नहीं",
-      `व्यापार की <b>Payment-In</b> रिपोर्ट डालिए — जो पैसा आया वह अपने-आप
-       अपने बिल से और आपके बैंक खाते से जुड़ जाएगा।`,
-      `<button type="button" class="mini primary" onclick="pickPhoto('vyFile')">📄 PDF चुनें</button>`);
-    return;
+    tag = g.due <= 0.5 ? `<span class="vySt ok">✅ पैसा आ गया</span>`
+      : `<span class="vySt due">🔴 ${INR(g.due)} बाक़ी</span>`;
+  } else if (x.kind === "payin") {
+    tag = payinInBank(x) ? `<span class="vySt ok">🏦 खाते में मिला</span>`
+      : `<span class="vySt no">🏦 खाते में नहीं मिला</span>`;
   }
-  const rows = PAYINS.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  box.innerHTML = rows.map((x) => {
-    const bank = payinInBank(x);
-    const sale = x.saleRef ? SALES.filter((y) => vyRef(y.ref) === vyRef(x.saleRef))[0] : null;
-    return `
-    <div class="vyRow got">
-      <div class="vyAmt in">+${INR(x.received || x.total)}</div>
-      <div class="vyMid">
-        <div class="vyName">${esc(unitShort(x.party))}</div>
-        <div class="vySub">${esc(dayLabel(x.date))}${
-          x.payType ? " · " + esc(x.payType) : ""} · ${esc(x.ref || "")}</div>
-        <div class="vyLinks">
-          ${sale ? `<span class="badge hi">🧾 ${esc(sale.ref)}</span>` :
-            `<span class="badge lo">🧾 किस बिल का, पता नहीं</span>`}
-          ${bank ? `<span class="badge hi">🏦 ${esc(accLabel(bank.accountId))} · ${
-            esc(dayLabel(String(bank.date).slice(0, 10)).replace(/\s\d{4}$/, ""))}</span>`
-            : `<span class="badge lo">🏦 खाते में नहीं मिला</span>`}
-        </div>
-      </div>
-    </div>`;
-  }).join("");
+  return `
+  <div class="vyDoc" onclick="openVyDoc('${esc(x._id)}')">
+    <div class="kd" style="background:${p.color}22;color:${p.color}">${p.ic}</div>
+    <div class="md"><b>${o.noName
+      ? esc(x.ref || p.nm) : esc(unitShort(x.party))}</b>
+      <small>${esc(dayLabel(x.date))}${o.noName
+        ? ((x.items || []).length
+            ? " · " + esc(x.items.slice(0, 2).map((i) => i.name).join(", ")) +
+              (x.items.length > 2 ? " +" + (x.items.length - 2) : "")
+            : "")
+        : " · " + esc(x.ref || "—") +
+          (x.firmId ? " · " + esc((firmOf(x.firmId) || {}).short || "") : "")}</small></div>
+    <div class="rt"><b>${INR(x.kind === "payin" ? (x.received || x.total) : x.total)}</b>
+      ${tag}</div>
+  </div>`;
 }
 
+/** 🧑 पार्टी-वार — «किसके कितने बिल बाक़ी हैं» का सीधा जवाब। */
 function renderVyParties(box) {
-  const map = {};
-  SALES.forEach((x) => {
-    const k = pKey(x.party);
-    if (!k) return;
-    const g = saleGot(x);
-    map[k] = map[k] || { party: x.party, total: 0, got: 0, due: 0, n: 0, oldest: "" };
-    map[k].total += x.total || 0; map[k].got += g.got; map[k].due += g.due; map[k].n++;
-    if (g.due > 0.5 && (!map[k].oldest || String(x.date) < map[k].oldest)) map[k].oldest = x.date;
-  });
-  const rows = Object.values(map).sort((a, b) => b.due - a.due);
-  if (!rows.length) { box.innerHTML = `<div class="empty">अभी कुछ नहीं</div>`; return; }
-  box.innerHTML = rows.map((r) => `
-    <div class="vyRow ${r.due > 0.5 ? "unpaid" : "paid"}">
-      <div class="vyAmt">${INR(r.due)}</div>
-      <div class="vyMid">
-        <div class="vyName">${esc(unitShort(r.party))}</div>
-        <div class="vySub">${plural(r.n, "बिल", "बिल")} · बेचा ${INR(r.total)} ·
-          आया ${INR(r.got)}${r.oldest ? " · सबसे पुराना " + vyAge(r.oldest) + " दिन" : ""}</div>
-      </div>
-      <div class="vyTag">${r.due > 0.5 ? "🔴 बाकी" : "✅ पूरा"}</div>
-    </div>`).join("");
+  const q = vyQ().trim().toLowerCase();
+  const rows = vyParties().filter((r) => !q ||
+    (String(r.party || "") + " " + unitShort(r.party)).toLowerCase().indexOf(q) >= 0);
+  if (!rows.length) {
+    box.innerHTML = gfx.empty("seek", "अभी कोई पार्टी नहीं",
+      "रिपोर्ट डालते ही हर यूनिट का पूरा हिसाब यहाँ बन जाएगा।");
+    return;
+  }
+  box.innerHTML = `<div class="itemsHead"><span>🧑 किस यूनिट का क्या बाक़ी है</span>
+      <span class="muted">${rows.length}</span></div>` +
+    rows.map((r) => {
+      const tot = Math.max(1, r.challan.sum, r.invoice.sum);
+      const gp = (r.gap / tot) * 100, dp = (r.due / tot) * 100;
+      return `
+      <div class="gapCard${r.gap > 0 ? " hot" : ""}" onclick="openVyParty('${esc(r.key)}')">
+        <div class="gapTop">
+          <div class="nm">${esc(unitShort(r.party))}<small>${esc(r.party || "")}</small></div>
+          <div class="amt" style="color:${r.gap > 0 ? "#ff9c9c" : "#86e3bf"}">
+            ${INR(r.gap || r.due)}<small>${r.gap > 0 ? "का बिल बाक़ी"
+              : r.due > 0 ? "पैसा बाक़ी" : "सब पूरा"}</small></div>
+        </div>
+        <div class="gapLine">
+          <span>🚚 <b>${r.challan.n}</b> चालान ${INR(r.challan.sum)}</span>
+          <span>🧾 <b>${r.invoice.n}</b> बिल ${INR(r.invoice.sum)}</span>
+          <span>📥 ${INR(r.payin.sum)} आया</span>
+          ${r.oldest ? `<span>⏳ सबसे पुराना चालान ${vyAge(r.oldest)} दिन</span>` : ""}
+        </div>
+        <div class="gapBar">
+          <i style="width:${Math.min(100, 100 - gp - dp)}%;background:#0ca30c"></i>
+          <i style="width:${Math.min(100, dp)}%;background:#c98500"></i>
+          <i style="width:${Math.min(100, gp)}%;background:#d03b3b"></i>
+        </div>
+      </div>`;
+    }).join("");
 }
 
-function renderVyUnits(box) {
-  const names = [...new Set(SALES.concat(PAYINS).map((x) => x.party).filter(Boolean))];
-  if (!names.length) { box.innerHTML = `<div class="empty">अभी कोई पार्टी नहीं</div>`; return; }
-  box.innerHTML = `<div class="muted" style="padding:2px 0 10px">
-    व्यापार में यूनिट का पूरा सरकारी नाम होता है। यहाँ छोटा नाम रखिए — पूरे app
-    में वही दिखेगा, और खोजने पर दोनों मिलेंगे।</div>` +
-    names.map((n) => `
-    <div class="vyRow" onclick="openShortName('${esc(n).replace(/'/g, "&#39;")}')">
-      <div class="vyMid">
-        <div class="vyName">${esc(SHORTNAME[pKey(n)] || suggestShort(n))}${
-          SHORTNAME[pKey(n)] ? "" : ' <span class="badge lo">सुझाव</span>'}</div>
-        <div class="vySub">${esc(n)}</div>
-      </div>
-      <div class="vyTag">✏️</div>
-    </div>`).join("");
-}
+/* ── एक यूनिट की पूरी कहानी ─────────────────────────────────────── */
 
-function openSale(id) {
-  const x = SALES.filter((y) => y._id === id)[0];
-  if (!x) return;
-  const g = saleGot(x);
-  const pays = PAYINS.filter((y) => y.saleRef && vyRef(y.saleRef) === vyRef(x.ref));
-  $("vyTitle").textContent = "🧾 " + unitShort(x.party);
+function openVyParty(key) {
+  const rows = vyRows().filter((x) => pKey(x.party) === key)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const st = vyParties().filter((p) => p.key === key)[0];
+  if (!st) return;
+  const links = vyLinks();
+  $("vyTitle").textContent = "🎯 " + unitShort(st.party);
   $("vyDetail").innerHTML = `
     <div class="paySum">
-      <div><span>बिल</span><b>${INR(x.total)}</b></div>
-      <div><span>आया</span><b class="ok2t">${INR(g.got)}</b></div>
-      <div><span>${g.due > 0.5 ? "बाकी" : "हालत"}</span>
-        <b class="${g.due > 0.5 ? "duet" : "ok2t"}">${g.due > 0.5 ? INR(g.due) : "✅ पूरा"}</b></div>
+      <div><span>माल गया</span><b>${INR(st.challan.sum)}</b></div>
+      <div><span>बिल बना</span><b>${INR(st.invoice.sum)}</b></div>
+      <div><span>${st.gap > 0 ? "बिल बाक़ी" : "पैसा आया"}</span>
+        <b class="${st.gap > 0 ? "duet" : "ok2t"}">${
+          st.gap > 0 ? INR(st.gap) : INR(st.payin.sum)}</b></div>
     </div>
-    <div class="muted" style="margin:10px 0">${esc(dayLabel(x.date))} ·
-      ${esc(x.ref || "")}${x.payType ? " · " + esc(x.payType) : ""} ·
-      ${esc(x.status || "")}${vyAge(x.date) != null && g.due > 0.5
-        ? " · <b>" + vyAge(x.date) + " दिन</b> हो गए" : ""}</div>
-    <div class="vyFull">${esc(x.party || "")}
+    <div class="vyFull" style="margin-top:10px">${esc(st.party || "")}
+      <button type="button" class="mini" onclick="closeSheet('vySheet');openShortName('${
+        esc(st.party || "").replace(/'/g, "&#39;")}')">🎯 छोटा नाम</button></div>
+    ${st.gap > 0 ? `<div class="badge lo" style="display:block;line-height:1.7;margin-top:12px">
+      🔴 <b>${INR(st.gap)}</b> का माल इनको जा चुका है जिसका टैक्स इनवॉइस
+      नहीं बना। नीचे 🚚 वाले जिन पर «बिल बाक़ी» लिखा है, वही हैं।</div>` : ""}
+    <div class="itemsHead" style="margin-top:14px"><span>📜 पूरा हिसाब</span>
+      <span class="muted">${rows.length} काग़ज़</span></div>
+    ${rows.map((x) => vyDocRow(x, links, { noName: true })).join("")}`;
+  openSheet("vySheet");
+}
+
+/* ── एक काग़ज़ का पूरा हाल ───────────────────────────────────────── */
+
+function openVyDoc(id) {
+  const x = vyAll().filter((y) => y._id === id)[0];
+  if (!x) return;
+  const p = partOf(x.kind);
+  const links = vyLinks();
+  const inv = x.kind === "challan" ? links[x._id] : null;
+  const g = x.kind === "invoice" ? saleGot(x) : null;
+  const bank = x.kind === "payin" ? payinInBank(x) : null;
+
+  $("vyTitle").textContent = p.ic + " " + unitShort(x.party);
+  $("vyDetail").innerHTML = `
+    <div class="paySum">
+      <div><span>${p.nm}</span><b>${INR(x.total)}</b></div>
+      ${g ? `<div><span>आया</span><b class="ok2t">${INR(g.got)}</b></div>
+        <div><span>${g.due > 0.5 ? "बाक़ी" : "हालत"}</span>
+          <b class="${g.due > 0.5 ? "duet" : "ok2t"}">${
+            g.due > 0.5 ? INR(g.due) : "✅ पूरा"}</b></div>`
+        : `<div><span>तारीख़</span><b>${esc(dayLabel(x.date))}</b></div>
+           <div><span>फ़र्म</span><b>${esc((firmOf(x.firmId) || {}).short || "—")}</b></div>`}
+    </div>
+
+    <div class="bKeys" style="margin-top:12px">
+      <span class="badge">${p.ic} ${esc(x.ref || "बिना नंबर")}</span>
+      <span class="badge">📅 ${esc(dayLabel(x.date))}</span>
+      ${x.status ? `<span class="badge">${esc(x.status)}</span>` : ""}
+      ${x.payType ? `<span class="badge">💳 ${esc(x.payType)}</span>` : ""}
+      ${x.firmId ? `<span class="badge" style="border-color:${firmColor(x.firmId)}66">🏢 ${
+        esc(firmName(x.firmId))}</span>` : ""}
+    </div>
+
+    <div class="vyFull" style="margin-top:10px">${esc(x.party || "")}
       <button type="button" class="mini" onclick="closeSheet('vySheet');openShortName('${
         esc(x.party || "").replace(/'/g, "&#39;")}')">🎯 छोटा नाम</button></div>
+
+    ${x.kind === "challan" ? (inv
+      ? `<div class="brdg" style="border-color:rgba(139,92,246,.5)">🧾
+          इसका बिल बन गया — <b>${esc(inv.ref || "")}</b> · ${INR(inv.total)}
+          ${links["auto:" + x._id] ? '<span class="badge lo">🔗 अपने-आप जोड़ा</span>' : ""}</div>`
+      : `<div class="badge lo" style="display:block;line-height:1.7;margin-top:12px">
+          🧾 <b>इसका टैक्स इनवॉइस अभी नहीं बना।</b> माल जा चुका है, बिल बाक़ी है।
+          <br><span class="muted">जोड़ी वही पार्टी + वही रकम देखकर बनती है — इस
+          चालान की रकम से मिलता कोई बिल नहीं मिला।</span></div>`) : ""}
+
+    ${bank ? `<div class="brdg">🏦
+        <div>यह पैसा <b>खाते में मिल गया</b>
+          <br><span class="muted">${esc(accLabel(bank.accountId))} ·
+          ${esc(dayLabel(String(bank.date).slice(0, 10)))}${
+          bank.chequeNo ? " · चेक " + esc(bank.chequeNo) : ""}</span></div></div>`
+      : x.kind === "payin" ? `<div class="badge lo"
+        style="display:block;line-height:1.7;margin-top:12px">
+        🏦 यह रकम बैंक की किसी क्रेडिट लकीर से नहीं मिली। उस खाते की statement
+        डाली गई है क्या?</div>` : ""}
+
     ${(x.items || []).length ? `
       <div class="itemsHead" style="margin-top:14px"><span>📦 सामान</span>
-        <span class="muted">${(x.items || []).length}</span></div>
+        <span class="muted">${x.items.length}</span></div>
       <div class="card tableWrap"><table>
-        <thead><tr><th>सामान</th><th class="num">मात्रा</th><th class="num">भाव ₹</th><th class="num">रकम ₹</th></tr></thead>
+        <thead><tr><th>सामान</th><th class="num">मात्रा</th>
+          <th class="num">भाव ₹</th><th class="num">रकम ₹</th></tr></thead>
         <tbody>${x.items.map((i) => `<tr>
           <td>${esc(i.name)}</td>
           <td class="num">${i.qty != null ? i.qty + " " + esc(i.unit || "") : "—"}</td>
           <td class="num">${i.rate != null ? INR(i.rate) : "—"}</td>
           <td class="num">${i.amount != null ? INR(i.amount) : "—"}</td></tr>`).join("")}</tbody>
-      </table></div>` : ""}
-    ${pays.length ? `
-      <div class="itemsHead" style="margin-top:14px"><span>📥 जो पैसा आया</span></div>
-      ${pays.map((pi) => {
-        const bank = payinInBank(pi);
-        return `<div class="pay"><div class="payTop">
-          <span class="payAmt">+${INR(pi.received || pi.total)}</span>
-          <div class="payWho"><b>${esc(pi.payType || "पेमेंट-इन")}</b>
-            <small>${esc(dayLabel(pi.date))} · ${esc(pi.ref || "")}${
-              bank ? " · 🏦 " + esc(accLabel(bank.accountId)) : ""}</small></div>
-        </div></div>`;
-      }).join("")}` :
-      `<div class="badge lo" style="display:block;margin-top:14px;line-height:1.6">
-        📥 इस बिल के सामने कोई पेमेंट-इन दर्ज नहीं। व्यापार की
-        <b>Payment-In</b> रिपोर्ट डालने पर अपने-आप जुड़ जाएगा।</div>`}`;
+      </table></div>` : ""}`;
   openSheet("vySheet");
 }
+
+/** पुराने रास्ते से आया लिंक भी चलता रहे। */
+function openSale(id) { openVyDoc(id); }
+
+/* ══════════ 📁 व्यापार का अपना घर — Drive में ═══════════════════════
+
+   विक्रम जी: «व्यापार का डेटा अलग और अच्छे से व्यवस्थित Google Drive में
+   स्टोर करिए।»
+
+       📁 VBE-व्यापार/
+          └── 📁 श्री हिंगलाज इन्फोटेक/
+                └── 📊 हिसाब — श्री हिंगलाज इन्फोटेक
+                      📐 कोटेशन · 🚚 चालान · 🧾 इनवॉइस · 📥 पेमेंट-इन · 📦 सामान
+
+   ख़रीद वाला `VBE-Bills/` छुआ तक नहीं जाता — दोनों संसार Drive में भी अलग
+   रहते हैं, जैसे ऐप के अंदर रहते हैं।
+
+   काम bot करता है (Drive तक पहुँच सिर्फ़ उसी के पास है), और वही Sheet हर
+   बार दुबारा भरती है — इसलिए दो बार दबाने पर दो फ़ाइलें नहीं बनतीं।     */
+
+async function vyToDrive(btn) {
+  const fid = VY_FIRM;
+  if (!fid) {
+    toast("पहले ऊपर से एक फ़र्म चुनिए — हर फ़र्म का अपना घर बनता है");
+    return;
+  }
+  const rows = vyRows(null, fid);
+  if (!rows.length) { toast("इस फ़र्म का अभी कुछ नहीं है"); return; }
+
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = "… रख रहा हूँ";
+  try {
+    const items = [];
+    rows.forEach((x) => (x.items || []).forEach((i) => items.push({
+      ref: x.ref || "", date: x.date || "", party: x.party || "",
+      name: i.name || "", qty: i.qty, unit: i.unit || "",
+      rate: i.rate, amount: i.amount })));
+    const res = await botCall("vysheet", {
+      firm: firmName(fid),
+      rows: rows.map((x) => ({ kind: x.kind, date: x.date, party: x.party || "",
+        ref: x.ref || "", status: x.status || "", payType: x.payType || "",
+        total: x.total, received: x.received, balance: x.balance })),
+      items: items.slice(0, 8000),
+      note: "VBE व्यापार · " + firmName(fid) + " · बना " + todayISO()
+    });
+    if (!res || !res.ok) throw new Error((res && res.error) || "नहीं बनी");
+    await auditLog("vyapar_drive", null,
+      { firm: fid, rows: rows.length, items: items.length });
+    toast("📁 " + firmName(fid) + " का घर बन गया");
+    window.open(res.url, "_blank", "noopener");
+  } catch (e) {
+    toast("नहीं रखी: " + e.message);
+  } finally { btn.disabled = false; btn.textContent = was; }
+}
+
 
 /* ══════════ 🔍 खोज — जो माँगा, वही मिले ══════════════════════════
    पहले खोज सब कुछ (नाम, विवरण, UTR, रकम, तारीख़) एक लंबी लकीर में जोड़कर
@@ -9933,6 +10772,86 @@ function renderStatus() {
     </div>`;
 }
 
+
+/* ══════════ 🔖 यह ऐप नया है या पुराना ═══════════════════════════════
+
+   विक्रम जी: «व्यापार वाला पेज पुराना वाला ही नज़र आ रहा है — ऐसी चीज़
+   करिए जो मेरे को धरातल पर भी नज़र आ जाए।»
+
+   और वे सही थे कि इसका कोई जवाब नहीं था। मैं code भेज देता, GitHub रख भी
+   लेता — पर उनके browser में पुराना पन्ना खुला रह जाए तो **किसी को पता
+   ही नहीं चलता।** उनके फ़ोन में 17 tab खुले रहते हैं; कोई भी कल का हो
+   सकता है। दोनों तरफ़ अंधेरा था, और हम दो दिन अंदाज़े लगाते रहे।
+
+   अब ऐप हर बार खुलते ही एक **छोटी-सी पर्ची** पढ़ता है — बस कुछ अक्षर, न
+   कोई data, न ख़र्च — और अपनी छाप से मिला लेता है। अलग हुई तो ऊपर पट्टी
+   आ जाती है। एक टैप, और नया ऐप।
+
+   🧱 सबक़: «भेज दिया» और «पहुँच गया» एक बात नहीं है। जो चीज़ दिख नहीं
+      सकती, उस पर भरोसा नहीं किया जा सकता।                              */
+
+/** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
+const APP_BUILD = "42a5595de416";
+
+/**
+ * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
+ * नाकाम हो जाए (net बंद, फ़ाइल न मिले) तो चुपचाप छोड़ दो — यह जाँच कभी
+ * ऐप के रास्ते में नहीं आनी चाहिए।
+ */
+/**
+ * पर्ची में जो लिखा है, उससे तय करो कि नया ऐप है या नहीं।
+ *
+ * यह **माँग से अलग** रखा गया है, जान-बूझकर: तुलना का नियम ही असली चीज़ है
+ * और उसे बिना net के जाँचा जा सकना चाहिए। दोनों एक ही function में गुँथे
+ * थे तो जाँच के लिए पूरा browser नक़ली करना पड़ता।
+ */
+function newAppFrom(text) {
+  const there = String(text || "").trim().split(/\s+/)[0];
+  if (!there || there === APP_BUILD) return null;
+  return there;
+}
+
+async function checkNewApp() {
+  // file:// से खोलने पर (जाँच वग़ैरह) यह माँग हो ही नहीं सकती — बेकार में
+  // console में लाल लिखावट भरने से अच्छा है पहले ही लौट जाना
+  if (!/^https?:$/.test(location.protocol)) return null;
+  try {
+    const r = await fetch("build.txt?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return null;
+    return newAppFrom(await r.text());
+  } catch (e) { return null; }
+}
+
+function showNewApp(stamp) {
+  const box = $("newBar");
+  if (!box) return;
+  box.innerHTML = `
+    <div class="newBar">
+      <span style="font-size:19px">🆕</span>
+      <div class="nt">नया ऐप आ गया है
+        <small>दबाइए — पुराना हटाकर नया आ जाएगा</small></div>
+      <button type="button" onclick="takeNewApp()">लीजिए</button>
+    </div>`;
+}
+
+/**
+ * नया ऐप लो — और **पक्के तौर पर** लो।
+ *
+ * सिर्फ़ `location.reload()` काफ़ी नहीं: browser वही पुराना पन्ना cache से
+ * लौटा सकता है, और तब पट्टी फिर आ जाएगी — यानी वही चक्कर। इसलिए पहले
+ * cache ख़ाली, फिर पते में एक नया अंक लगाकर जाना।
+ */
+async function takeNewApp() {
+  try {
+    if (window.caches && caches.keys) {
+      const ks = await caches.keys();
+      await Promise.all(ks.map((k) => caches.delete(k)));
+    }
+  } catch (e) {}
+  const u = location.pathname + "?v=" + Date.now() + location.hash;
+  location.replace(u);
+}
+
 function renderAlerts() {
   const box = $("ovAlerts");
   if (!box) return;
@@ -10287,7 +11206,7 @@ function namePairs() {
     names.push({ key: k, name: String(n).trim(), side });
   };
   Object.values(PARTIES).forEach((p) => push(p.name, "buy"));
-  SALES.concat(PAYINS).forEach((x) => push(x.party, "sell"));
+  vyAll().forEach((x) => push(x.party, "sell"));
 
   const out = [];
   for (let i = 0; i < names.length; i++) {
@@ -10321,15 +11240,13 @@ function pairWhy(a, b) {
 /** एक नाम का हिसाब — किस तरफ़ का है, कितने सौदे, कितनी रकम। */
 function nameStat(key) {
   const buy = PARTIES[key];
-  const sell = SALES.filter((x) => pKey(x.party) === key);
+  const sell = vyAll().filter((x) => pKey(x.party) === key);
   if (sell.length) {
-    return { side: "🏛️ व्यापार", n: sell.length,
-      sum: sell.reduce((a, x) => a + (x.total || 0), 0) };
-  }
-  const pin = PAYINS.filter((x) => pKey(x.party) === key);
-  if (pin.length && !buy) {
-    return { side: "📥 पेमेंट-इन", n: pin.length,
-      sum: pin.reduce((a, x) => a + (x.received || 0), 0) };
+    // व्यापार की तरफ़ «रकम» का मतलब वही है जो असल में मायने रखता है:
+    // कितने का माल गया (चालान) और कितने का बिल बना — दोनों में जो बड़ा हो।
+    const s = (k) => sell.filter((x) => x.kind === k)
+      .reduce((a, x) => a + (x.total || 0), 0);
+    return { side: "🏛️ व्यापार", n: sell.length, sum: Math.max(s("challan"), s("invoice")) };
   }
   return { side: "🧾 ख़रीद", n: (buy && buy.count) || 0, sum: (buy && buy.total) || 0 };
 }
@@ -13807,6 +14724,285 @@ function contactRows() {
       : b.sum - a.sum);
 }
 
+
+/* ══════════ 📇 संपर्क — एक आदमी, एक नंबर, और वह नंबर जेल नहीं ═════════
+
+   विक्रम जी: «यह संपर्क वाला पेज बहुत ही ग़लतियों से भरा हुआ है… पहले
+   ग़लतियों के कारण एक व्यक्ति 10 जगह अलग-अलग था, 10 अलग-अलग मोबाइल नंबर हो
+   गए थे। अब मैं सबको मर्ज करके एक मोबाइल नंबर डालूँ तो वह व्यवस्थित होना
+   चाहिए और सब जगह अपडेट भी होना चाहिए।»
+
+   🩸 और यहाँ मेरी बड़ी ग़लती पकड़ी गई। v42 में उन्होंने यही माँगा था और
+   मैंने ठीक भी किया — पर **ग़लत पर्दे पर।** ऐप में दो संपर्क-सुधारने वाले
+   पर्दे थे:
+
+       📇 संपर्क (नीचे की पट्टी)   → ctSheet   ← विक्रम जी यही खोलते हैं
+       👥 मेरी टीम (बिल के अंदर)  → teamSheet ← मैं इसे सजाता रहा
+
+   दो घर होने का मतलब ही यही है कि एक हमेशा पुराना पड़ा रहेगा। इसलिए अब
+   असली पर्दा यही है, और यहीं सब कुछ है।
+
+   तीन नए काम, तीनों उनकी अपनी बात से निकले:
+
+     1. नंबर खुला — पहचान ग़लत भी लिखी जा सकती है
+     2. 🔗 कई संपर्क एक साथ चुनकर एक में — «10 जगह 10 नंबर» का इलाज
+     3. 🏷️ बिल पर पड़ा नाम पक्के नंबर से जोड़ना — ताकि गड़बड़ **दुबारा बने
+        ही नहीं**। पुराना सुधारना आधा इलाज है; नया न बिगड़े, वह पूरा।     */
+
+/** इस संपर्क के नाम से कितने बिल जुड़े हैं — बदलने से पहले गिनती। */
+function ctBills(phone) {
+  const k = phoneKey(phone);
+  if (!k) return [];
+  return EXP.concat(EXP_OUT).filter((e) => e && phoneKey(e.requestedPhone) === k);
+}
+
+/**
+ * 🔀 नंबर बदलते ही — सहेजने से **पहले** — पूरा हिसाब सामने।
+ * बैंकिंग में चुपचाप हुआ बदलाव सबसे ख़तरनाक चीज़ है।
+ */
+function ctNumWatch() {
+  const box = $("ctMove");
+  if (!box) return;
+  const was = CT_EDIT || "";
+  const now = phoneKey($("ctPhone") ? $("ctPhone").value : "");
+  if (!was || !now || now === was) { box.innerHTML = ""; return; }
+  const n = ctBills(was).length;
+  const other = CONTACTS[now];
+  box.innerHTML = `
+    <div class="fxWarn">
+      <b>🔀 नंबर बदल रहा है</b>
+      <span class="ar">${esc(phoneShow(was))} &nbsp;→&nbsp; ${esc(phoneShow(now))}</span>
+      ${other ? `⚠️ यह नंबर पहले से <b>${esc(other.name || now)}</b> का है —
+        सहेजने पर दोनों <b>एक ही आदमी</b> बन जाएँगे।<br>` : ""}
+      • ${n ? `<b>${n}</b> बिलों पर नया नंबर लिख दिया जाएगा`
+            : "इनके नाम कोई बिल नहीं है"}<br>
+      • पुराना नंबर <b>मिटेगा नहीं</b> — «बदल गया» लिखकर अलग रख दिया जाएगा<br>
+      • खोजने पर पुराने नाम से भी यही आदमी मिलेगा
+    </div>`;
+}
+
+/**
+ * 🔗 दो संपर्क एक में — बिल, नाम, सब साथ।
+ *
+ * पुराना कभी मिटता नहीं: उस पर `mergedInto` लिख दिया जाता है और वह सूची से
+ * हट जाता है। उसका नाम नए वाले के «और नाम» में चला जाता है, इसलिए उसी नाम
+ * से खोजने पर भी वही आदमी मिलता है।
+ */
+async function joinContacts(losePhone, keepPhone) {
+  const lose = CONTACTS[losePhone], keep = CONTACTS[keepPhone];
+  if (!lose || !keep || losePhone === keepPhone) return { bills: 0 };
+  const bills = ctBills(losePhone);
+
+  const B = batcher();
+  bills.forEach((e) => {
+    B.update(db.collection("vbe_expenses").doc(e._id),
+      { requestedPhone: keepPhone, requestedBy: keep.name || e.requestedBy || null });
+    e.requestedPhone = keepPhone;
+    e.requestedBy = keep.name || e.requestedBy || null;
+  });
+  const aliases = [...new Set((keep.aliases || [])
+    .concat([lose.name]).concat(lose.aliases || []).filter(Boolean)
+    .filter((a) => pKey(a) !== pKey(keep.name)))].slice(0, 12);
+  B.set(db.collection("vbe_contacts").doc(keepPhone), { aliases }, { merge: true });
+  B.set(db.collection("vbe_contacts").doc(losePhone),
+    { mergedInto: keepPhone, mergedAt: todayISO() }, { merge: true });
+  await B.done();
+
+  keep.aliases = aliases;
+  CONTACT_OUT[losePhone] = Object.assign({}, lose, { mergedInto: keepPhone });
+  delete CONTACTS[losePhone];
+  await auditLog("contacts_merged",
+    { phone: losePhone, name: lose.name, bills: bills.length },
+    { phone: keepPhone, name: keep.name });
+  return { bills: bills.length };
+}
+
+/* ── 🔗 कई एक साथ ────────────────────────────────────────────────── */
+
+let CM = { keep: "", lose: {} };
+
+function openCtMerge(keep) {
+  const ids = Object.keys(CONTACTS);
+  if (ids.length < 2) { toast("मिलाने के लिए कम से कम दो संपर्क चाहिए"); return; }
+  CM = { keep: keep || ctBest(), lose: {} };
+  renderCtMerge();
+  openSheet("ctMerge");
+}
+
+/** सबसे ज़्यादा बिल वाला — «कौन रहेगा» का सबसे समझदार सुझाव। */
+function ctBest() {
+  return Object.keys(CONTACTS)
+    .sort((a, b) => ctBills(b).length - ctBills(a).length)[0] || "";
+}
+
+function setCmKeep(p) { CM.keep = p; delete CM.lose[p]; renderCtMerge(); }
+function toggleCmLose(p) {
+  if (p === CM.keep) return;
+  if (CM.lose[p]) delete CM.lose[p]; else CM.lose[p] = 1;
+  renderCtMerge();
+}
+
+/** नाम कितना मिलता-जुलता है — ऊपर वही आएँ जिनके मिलने की संभावना है। */
+function ctLike(a, b) {
+  const x = pKey(a), y = pKey(b);
+  if (!x || !y) return 0;
+  if (x === y) return 3;
+  const sh = x.length < y.length ? x : y, lo = x.length < y.length ? y : x;
+  if (sh.length >= 4 && lo.indexOf(sh) >= 0) return 2;
+  if (sh.length >= 4 && lo.slice(0, 4) === sh.slice(0, 4)) return 1;
+  return 0;
+}
+
+function renderCtMerge() {
+  const keep = CONTACTS[CM.keep];
+  const picked = Object.keys(CM.lose).filter((p) => CONTACTS[p]);
+  const others = Object.keys(CONTACTS).filter((p) => p !== CM.keep)
+    .sort((a, b) => (ctLike(CONTACTS[b].name, keep && keep.name) -
+                     ctLike(CONTACTS[a].name, keep && keep.name)) ||
+                    (ctBills(b).length - ctBills(a).length));
+  const moving = picked.reduce((a, p) => a + ctBills(p).length, 0);
+
+  $("cmBody").innerHTML = `
+    <div class="toonBox" style="margin-bottom:12px">
+      <div class="toonArt">${gfx.toon("think", 66)}</div>
+      <div class="toonSay"><b>एक आदमी, एक नंबर</b>
+        <p>जो नंबर <b>रहना</b> है उसे ऊपर चुनिए, फिर नीचे उन सबको टिक कीजिए
+          जो वही आदमी हैं। सारे बिल उसी नंबर पर आ जाएँगे और पुराने नाम
+          «और नाम» में सँभल जाएँगे — <b>कुछ मिटेगा नहीं।</b></p></div>
+    </div>
+
+    <div class="itemsHead"><span>✅ कौन रहेगा</span></div>
+    <div class="mgKeep">
+      <b>${esc((keep && keep.name) || "—")}</b>
+      <div class="muted">${esc(phoneShow(CM.keep))} ·
+        ${plural(ctBills(CM.keep).length, "बिल", "बिल")}</div>
+    </div>
+
+    <div class="itemsHead"><span>🔗 किन्हें इसमें मिलाना है</span>
+      <span class="muted">${picked.length} चुने</span></div>
+    <div class="card" style="padding:2px 12px;max-height:44vh;overflow:auto">
+      ${others.map((p) => {
+        const c = CONTACTS[p];
+        return `
+        <div class="mgPick${CM.lose[p] ? " on" : ""}" onclick="toggleCmLose('${esc(p)}')">
+          <span class="bx">✓</span>
+          <div class="mt"><b>${esc(c.name || "—")}</b>
+            <small>${esc(phoneShow(p))}${
+              (c.aliases || []).length ? " · और नाम: " +
+                esc((c.aliases || [])[0]) : ""}</small></div>
+          <span class="mn">${ctBills(p).length} बिल
+            <button type="button" class="mini" style="margin-left:6px"
+              onclick="event.stopPropagation();setCmKeep('${esc(p)}')">यह रहे</button></span>
+        </div>`;
+      }).join("")}
+    </div>
+
+    ${picked.length ? `
+      <div class="mgSum">मिलाने पर —<br>
+        • <b>${moving}</b> बिल «${esc((keep && keep.name) || "")}» पर आ जाएँगे<br>
+        • <b>${picked.length}</b> पुराने नाम «और नाम» में सँभल जाएँगे<br>
+        • पुराने नंबर <b>मिटेंगे नहीं</b>, बस अलग रख दिए जाएँगे</div>
+      <button class="primary wide" onclick="doCtMerge(this)">🔗 मिला दीजिए</button>`
+      : `<div class="muted" style="margin-top:12px">ऊपर से चुनिए — तभी
+         मिलाया जाएगा। <b>ग़लत मिलान से दो अलग आदमियों का हिसाब एक हो
+         जाएगा</b>, इसलिए ऐप ख़ुद तय नहीं करता।</div>`}`;
+}
+
+async function doCtMerge(btn) {
+  const picked = Object.keys(CM.lose).filter((p) => CONTACTS[p]);
+  if (!picked.length || !CONTACTS[CM.keep]) return;
+  btn.disabled = true;
+  let bills = 0, done = 0;
+  try {
+    for (const p of picked) {
+      btn.textContent = `… ${++done} / ${picked.length}`;
+      const r = await joinContacts(p, CM.keep);
+      bills += (r && r.bills) || 0;
+    }
+    saveCache();
+    closeSheet("ctMerge");
+    renderContacts();
+    renderAll();
+    toast(`🔗 ${picked.length} संपर्क मिल गए · ${bills} बिल साथ आए`);
+  } catch (e) {
+    toast("नहीं मिले: " + e.message);
+  } finally { btn.disabled = false; btn.textContent = "🔗 मिला दीजिए"; }
+}
+
+/* ── 🏷️ बिल पर लिखा नाम → पक्के नंबर से ──────────────────────────── */
+
+let CG_NAME = "";
+
+function openCtTag(name) {
+  CG_NAME = name;
+  $("cgTitle").textContent = "🏷️ «" + name + "» किसका है?";
+  const rows = Object.values(CONTACTS)
+    .sort((a, b) => (ctLike(b.name, name) - ctLike(a.name, name)) ||
+                    (ctBills(b.phone).length - ctBills(a.phone).length));
+  const n = EXP.filter((e) => e && !phoneKey(e.requestedPhone) &&
+    pKey(e.requestedBy) === pKey(name)).length;
+
+  $("cgBody").innerHTML = `
+    <div class="toonBox" style="margin-bottom:12px">
+      <div class="toonArt">${gfx.toon("seek", 66)}</div>
+      <div class="toonSay"><b>यह नाम किस आदमी का है?</b>
+        <p>बिल पर सिर्फ़ नाम लिखा था, नंबर नहीं। जिससे जोड़ेंगे, उसके नंबर
+          पर <b>${n}</b> बिल आ जाएँगे — और आगे से यही नाम कहीं भी आए तो
+          <b>सीधे उसी आदमी से जुड़ेगा।</b></p></div>
+    </div>
+    <div class="card" style="padding:2px 12px;max-height:52vh;overflow:auto">
+      ${rows.map((c) => `
+        <div class="mgPick" onclick="doCtTag('${esc(c.phone)}',this)">
+          <span class="bx" style="border-radius:50%">＋</span>
+          <div class="mt"><b>${esc(c.name || "—")}</b>
+            <small>${esc(phoneShow(c.phone))} · ${ctBills(c.phone).length} बिल</small></div>
+        </div>`).join("")}
+    </div>
+    <button class="wide" style="margin-top:12px"
+      onclick="closeSheet('ctTag');openContact('','${esc(name).replace(/'/g, "&#39;")}')">
+      ➕ यह नया आदमी है — नंबर के साथ जोड़िए</button>`;
+  openSheet("ctTag");
+}
+
+/**
+ * जोड़ते ही तीन काम एक साथ — और तीनों ज़रूरी हैं:
+ *   1. उन बिलों पर उस आदमी का नंबर लिख जाता है
+ *   2. वह नाम उसका «और नाम» बन जाता है
+ *   3. इसलिए आगे वही नाम आए तो `contactsNoPhone()` उसे उठाता ही नहीं —
+ *      यानी वही गड़बड़ दुबारा बनती नहीं
+ */
+async function doCtTag(phone, el) {
+  const c = CONTACTS[phone];
+  if (!c || !CG_NAME) return;
+  if (el) { el.style.opacity = ".5"; el.style.pointerEvents = "none"; }
+  try {
+    const hit = EXP.filter((e) => e && !phoneKey(e.requestedPhone) &&
+      pKey(e.requestedBy) === pKey(CG_NAME));
+    const B = batcher();
+    hit.forEach((e) => {
+      B.update(db.collection("vbe_expenses").doc(e._id),
+        { requestedPhone: phone, requestedBy: c.name || e.requestedBy || null });
+      e.requestedPhone = phone;
+      e.requestedBy = c.name || e.requestedBy || null;
+    });
+    const aliases = [...new Set((c.aliases || []).concat([CG_NAME])
+      .filter(Boolean).filter((a) => pKey(a) !== pKey(c.name)))].slice(0, 12);
+    B.set(db.collection("vbe_contacts").doc(phone), { aliases }, { merge: true });
+    await B.done();
+    c.aliases = aliases;
+    await auditLog("name_linked", { name: CG_NAME, bills: hit.length },
+      { phone, name: c.name });
+    saveCache();
+    closeSheet("ctTag");
+    renderContacts();
+    renderAll();
+    toast(`🏷️ «${CG_NAME}» अब ${c.name || phone} है · ${hit.length} बिल जुड़े`);
+  } catch (e) {
+    if (el) { el.style.opacity = ""; el.style.pointerEvents = ""; }
+    toast("नहीं जुड़ा: " + e.message);
+  }
+}
+
 function renderContacts() {
   const box = $("contactList");
   if (!box) return;
@@ -13822,10 +15018,26 @@ function renderContacts() {
            खुल जाएगा — और वही आदमी दुबारा नए नाम से नहीं बनेगा।</span>` +
           `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">` +
           noPh.slice(0, 3).map((x) =>
-            `<button type="button" class="mini" onclick="openContact('','${
-              esc(x.name).replace(/'/g, "&#39;")}')">📞 ${esc(x.name)}</button>`).join("") +
+            `<button type="button" class="mini" onclick="openCtTag('${
+              esc(x.name).replace(/'/g, "&#39;")}')">🔗 ${esc(x.name)}</button>`).join("") +
           `</div>` })
     : "";
+
+  /* 🏷️ पूरी सूची — तीन ही नहीं, सारे। यही «10 जगह 10 नाम» वाली गड़बड़ को
+     दुबारा बनने से रोकने की जगह है, इसलिए यह छिपी नहीं रहनी चाहिए। */
+  const tagBox = $("cTags");
+  if (tagBox) {
+    tagBox.innerHTML = noPh.length ? `
+      <div class="itemsHead"><span>🏷️ ये नाम अभी किसी नंबर से नहीं जुड़े</span>
+        <span class="muted">${noPh.length}</span></div>
+      <div class="card">${noPh.map((x) => `
+        <div class="tagRow">
+          <div class="tn"><b>${esc(x.name)}</b>
+            <small>${INR(x.sum)} · ${plural(x.n, "बिल", "बिल")}</small></div>
+          <button type="button" class="mini primary" onclick="openCtTag('${
+            esc(x.name).replace(/'/g, "&#39;")}')">🔗 किससे जोड़ें?</button>
+        </div>`).join("")}</div>` : "";
+  }
 
   if (!Object.keys(CONTACTS).length) {
     box.innerHTML = gfx.empty("hello", "अभी कोई संपर्क नहीं",
@@ -13861,21 +15073,44 @@ function openContact(phone, presetName) {
   const c = CONTACTS[phone] || {};
   $("ctTitle").textContent = phone ? "✏️ संपर्क सुधारें" : "➕ नया संपर्क";
   $("ctPhone").value = phone || "";
-  $("ctPhone").disabled = !!phone;      // नंबर ही पहचान है — बदला नहीं जाता
+  /* 🩸 यहाँ `disabled = !!phone` लिखा था — «नंबर ही पहचान है, बदला नहीं
+     जाता»। विक्रम जी: «अगर व्यक्ति के नंबर ग़लत हो गए हैं, उसे सही किया जा
+     सकता है।» वे सही हैं: पहचान होना और पत्थर की लकीर होना एक बात नहीं।
+     अब नंबर खुला है, पर बदलने पर पूरा हिसाब सामने रखा जाता है। */
+  $("ctPhone").disabled = false;
   $("ctName").value = c.name || presetName || "";
   $("ctNote").value = c.note || "";
   $("ctMsg").textContent = "";
+  $("ctToon").innerHTML = gfx.toon(phone ? "card" : "hello", 66);
+  $("ctSay").textContent = phone ? "✏️ " + (c.name || phoneShow(phone))
+    : "➕ नया आदमी";
+  $("ctSay2").innerHTML = phone
+    ? `नाम भी बदल सकते हैं और नंबर भी — <b>दोनों खुले हैं।</b> नंबर बदलेंगे
+       तो इनके सारे बिल साथ चले आएँगे।`
+    : `📞 नंबर <b>ज़रूरी</b> है — वही पहचान है। «मनोज» दो हो सकते हैं,
+       नंबर एक ही होता है।`;
+  $("ctMove").innerHTML = "";
   openSheet("ctSheet");
 }
 
 async function saveContact() {
   const k = phoneKey($("ctPhone").value);
+  const name = String($("ctName").value || "").trim();
   const msg = $("ctMsg");
-  if (!k) {
-    msg.className = "bad";
-    msg.textContent = "10 अंकों का सही मोबाइल नंबर डालें (6–9 से शुरू)";
-    return;
-  }
+  ["fxCtName", "fxCtPhone"].forEach((x) => {
+    const el = $(x); if (el) el.classList.remove("bad");
+  });
+  // ग़लती नीचे की लिखावट में नहीं, **उसी ख़ाने पर** — वरना फ़ोन पर वह
+  // कीबोर्ड के पीछे छिप जाती है और लगता है कुछ हुआ ही नहीं
+  const bad = (t, fx) => {
+    msg.className = "bad"; msg.textContent = t;
+    const el = fx && $(fx);
+    if (el) { el.classList.add("bad"); const i = el.querySelector("input"); if (i) i.focus(); }
+  };
+
+  if (!name) return bad("नाम तो भरिए", "fxCtName");
+  if (!k) return bad("10 अंकों का सही मोबाइल नंबर डालें (6–9 से शुरू)", "fxCtPhone");
+
   const had = CONTACTS[k];
   if (!CT_EDIT && had) {
     msg.className = "bad";
@@ -13883,13 +15118,38 @@ async function saveContact() {
       दुबारा नहीं जुड़ेगा। नाम जोड़ना हो तो उसी संपर्क को खोलिए।`;
     return;
   }
+  const moved = CT_EDIT && k !== CT_EDIT;
   msg.className = "muted"; msg.textContent = "सहेज रहा हूँ…";
   try {
-    await touchContact(k, $("ctName").value.trim(), { note: $("ctNote").value.trim() || null });
+    /* 🔀 नंबर बदला — यानी पहचान बदली। नई पहचान पहले बना दो (पुराने के नाम
+       को «और नाम» में लेकर), फिर वही `joinContacts()` चला दो जो «मिलाइए»
+       चलाता है। एक ही रास्ता, दो नाम — इसलिए कोई नया छेद नहीं बनता। नया
+       नंबर पहले से किसी और का हो तो यही अपने-आप «मिलान» बन जाता है। */
+    if (moved) {
+      const old = CONTACTS[CT_EDIT] || {};
+      await touchContact(k, name, { note: $("ctNote").value.trim() || null });
+      const c = CONTACTS[k];
+      c.aliases = [...new Set((c.aliases || []).concat([old.name])
+        .concat(old.aliases || []).filter(Boolean)
+        .filter((a) => pKey(a) !== pKey(name)))].slice(0, 12);
+      await db.collection("vbe_contacts").doc(k).set({ aliases: c.aliases }, { merge: true });
+      const r = await joinContacts(CT_EDIT, k);
+      await auditLog("contact_renumber",
+        { phone: CT_EDIT, name: old.name || null },
+        { phone: k, name, bills: (r && r.bills) || 0 });
+      saveCache();
+      closeSheet("ctSheet");
+      renderContacts();
+      renderAll();
+      toast(`🔀 नंबर बदल गया${r && r.bills ? ` · ${r.bills} बिल साथ आए` : ""}`);
+      return;
+    }
+    await touchContact(k, name, { note: $("ctNote").value.trim() || null });
     await auditLog(CT_EDIT ? "edit_contact" : "add_contact", had || null, CONTACTS[k]);
     saveCache();
     closeSheet("ctSheet");
     renderContacts();
+    renderAll();
     toast("📇 संपर्क सहेजा");
   } catch (err) { msg.className = "bad"; msg.textContent = "नहीं हुआ: " + err.message; }
 }
@@ -15538,7 +16798,7 @@ function bahiCard(r) {
       <span class="badge">🏦 ${esc(accLabel(t.accountId))}</span>
       ${r.receiptId ? `<span class="badge">🧾 ${esc(r.receiptId)}</span>` : ""}
     </div>
-    ${t.type === "credit" ? "" : (!r.e && noBillWhy(t) ? `
+    ${t.type === "credit" ? bahiBridge(t) : (!r.e && noBillWhy(t) ? `
     <div class="bStory"><div class="sl"><span>${esc(noBillWhy(t))}</span>
       <span class="muted">इसका बिल नहीं होता</span></div></div>` : `
     <div class="bStory">
@@ -15551,6 +16811,35 @@ function bahiCard(r) {
     </div>
     ${r.e ? billStrip(r.e, { close: "bahiSheet" }) : ""}`)}
   </div>`;
+}
+
+/**
+ * 🌉 «₹24,500 — ये 414 इंजीनियर से आए हैं।»
+ *
+ * विक्रम जी का आदेश शब्दशः: «बैंक और व्यापार का डाटा एक-दूसरे से मिलान मत
+ * करिए। **केवल एक जगह मिलन हो सकता है** — जो पेमेंट मेरे खाते के अंदर आ
+ * गया, और जो व्यापार में पेमेंट-इन हुआ।»
+ *
+ * इसलिए यह पट्टी सिर्फ़ **क्रेडिट** लकीर पर लगती है और सिर्फ़ पेमेंट-इन से
+ * मिलती है। चालान, इनवॉइस, कोटेशन — तीनों बैंक को कभी नहीं छूते।
+ *
+ * और जो क्रेडिट किसी पेमेंट-इन से नहीं मिलती, उस पर ऐप **कुछ नहीं लिखता।**
+ * अंदाज़ा नहीं लगाता — बैंकिंग में अंदाज़ा सबसे महँगी चीज़ है।
+ */
+function bahiBridge(t) {
+  const pi = bankIsPayin(t);
+  if (!pi) return "";
+  const inv = pi.saleRef
+    ? vyRows("invoice", "").filter((v) => vyRef(v.ref) === vyRef(pi.saleRef))[0]
+    : null;
+  return `
+    <div class="brdg">🏛️
+      <div>यह पैसा <b>${esc(unitShort(pi.party))}</b> से आया —
+        व्यापार का पेमेंट-इन <b>${esc(pi.ref || "")}</b>${
+        pi.firmId ? ` · ${esc((firmOf(pi.firmId) || {}).short || "")}` : ""}
+        ${inv ? `<br><span class="muted">🧾 बिल ${esc(inv.ref || "")} · ${
+          INR(inv.total)}</span>` : ""}</div>
+    </div>`;
 }
 
 /** काग़ज़ को शब्दों में — कॉपी और WhatsApp दोनों के लिए वही। */
@@ -15577,8 +16866,12 @@ function bahiText() {
     if (r.items.length) L.push("   🛒 " + r.items.map((i) => i.name).join(", "));
   });
   L.push("", "── 🟢 जो पैसा आया ──");
-  ins.forEach((r) => L.push(`${INR(r.t.amount)} · ${r.who || "—"} · ${
-    dayLabel(String(r.t.date).slice(0,10))}`));
+  ins.forEach((r) => {
+    L.push(`${INR(r.t.amount)} · ${r.who || "—"} · ${
+      dayLabel(String(r.t.date).slice(0, 10))}`);
+    const pi = bankIsPayin(r.t);
+    if (pi) L.push(`   🏛️ ${unitShort(pi.party)} · ${pi.ref || ""}`);
+  });
   return L.join("\n");
 }
 
@@ -15911,34 +17204,78 @@ function editTeam(phone) {
     <div class="toonBox">
       <div class="toonArt">${gfx.toon("card", 70)}</div>
       <div class="toonSay"><b>${phone ? "✏️ " + esc(c.name || phone) : "➕ नया आदमी"}</b>
-        <p>💬 WhatsApp नंबर <b>ज़रूरी</b> है — वही पहचान है। कॉलिंग नंबर
-          ख़ाली छोड़ दीजिए तो WhatsApp वाला ही माना जाएगा।</p></div>
+        <p>${phone ? `नाम भी बदल सकते हैं और नंबर भी — दोनों खुले हैं।
+          नंबर बदलेंगे तो इनके सारे बिल <b>साथ चले आएँगे।</b>`
+          : `💬 WhatsApp नंबर <b>ज़रूरी</b> है — वही पहचान है। कॉलिंग नंबर
+          ख़ाली छोड़ दीजिए तो WhatsApp वाला ही माना जाएगा।`}</p></div>
     </div>
-    <label>🧑 नाम<input id="tmName" value="${esc(c.name || "")}"
-      placeholder="जैसे: नरपत मेघवाल"></label>
-    <label>💬 WhatsApp नंबर<input id="tmPhone" inputmode="numeric"
-      value="${esc(c.phone || "")}" placeholder="10 अंक"
-      ${phone ? "readonly style='opacity:.6'" : ""}></label>
-    ${phone ? `<div class="muted" style="margin-top:-6px;font-size:11.5px">
-      नंबर बदला नहीं जा सकता — वही पहचान है। नंबर ग़लत हो तो नया आदमी
-      जोड़कर 🔗 मिला दीजिए।</div>` : ""}
-    <label>📞 कॉलिंग नंबर (अलग हो तभी)<input id="tmCall" inputmode="numeric"
-      value="${esc(c.callPhone || "")}" placeholder="ख़ाली = WhatsApp वाला"></label>
-    <label>🎖️ दर्जा
-      <select id="tmRole">
-        <option value="staff"${c.role === "staff" ? " selected" : ""}>🧑‍🍳 स्टाफ़</option>
-        <option value="officer"${c.role === "officer" ? " selected" : ""}>🎖️ आर्मी ऑफ़िसर</option>
-      </select></label>
-    <label>🎯 यूनिट / जगह<input id="tmUnit" value="${esc(c.unit || "")}"
-      placeholder="जैसे: मारवाड़ रसोई, 110 Engineer"></label>
-    <label style="display:flex;gap:8px;align-items:center;margin-top:10px">
-      <input type="checkbox" id="tmReg" ${c.regular ? "checked" : ""}
-        style="width:auto">
+    <label class="fx" id="fxName"><span><i></i>🧑 नाम</span>
+      <input id="tmName" value="${esc(c.name || "")}"
+        placeholder="जैसे: नरपत मेघवाल"></label>
+
+    <label class="fx" id="fxPhone"><span><i></i>💬 WhatsApp नंबर</span>
+      <input id="tmPhone" inputmode="numeric" value="${esc(c.phone || "")}"
+        placeholder="10 अंक" oninput="teamNumWatch()">
+      <small>${phone ? "यही इस आदमी की पहचान है। ग़लत लिखा गया हो तो यहीं सुधार दीजिए — बाक़ी सब अपने-आप साथ चला आएगा।"
+        : "नाम पहचान नहीं है — «मनोज» दो हो सकते हैं, नंबर एक ही होता है।"}</small></label>
+
+    <div id="tmMove"></div>
+
+    <label class="fx"><span>📞 कॉलिंग नंबर</span>
+      <input id="tmCall" inputmode="numeric" value="${esc(c.callPhone || "")}"
+        placeholder="ख़ाली = WhatsApp वाला ही">
+      <small>अलग हो तभी भरिए।</small></label>
+
+    <div class="fxRow">
+      <label class="fx"><span><i></i>🎖️ दर्जा</span>
+        <select id="tmRole">
+          <option value="staff"${c.role === "staff" ? " selected" : ""}>🧑‍🍳 स्टाफ़</option>
+          <option value="officer"${c.role === "officer" ? " selected" : ""}>🎖️ आर्मी ऑफ़िसर</option>
+        </select></label>
+      <label class="fx"><span>🎯 यूनिट / जगह</span>
+        <input id="tmUnit" value="${esc(c.unit || "")}"
+          placeholder="मारवाड़ रसोई"></label>
+    </div>
+
+    <label class="fxChk">
+      <input type="checkbox" id="tmReg" ${c.regular ? "checked" : ""}>
       <span>👑 पक्का — «किसके कहने पर» में सबसे ऊपर रहे</span></label>
-    <div id="tmMsg" class="muted" style="margin-top:8px"></div>
-    <div class="pick" style="margin-top:12px">
+
+    <div id="tmMsg" class="muted" style="margin-bottom:10px"></div>
+    <div class="pick">
       <button type="button" class="primary" onclick="saveTeam(this)">💾 सहेजिए</button>
       <button type="button" onclick="renderTeam('')">← वापस</button>
+    </div>`;
+  teamNumWatch();
+}
+
+/**
+ * 🔀 नंबर बदलते ही — सहेजने से **पहले** — पूरा हिसाब सामने रख दो।
+ *
+ * विक्रम जी: «नाम और नंबर सब एडिट करने का ऑप्शन होना चाहिए।» ठीक है, पर
+ * नंबर इस ऐप की **पहचान** है: उससे बिल जुड़े हैं। इसलिए रोका नहीं जाता —
+ * बस यह गिनकर दिखा दिया जाता है कि साथ में क्या-क्या चलेगा। बैंकिंग में
+ * चुपचाप हुआ बदलाव सबसे ख़तरनाक चीज़ है।
+ */
+function teamNumWatch() {
+  const box = $("tmMove");
+  if (!box) return;
+  const was = TEAM_EDIT || "";
+  const now = phoneKey($("tmPhone") ? $("tmPhone").value : "");
+  if (!was || !now || now === was) { box.innerHTML = ""; return; }
+
+  const n = EXP.concat(EXP_OUT)
+    .filter((e) => e && phoneKey(e.requestedPhone) === was).length;
+  const other = CONTACTS[now];
+  box.innerHTML = `
+    <div class="fxWarn">
+      <b>🔀 नंबर बदल रहा है</b>
+      <span class="ar">${esc(phoneShow(was))} &nbsp;→&nbsp; ${esc(phoneShow(now))}</span>
+      ${other ? `⚠️ यह नंबर पहले से <b>${esc(other.name || now)}</b> का है —
+        सहेजने पर दोनों <b>एक ही आदमी</b> बन जाएँगे।<br>` : ""}
+      • ${n ? `<b>${n}</b> बिलों पर नया नंबर लिख दिया जाएगा` : "इनके नाम कोई बिल नहीं है"}<br>
+      • पुराना नंबर <b>मिटेगा नहीं</b> — «बदल गया» लिखकर अलग रख दिया जाएगा<br>
+      • खोजने पर पुराने नाम से भी यही आदमी मिलेगा
     </div>`;
 }
 
@@ -15947,30 +17284,62 @@ async function saveTeam(btn) {
   const name = String($("tmName").value || "").trim();
   const ph = phoneKey($("tmPhone").value);
   const call = phoneKey($("tmCall").value);
-  const bad = (t) => { msg.className = "bad"; msg.textContent = t; };
+  ["fxName", "fxPhone"].forEach((k) => {
+    const el = $(k); if (el) el.classList.remove("bad");
+  });
+  // ग़लती नीचे की लिखावट में नहीं, **उसी ख़ाने पर** दिखे — वरना फ़ोन पर
+  // लिखावट कीबोर्ड के पीछे छिप जाती है और लगता है कुछ हुआ ही नहीं
+  const bad = (t, fx) => {
+    msg.className = "bad"; msg.textContent = t;
+    const el = fx && $(fx);
+    if (el) { el.classList.add("bad"); const i = el.querySelector("input"); if (i) i.focus(); }
+    return false;
+  };
 
-  if (!name) return bad("नाम तो भरिए");
+  if (!name) return bad("नाम तो भरिए", "fxName");
   /* 📞 यही वह पहरा है जिसकी विक्रम जी ने माँग की थी: «बिना मोबाइल नंबर के
      कोई भी चीज़ नहीं होनी चाहिए»। नाम अकेला पहचान नहीं है। */
-  if (!ph) return bad("💬 WhatsApp नंबर ज़रूरी है — 10 अंक, 6–9 से शुरू");
+  if (!ph) return bad("💬 WhatsApp नंबर ज़रूरी है — 10 अंक, 6–9 से शुरू", "fxPhone");
   if ($("tmCall").value.trim() && !call) {
     return bad("📞 कॉलिंग नंबर ठीक नहीं लग रहा — 10 अंक, 6–9 से शुरू");
   }
   if (!TEAM_EDIT && CONTACTS[ph]) {
     return bad("यह नंबर पहले से «" + (CONTACTS[ph].name || ph) + "» पर है");
   }
+  const moved = TEAM_EDIT && ph !== TEAM_EDIT;
 
   btn.disabled = true; btn.textContent = "… सहेज रहा हूँ";
   try {
+    const old = (TEAM_EDIT && CONTACTS[TEAM_EDIT]) || {};
     const doc = { phone: ph, name, nameByOwner: true,
       callPhone: call || null, role: $("tmRole").value,
       unit: String($("tmUnit").value || "").trim() || null,
       regular: !!$("tmReg").checked };
-    await db.collection("vbe_contacts").doc(ph).set(doc, { merge: true });
-    CONTACTS[ph] = Object.assign({}, CONTACTS[ph], doc);
-    await auditLog(TEAM_EDIT ? "team_edit" : "team_add", null, doc);
-    saveCache();
-    toast("💾 सहेज दिया");
+    /* 🔀 नंबर बदला — यानी पहचान बदली। नई पहचान पहले बना दो (पुराने के
+       उपनाम साथ लेकर), फिर वही `mergeContacts()` चला दो जो v41 में बना
+       था। एक ही रास्ता, दो नाम — इसलिए कोई नया छेद नहीं बनता। नया नंबर
+       पहले से किसी और का हो तो यही अपने-आप «मिलान» बन जाता है। */
+    if (moved) {
+      const seed = Object.assign({}, doc, {
+        aliases: [...new Set((old.aliases || []).concat([old.name])
+          .filter(Boolean).filter((a) => pKey(a) !== pKey(name)))].slice(0, 8)
+      });
+      Object.keys(seed).forEach((k) => { if (seed[k] === undefined) delete seed[k]; });
+      await db.collection("vbe_contacts").doc(ph).set(seed, { merge: true });
+      CONTACTS[ph] = Object.assign({}, CONTACTS[ph], seed);
+      const r = await mergeContacts(TEAM_EDIT, ph);
+      await auditLog("contact_renumber",
+        { phone: TEAM_EDIT, name: old.name || null },
+        { phone: ph, name, bills: (r && r.bills) || 0 });
+      saveCache();
+      toast(`🔀 नंबर बदल गया${r && r.bills ? ` · ${r.bills} बिल साथ आए` : ""}`);
+    } else {
+      await db.collection("vbe_contacts").doc(ph).set(doc, { merge: true });
+      CONTACTS[ph] = Object.assign({}, CONTACTS[ph], doc);
+      await auditLog(TEAM_EDIT ? "team_edit" : "team_add", null, doc);
+      saveCache();
+      toast("💾 सहेज दिया");
+    }
     renderTeam("");
     renderAll();
   } catch (e) {
