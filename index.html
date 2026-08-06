@@ -950,6 +950,50 @@
   .flagRow .ft b { color: var(--ink); }
   .muted { color: var(--muted); font-size: 12.5px; }
 
+  /* ── 📦 सामान — एक चीज़, एक कार्ड ────────────────────────────────────
+
+     विक्रम जी: «जैसे ही मैं किसी बिल पर क्लिक करूँगा… अभी एक लंबी सी लाइन
+     होती है। उसको मोबाइल ऐप के हिसाब से बढ़िया लिखा हुआ आना चाहिए — उस
+     चीज़ का नाम, इसकी quantity, और उसका price और total price।»
+
+     पहले यह `<table>` थी और CSS में `td { white-space: nowrap }` लगा था —
+     यानी «Vegetable Storage Sliding Door Cabinet…» जैसा नाम टूटता ही नहीं
+     था, बस दाईं तरफ़ खिसकता चला जाता। 390px के फ़ोन पर चार खाने कभी बैठ
+     ही नहीं सकते।
+
+     इसलिए अब तालिका नहीं — **हर चीज़ का अपना कार्ड।** नाम पूरा, अपनी लकीर
+     पर (कभी नहीं कटता), और नीचे तीन साफ़ खाने: मात्रा · भाव · रकम।       */
+  .itmWrap { display: flex; flex-direction: column; gap: 9px; }
+  .itmCard { border: 1px solid var(--border); border-radius: 15px;
+    padding: 12px 13px; background: rgba(255,255,255,.032);
+    transition: border-color .14s ease; }
+  .itmCard:active { border-color: var(--s1); }
+  .itmTop { display: flex; gap: 9px; align-items: flex-start; margin-bottom: 10px; }
+  .itmNo { flex: 0 0 24px; height: 24px; border-radius: 8px; display: grid;
+    place-items: center; font-size: 11.5px; font-weight: 800;
+    background: rgba(255,255,255,.07); color: var(--muted); }
+  .itmName { flex: 1; min-width: 0; font-size: 14px; font-weight: 700;
+    line-height: 1.45; word-break: break-word; }
+  .itmNums { display: grid; grid-template-columns: 1fr 1fr 1.15fr; gap: 8px; }
+  .itmNums > div { border-radius: 11px; padding: 8px 9px; text-align: center;
+    background: rgba(255,255,255,.04); }
+  .itmNums b { display: block; font-size: 14.5px; font-weight: 800;
+    font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
+  .itmNums small { display: block; font-size: 10.5px; color: var(--muted);
+    margin-top: 2px; }
+  .itmNums .amt { background: linear-gradient(150deg, rgba(139,92,246,.20), transparent 78%);
+    border: 1px solid rgba(139,92,246,.35); }
+  .itmNums .amt b { color: #c4a8ff; }
+  /* सबसे नीचे जोड़ — और अगर बिल के कुल से मेल न खाए तो चुपचाप मत जाओ */
+  .itmSum { display: flex; align-items: center; gap: 10px; margin-top: 11px;
+    padding: 12px 13px; border-radius: 15px; font-size: 13.5px;
+    border: 1px solid rgba(139,92,246,.45);
+    background: linear-gradient(140deg, rgba(139,92,246,.16), transparent 78%); }
+  .itmSum .k { flex: 1; }
+  .itmSum b { font-size: 16.5px; font-weight: 800; letter-spacing: -.3px; }
+  .itmSum.off { border-color: rgba(201,133,0,.5);
+    background: linear-gradient(140deg, rgba(201,133,0,.15), transparent 78%); }
+
   /* ── 📇 संपर्क — मिलाना और जोड़ना ─────────────────────────────────── */
   .mgPick { display: flex; gap: 10px; align-items: center; padding: 12px 13px;
     border-bottom: 1px solid var(--grid); cursor: pointer; }
@@ -9235,19 +9279,59 @@ function openVyDoc(id) {
         🏦 यह रकम बैंक की किसी क्रेडिट लकीर से नहीं मिली। उस खाते की statement
         डाली गई है क्या?</div>` : ""}
 
-    ${(x.items || []).length ? `
-      <div class="itemsHead" style="margin-top:14px"><span>📦 सामान</span>
-        <span class="muted">${x.items.length}</span></div>
-      <div class="card tableWrap"><table>
-        <thead><tr><th>सामान</th><th class="num">मात्रा</th>
-          <th class="num">भाव ₹</th><th class="num">रकम ₹</th></tr></thead>
-        <tbody>${x.items.map((i) => `<tr>
-          <td>${esc(i.name)}</td>
-          <td class="num">${i.qty != null ? i.qty + " " + esc(i.unit || "") : "—"}</td>
-          <td class="num">${i.rate != null ? INR(i.rate) : "—"}</td>
-          <td class="num">${i.amount != null ? INR(i.amount) : "—"}</td></tr>`).join("")}</tbody>
-      </table></div>` : ""}`;
+    ${vyItemCards(x)}`;
   openSheet("vySheet");
+}
+
+/**
+ * 📦 इस काग़ज़ का सामान — एक चीज़, एक कार्ड।
+ *
+ * नाम पूरा दिखता है (कटता नहीं, खिसकता नहीं), और नीचे तीन खाने: कितना ·
+ * क्या भाव · कुल कितने का। सबसे नीचे पूरा जोड़।
+ *
+ * 🧾 और जोड़ अगर बिल के कुल से मेल न खाए तो वह चुपचाप नहीं जाता — पीला
+ *    होकर फ़र्क़ लिख देता है। रिपोर्ट में कभी-कभी छूट या ढुलाई अलग जुड़ती
+ *    है; तब यह फ़र्क़ बताना ही सही है, छिपाना नहीं।
+ */
+function vyItemCards(x) {
+  const items = (x.items || []).filter(Boolean);
+  if (!items.length) {
+    return `<div class="badge lo" style="display:block;line-height:1.7;margin-top:14px">
+      📦 इस काग़ज़ पर सामान की सूची नहीं आई। व्यापार की
+      <b>All Transactions Report</b> में «Item Details» वाला पन्ना होता है —
+      वही फ़ाइल डालने पर सामान अपने-आप जुड़ जाता है।</div>`;
+  }
+  const sum = items.reduce((a, i) => a + (Number(i.amount) || 0), 0);
+  const tot = Number(x.total) || 0;
+  const off = tot > 0 && Math.abs(sum - tot) > 1;
+
+  return `
+    <div class="itemsHead" style="margin-top:16px"><span>📦 क्या-क्या गया</span>
+      <span class="muted">${plural(items.length, "चीज़", "चीज़ें")}</span></div>
+    <div class="itmWrap">
+      ${items.map((i, n) => `
+        <div class="itmCard">
+          <div class="itmTop">
+            <span class="itmNo">${n + 1}</span>
+            <div class="itmName">${esc(i.name || "—")}</div>
+          </div>
+          <div class="itmNums">
+            <div><b>${i.qty != null ? esc(String(i.qty).replace(/\.0+$/, "")) : "—"}</b>
+              <small>${esc(i.unit || "मात्रा")}</small></div>
+            <div><b>${i.rate != null ? INR(i.rate) : "—"}</b><small>भाव</small></div>
+            <div class="amt"><b>${i.amount != null ? INR(i.amount) : "—"}</b>
+              <small>कुल</small></div>
+          </div>
+        </div>`).join("")}
+    </div>
+    <div class="itmSum${off ? " off" : ""}">
+      <span style="font-size:18px">${off ? "🟡" : "🧾"}</span>
+      <span class="k">${off ? "सामान का जोड़" : "पूरा जोड़"}
+        ${off ? `<div class="muted" style="font-size:11.5px;margin-top:2px">
+          बिल ${INR(tot)} का है — <b>${INR(Math.abs(sum - tot))}</b> का फ़र्क़
+          ${sum < tot ? "(ढुलाई/GST अलग जुड़ा हो सकता है)" : "(छूट लगी हो सकती है)"}</div>` : ""}</span>
+      <b>${INR(sum)}</b>
+    </div>`;
 }
 
 /** पुराने रास्ते से आया लिंक भी चलता रहे। */
@@ -10791,7 +10875,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "42a5595de416";
+const APP_BUILD = "f312f58f3ca7";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
