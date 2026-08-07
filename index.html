@@ -950,6 +950,34 @@
   .flagRow .ft b { color: var(--ink); }
   .muted { color: var(--muted); font-size: 12.5px; }
 
+  /* ── 📊 कौन-सा हिसाब अंदर है ───────────────────────────────────────
+
+     विक्रम जी: «मैंने अपना पूरा बैंक स्टेटमेंट आपको दे रखा है, फिर भी आपने
+     आधी अधूरी एंट्री की है।»
+
+     ऐप के पास यह बताने का कोई तरीक़ा ही नहीं था कि **किस खाते का कौन-सा
+     महीना उसके अंदर है।** इसलिए एक न मिलने वाली खोज से यह लगा कि पूरा
+     डेटा अधूरा है। अब हर खाते का महीना-दर-महीना नक़्शा सामने रहता है —
+     जो महीना ख़ाली है वह ख़ाली दिखता है, अंदाज़ा नहीं लगाना पड़ता।       */
+  .covAcc { border: 1px solid var(--border); border-radius: 16px; padding: 13px;
+    margin-bottom: 11px; background: rgba(255,255,255,.03); }
+  .covTop { display: flex; gap: 10px; align-items: baseline; margin-bottom: 10px; }
+  .covTop b { flex: 1; min-width: 0; font-size: 14.5px; }
+  .covTop small { color: var(--muted); font-size: 11.5px; }
+  .covGrid { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; }
+  .covGrid::-webkit-scrollbar { display: none; }
+  .covM { flex: 0 0 auto; min-width: 50px; text-align: center; padding: 8px 6px;
+    border-radius: 11px; border: 1px solid var(--border);
+    background: rgba(255,255,255,.04); }
+  .covM b { display: block; font-size: 14px; font-weight: 800; }
+  .covM small { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .covM.has { border-color: rgba(25,158,112,.5);
+    background: linear-gradient(160deg, rgba(25,158,112,.16), transparent 75%); }
+  .covM.has b { color: #86e3bf; }
+  .covM.gap { border-color: rgba(208,59,59,.5); border-style: dashed;
+    background: rgba(208,59,59,.08); }
+  .covM.gap b { color: #ff9c9c; }
+
   /* ── 🪪 पार्टी Master ────────────────────────────────────────────── */
   .pmAsk { border: 1px solid rgba(139,92,246,.5); border-radius: 18px;
     padding: 16px; margin-bottom: 12px; text-align: center;
@@ -1834,6 +1862,16 @@
        बहीखाता बैंक वाले टैब से खुलता है, यानी पर्दा वहीं से बुलाया जाता है। -->
   <!-- 🔔 क्या-क्या अधूरा है -->
   <!-- 🪪 पार्टी Master -->
+  <!-- 📊 कौन-सा हिसाब अंदर है -->
+  <div id="covSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:560px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>📊 मेरे पास कौन-सा हिसाब है</h3>
+        <button class="x" onclick="closeSheet('covSheet')">✕</button></div>
+      <div id="covBody"></div>
+    </div>
+  </div>
+
   <div id="pmSheet" class="sheet" hidden>
     <div class="sheetBox" style="max-width:540px">
       <div class="grab"></div>
@@ -3384,6 +3422,13 @@ function renderStamp() {
   const box = $("meStamp");
   if (!box) return;
   box.innerHTML = `
+    <div class="stampRow" onclick="closeSheet('meSheet');openCoverage()"
+         style="cursor:pointer">
+      <span style="font-size:17px">📊</span>
+      <div style="flex:1;min-width:0">मेरे पास कौन-सा हिसाब है
+        <div class="muted">हर खाते का महीना-दर-महीना — कौन-सा महीना ख़ाली है</div></div>
+      <span style="color:var(--muted)">›</span>
+    </div>
     <div class="stampRow">
       <span style="font-size:17px">🔖</span>
       <div style="flex:1;min-width:0">ऐप: <code>${esc(APP_BUILD)}</code>
@@ -9833,6 +9878,12 @@ function searchNote(boxId, inputId, sq, found, redo, outside) {
       पर पूरे हिसाब में <b>${outside}</b> मिलीं</span>${wider}${clear}</div>`;
     return;
   }
+
+  /* 🩸 यहीं भरोसा टूटा था। «कुछ नहीं मिला» दो बिल्कुल अलग बातों का एक ही
+     जवाब था — «यह सौदा हुआ ही नहीं» और «यह महीना ऐप में चढ़ा ही नहीं»।
+     इसलिए अब जवाब के साथ यह रास्ता हमेशा रहता है। */
+  const cov = ` <button type="button" class="sx go"
+    onclick="openCoverage()">📊 मेरे पास कौन-सा हिसाब है?</button>`;
   // कुछ न मिले तो सूखा "कुछ नहीं" नहीं — आगे का रास्ता
   let more = "";
   if (sq.kind === "amount" && !sq.min) {
@@ -9841,7 +9892,8 @@ function searchNote(boxId, inputId, sq, found, redo, outside) {
   } else if (sq.kind === "ref" || sq.kind === "amount") {
     more = ` <button type="button" class="sx go" onclick="document.getElementById('${inputId}').select()">नाम से खोजें</button>`;
   }
-  box.innerHTML = `<div class="snote none"><span>${esc(sq.label)} · कुछ नहीं मिला${more}</span>${clear}</div>`;
+  box.innerHTML = `<div class="snote none"><span>${esc(sq.label)} · कुछ नहीं मिला${
+    more}${cov}</span>${clear}</div>`;
 }
 
 function clearSearch(id) {
@@ -11180,7 +11232,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "c34dd54aba0a";
+const APP_BUILD = "e8b75d20b1a7";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -17551,6 +17603,96 @@ async function unlinkBank(btn) {
 }
 
 
+
+
+/* ══════════ 📊 मेरे पास कौन-सा हिसाब है ═══════════════════════════════
+
+   विक्रम जी: «मैंने अपना पूरा बैंक स्टेटमेंट आपको दे रखा है, फिर भी आपने
+   आधी अधूरी एंट्री की है — मेरे को बड़ा दुख हुआ।»
+
+   9 जुलाई वाला ₹5,000 का «PAINTER GHANU» पेमेंट उनकी statement में पूरा
+   दर्ज है, पर ऐप में खोजने पर नहीं मिला — और अवधि «सब» पर थी, यानी वह
+   पंक्ति ऐप के अंदर पहुँची ही नहीं थी।
+
+   असली कमी यह है कि **ऐप कभी बताता ही नहीं कि उसके पास क्या है।** «कुछ
+   नहीं मिला» दो बिल्कुल अलग बातों के लिए एक ही जवाब था:
+       • यह सौदा हुआ ही नहीं
+       • यह महीना ऐप में चढ़ा ही नहीं
+   पहली बात ठीक है; दूसरी पर पूरे डेटा से भरोसा उठ जाता है।
+
+   इसलिए अब हर खाते का **महीना-दर-महीना नक़्शा** है। जो महीना ख़ाली है वह
+   लाल दिखता है। ढूँढना नहीं पड़ता, अंदाज़ा नहीं लगाना पड़ता।            */
+
+const COV_M = ["जन", "फ़र", "मार्च", "अप्रैल", "मई", "जून",
+  "जुल", "अग", "सित", "अक्तू", "नव", "दिस"];
+
+/**
+ * हर खाते का हिसाब — कितनी पंक्तियाँ, कब से कब तक, और बीच में कौन-सा
+ * महीना ख़ाली है।
+ *
+ * 🛑 «ख़ाली महीना» सिर्फ़ पहली और आख़िरी पंक्ति के **बीच** का गिना जाता है।
+ *    उससे पहले या बाद का महीना ख़ाली होना ग़लती नहीं — वह अभी आया ही नहीं।
+ */
+function accCoverage() {
+  const by = {};
+  BANKTXNS.forEach((t) => {
+    if (!t || t.mergedInto) return;
+    const d = String(t.date || "").slice(0, 10);
+    if (!d) return;
+    const a = t.accountId || "";
+    const m = d.slice(0, 7);
+    const c = by[a] = by[a] || { id: a, n: 0, from: d, to: d, months: {} };
+    c.n++;
+    if (d < c.from) c.from = d;
+    if (d > c.to) c.to = d;
+    c.months[m] = (c.months[m] || 0) + 1;
+  });
+  return Object.values(by).map((c) => {
+    // पहली से आख़िरी तारीख़ तक हर महीना — बीच का ख़ाली महीना ही «छेद» है
+    const list = [];
+    const s = new Date(c.from.slice(0, 7) + "-01T12:00:00");
+    const e = new Date(c.to.slice(0, 7) + "-01T12:00:00");
+    for (let d = new Date(s); d <= e; d.setMonth(d.getMonth() + 1)) {
+      const key = d.toISOString().slice(0, 7);
+      list.push({ key, label: COV_M[d.getMonth()], n: c.months[key] || 0 });
+    }
+    c.list = list;
+    c.gaps = list.filter((x) => !x.n).length;
+    return c;
+  }).sort((a, b) => b.n - a.n);
+}
+
+function openCoverage() {
+  const rows = accCoverage();
+  const box = $("covBody");
+  box.innerHTML = `
+    <div class="toonBox" style="margin-bottom:12px">
+      <div class="toonArt">${gfx.toon("book2", 66)}</div>
+      <div class="toonSay"><b>यही सब ऐप के अंदर है</b>
+        <p>हर खाते का महीना-दर-महीना हिसाब। <b>लाल महीना</b> यानी उस महीने
+          की statement अभी चढ़ी ही नहीं — तब उस महीने का कोई सौदा खोजने पर
+          मिलेगा भी नहीं।</p></div>
+    </div>
+    ${rows.length ? rows.map((c) => `
+      <div class="covAcc">
+        <div class="covTop"><b>🏦 ${esc(accLabel(c.id))}</b>
+          <small>${c.n.toLocaleString("en-IN")} पंक्तियाँ</small></div>
+        <div class="muted" style="font-size:11.5px;margin-bottom:9px">
+          ${esc(dayLabel(c.from))} → ${esc(dayLabel(c.to))}${
+          c.gaps ? ` · <b style="color:#ff9c9c">${c.gaps} महीना ख़ाली</b>` : ""}</div>
+        <div class="covGrid">${c.list.map((m) => `
+          <div class="covM ${m.n ? "has" : "gap"}">
+            <b>${m.n || "—"}</b><small>${m.label}</small></div>`).join("")}</div>
+      </div>`).join("")
+      : gfx.empty("seek", "अभी कोई बैंक-पंक्ति नहीं",
+          "🏦 मिलान वाले पन्ने से statement डालिए।")}
+    <div class="badge lo" style="display:block;line-height:1.7;margin-top:12px">
+      जो महीना यहाँ नहीं दिख रहा, उसका कोई सौदा ऐप में मिलेगा भी नहीं —
+      <b>डेटा ग़लत नहीं है, बस वह महीना अभी डाला नहीं गया।</b></div>
+    <button class="primary wide" style="margin-top:12px"
+      onclick="closeSheet('covSheet');goTab('recon')">📄 statement डालिए</button>`;
+  openSheet("covSheet");
+}
 
 /* ══════════ 🪪 पार्टी Master — यूनिट का नंबर ही असली पहचान ═══════════
 
