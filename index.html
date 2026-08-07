@@ -4558,15 +4558,34 @@ const toISO = (v) => parseDay(v);
 function utrOf(text) {
   const s = String(text || "");
 
-  // 1. UPI/IMPS/NEFT/RTGS का अपना ढाँचा — सबसे पक्का
-  let m = s.match(/\b(?:UPI|IMPS|NEFT|RTGS)\/[A-Z]{2}\/(\d{9,22})/i);
+  /* 1. UPI/IMPS/NEFT/RTGS का अपना ढाँचा — सबसे पक्का।
+        «DR-REV» = वापसी (पैसा गया और लौट आया) — बैंक उसी UTR के साथ
+        उल्टी पंक्ति छापता है, इसलिए वह शक्ल भी यहीं पढ़ी जाती है।     */
+  let m = s.match(/\b(?:UPI|IMPS|NEFT|RTGS)\/[A-Z]{2}(?:-?REV)?\/(\d{9,22})/i);
   if (m) return m[1].toUpperCase();
 
-  // 2. साफ़ लिखा हुआ — "UTR NO:", "Ref No:", "RRN", "Transaction ID"
+  /* 2. NEFT/RTGS की अपनी पर्ची — बैंक इसे बिना किसी शब्द के, सीधे
+        डैश के बाद छापता है:
+
+            NEFT CR-SBINN52026062981402318 -PUB FUND ACCT 17 MECH INF -…
+                    └──────────┬─────────┘
+                          यही उसका UTR है
+
+        विक्रम जी की statement के **आठों बड़े credits** (₹99,040 · ₹2,81,495
+        · ₹5,98,700 …) इसी शक्ल में आते हैं — यानी हर वह पेमेंट जो किसी
+        यूनिट ने भेजा। पहले इनका UTR उठता ही नहीं था, इसलिए 🔗 कनेक्टर उन्हें
+        व्यापार की payment-in पर्ची से अपने-आप जोड़ ही नहीं सकता था।
+
+        ढाँचा पक्का है: चार अक्षरों का बैंक-कोड (SBIN/PUNB…) और उसके बाद
+        अंक — इसलिए यह किसी आम नंबर से नहीं टकराता।                     */
+  m = s.match(/\b(?:NEFT|RTGS)\s*(?:CR|DR)?\s*-\s*([A-Z]{4}[A-Z0-9]{8,20})\b/i);
+  if (m) return m[1].toUpperCase();
+
+  // 3. साफ़ लिखा हुआ — "UTR NO:", "Ref No:", "RRN", "Transaction ID"
   m = s.match(/\b(?:UTR|RRN|REF|TXN|TRANSACTION\s*ID)\s*(?:NO\.?|NUMBER)?\s*[:#-]?\s*([A-Za-z0-9]{8,22})\b/i);
   if (m) return m[1].toUpperCase();
 
-  /* 3. बिना निशानी वाला नंबर — सिर्फ़ तभी, जब पूरे पाठ में कहीं UPI/NEFT
+  /* 4. बिना निशानी वाला नंबर — सिर्फ़ तभी, जब पूरे पाठ में कहीं UPI/NEFT
         जैसी बात हो **और** नंबर ठीक 12 अंकों का हो (UPI का UTR हमेशा 12
         अंकों का होता है; खाता नंबर 9–18 अंकों का, अक्सर 0 से शुरू)।       */
   if (/\b(?:UPI|IMPS|NEFT|RTGS|UTR|RRN)\b/i.test(s)) {
@@ -4576,11 +4595,71 @@ function utrOf(text) {
   return null;
 }
 
-/** Party name out of a UPI/NEFT narration. */
-function partyOf(text) {
+/* ══════════ 🪪 नाम narration के अंदर छिपा होता है ═══════════════════
+
+   विक्रम जी: «मैं अपना पूरा बैंक स्टेटमेंट आपको दे रखा हूँ, फिर भी आपने
+   आधी अधूरी एंट्री की है… मैंने इसके आधार पर सर्च करने की कोशिश की तो यह
+   पेमेंट मेरे को मिला ही नहीं।»
+
+   उनकी AU वाली statement में **पार्टी का अपना खाना है ही नहीं** —
+
+       SrNo,Date,ValueDate,Narration,RefNo,Debit,Credit,Balance
+
+   नाम narration के बीच में पड़ा है:
+
+       UPI/DR/619002962426/PAINTER GHANU/UBIN/520191039316463/UPI AU JAGATPURA
+                           └────┬─────┘
+
+   इसलिए 999 में से **999 पंक्तियाँ बिना नाम** के अंदर जातीं, और नाम से की
+   गई हर खोज नाकाम रहती — चाहे अवधि «सब» ही क्यों न हो। «कुछ नहीं मिला»
+   सच नहीं था; नाम अंदर पहुँचा ही नहीं था।
+
+   नीचे उन्हीं की असली 999-पंक्ति वाली फ़ाइल पर परखी हुई चारों शक्लें हैं। */
+
+/** बैंक की अपनी पंक्तियाँ — इनमें कोई पार्टी होती ही नहीं, इसलिए इनका नाम
+    कूड़ा («CHQ PAID-SELF-SELF -BARMER») नहीं, सीधी बात होनी चाहिए। */
+const BANK_LINES = [
+  [/^CHQ\s*PAID\s*-\s*SELF/i,                    "अपना चेक (SELF)"],
+  [/^CHQ\s*DEP\s*RET|^CHQDEP\s*RET|CHEQUE\s*RETURN/i, "चेक वापस आया"],
+  [/^AMB\b|NON\s*MAINTENANCE|MIN(IMUM)?\s*BAL/i,   "बैंक शुल्क"],
+  [/^INT\.?\s*(CR|CREDIT|PD|PAID)\b|^CREDIT\s*INTEREST/i, "बैंक का ब्याज"]
+];
+
+/**
+ * दुहरा चिपका हुआ नाम एक बार — «PCDA SWC JAIPURPCDA SWC JAIPUR»।
+ * बैंक की NEFT पंक्ति में नाम अक्सर दो बार जुड़कर आता है।
+ */
+function dedupName(x) {
+  const t = String(x || "").trim();
+  if (t.length < 8 || t.length % 2) return t;
+  const h = t.length / 2;
+  return t.slice(0, h) === t.slice(h) ? t.slice(0, h) : t;
+}
+
+/**
+ * narration में से पार्टी का नाम।
+ *
+ * @param {string} text
+ * @param {boolean} [strict]  सिर्फ़ पहचानी हुई शक्लों से नाम लो।
+ *
+ * 🛑 `strict` क्यों चाहिए: CSV में पार्टी का अपना खाना ख़ाली हो तो narration
+ *    से नाम लिया जाता है — पर तभी जब शक्ल सचमुच पहचानी हुई हो। बिना इस
+ *    पहरे के बैंक की अपनी लकीरें भी «नाम» बन जाती थीं:
+ *
+ *        CHQ TRFR FROM 0051011957898 OF   → यह नाम नहीं, खाता नंबर है
+ *        DEBIT CMP 3Q523287210SBILife     → यह बीमे की क़िस्त है
+ *
+ *    ऐसा «नाम» संपर्क की सूची में जाकर हमेशा के लिए कूड़ा बन जाता।
+ *    काग़ज़ी (PDF) रास्ते पर narration ही सब कुछ है, इसलिए वहाँ ढीला
+ *    अंदाज़ा अब भी चलता है — CSV में नहीं।
+ */
+function partyOf(text, strict) {
   let s = String(text).replace(/\s+/g, " ").trim();
-  // UPI/DR/<utr>/<NAME>/<BANK>/<acct>/<remark>
-  let m = s.match(/\b(?:UPI|IMPS)\/(?:DR|CR)\/\d+\/(.+)/i);
+
+  /* 1️⃣ UPI/DR/<utr>/<NAME>/<BANK>/<acct>/<remark>
+     «UPI/DR-REV/…» वापसी वाली पंक्ति है — नाम उसमें भी उसी जगह होता है।
+     पहले यह शक्ल छूट जाती थी और वे तीनों पंक्तियाँ बेनाम रह जातीं।   */
+  let m = s.match(/\b(?:UPI|IMPS)\/(?:DR|CR)(?:-?REV)?\/\d+\/(.+)/i);
   if (m) {
     let rest = m[1];
     // name runs until the bank code segment (3-6 uppercase letters between slashes)
@@ -4589,6 +4668,45 @@ function partyOf(text) {
     else rest = rest.split("/")[0];
     return clean(rest);
   }
+
+  /* 2️⃣ NEFT/RTGS का बैंकी ढाँचा — टुकड़े « -» से बँटे होते हैं:
+
+         NEFT CR-SBINN52026062981402318 -PUB FUND ACCT 17 MECH INF -SBIN0018049 -/URGENT/…
+         └───────── UTR ──────────────┘  └──────── नाम ─────────┘  └─ IFSC ─┘  └ टिप्पणी ┘
+
+     🔑 नाम में **अंक रहने दिए जाते हैं**। पुराना नियम अंक पर रुक जाता था
+        और सिर्फ़ «PUB FUND ACCT» बचता — यानी यूनिट का नंबर ही उड़ जाता,
+        जो पार्टी Master के हिसाब से उसकी असली पहचान है (देखें vyUnitCode)। */
+  if (/^(?:NEFT|RTGS)\b/i.test(s)) {
+    const parts = s.split(/\s+-\s*/);
+    for (let i = 1; i < parts.length; i++) {
+      const p = parts[i].trim();
+      if (!p) continue;
+      if (/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(p)) continue;   // IFSC
+      if (p.charAt(0) === "/") continue;                 // /ATTN//INB जैसी टिप्पणी
+      if (!/[A-Za-z]{3}/.test(p)) continue;              // नाम में अक्षर तो हों
+      const nm = clean(dedupName(p));
+      if (nm) return nm;
+    }
+  }
+
+  /* 3️⃣ चेक जमा — «BY CLG SBI 31/03/2026 BARMER GE»।
+     ढाँचा: BY CLG <बैंक> <तारीख़> <शाखा> <नाम>। नाम clearing वाले यहाँ
+     काट देते हैं («OCONESEVENSEVEN» = «0177…»), इसलिए यह हमेशा अधूरा
+     माना जाता है — पर «BY CLG SBI 31» लिखने से तो यही भला। */
+  m = s.match(/^BY\s+CLG\s+[A-Z]+\s+\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\s*(.*)$/i);
+  if (m) {
+    const w = m[1].trim().split(/\s+/).filter(Boolean);
+    const frag = clean(w.length > 1 ? w.slice(1).join(" ") : w.join(" "));
+    /* «चेक जमा» लिखा रहना ज़रूरी है — अकेला «GE» या «PUBLIC» पढ़कर यह
+       नहीं पता चलता कि यह पैसा चेक से आया और नाम बैंक ने काटा है। */
+    return frag ? "चेक जमा (" + frag + ")" : "चेक जमा";
+  }
+
+  // 4️⃣ बैंक की अपनी पंक्ति — शुल्क, ब्याज, चेक वापसी, अपना निकाला हुआ
+  for (const [re, label] of BANK_LINES) if (re.test(s)) return label;
+
+  if (strict) return null;           // पहचानी शक्ल नहीं मिली — अंदाज़ा मत लगाओ
   m = s.match(/\b(?:NEFT|RTGS)[\/\s-]+(?:CR|DR)?[\/\s-]*(?:[A-Z0-9]+[\/\s-]+)?([A-Za-z][A-Za-z .&-]{3,})/i);
   if (m) return clean(m[1]);
   return clean(s.split("/")[0]);
@@ -4900,7 +5018,12 @@ function parseStatement(text) {
     }
     if (!amount) continue;
 
-    let party = cell(row, c.party) || null;
+    /* 🩸 यहीं वह पेमेंट खो गया था। पहले सिर्फ़ «Party» खाना देखा जाता
+       था; AU की CSV में वह खाना है ही नहीं, इसलिए नाम **null** चला जाता
+       और «PAINTER GHANU» खोजने पर 999 में से एक भी पंक्ति न मिलती।
+       PDF वाले रास्ते पर narration से नाम निकाला ही जाता था — CSV वाले
+       पर वही बात छूटी हुई थी। */
+    let party = cell(row, c.party) || partyOf(narration, true) || null;
     /* 🔢 सिर्फ़ अंक कभी पार्टी का नाम नहीं होते। विक्रम जी की statement में
        «5111478» और «6812014» पार्टी के नाम बनकर बैठे थे — वे खाता-नंबर के
        टुकड़े हैं। narration वाले रास्ते पर यह पहरा था, CSV वाले पर नहीं। */
@@ -6548,6 +6671,43 @@ function retryWithPassword() {
   handleStatementFile(PENDING_FILE, pass);
 }
 
+/* ══════════ 📅 «यह फ़ाइल कहाँ तक की है» ═══════════════════════════
+
+   3 अगस्त को दी गई फ़ाइल 27 जुलाई पर ख़त्म थी — और ऐप ने वह बात कभी कही
+   ही नहीं। विक्रम जी को यह तब पता चला जब एक पेमेंट खोजने पर नहीं मिला,
+   और उन्हें लगा कि उनका पूरा डेटा अधूरा भर दिया गया।
+
+   अब हर import के बाद यह सामने रहता है: फ़ाइल किस दिन से किस दिन तक की
+   है, कितनी पंक्तियाँ हैं, आख़िरी बची रकम क्या है — और आज तक का कितना
+   हिसाब अभी बाक़ी है। बची रकम को अपनी बैंक ऐप से मिला लेना ही यह जानने
+   के लिए काफ़ी है कि फ़ाइल पूरी आई या नहीं।                            */
+function coverCard(rows) {
+  const list = (rows || []).filter((t) => t && t.date);
+  if (!list.length) return "";
+  const days = list.map((t) => String(t.date).slice(0, 10)).sort();
+  const from = days[0], to = days[days.length - 1];
+  const bal = [...list].reverse().filter((t) => t.balance != null)[0];
+  const today = new Date().toISOString().slice(0, 10);
+  const gapDays = Math.round((new Date(today + "T12:00:00") -
+    new Date(to + "T12:00:00")) / 86400000);
+  const nextDay = new Date(to + "T12:00:00");
+  nextDay.setDate(nextDay.getDate() + 1);
+  const nxt = nextDay.toISOString().slice(0, 10);
+  return gfx.insight({ icon: "📅", tone: gapDays > 1 ? "warn" : "down",
+    title: "यह फ़ाइल कहाँ तक की है",
+    body: `<b>${esc(dayLabel(from) || from)}</b> → <b>${esc(dayLabel(to) || to)}</b> · ` +
+      `${list.length} पंक्तियाँ` +
+      /* 💰 पैसे भी — यही अंक बैंक की ऐप से मिलाया जाना है, और गोल किया
+         हुआ अंक मिलाने के काम ही नहीं आता (₹3,69,595 ≠ ₹3,69,595.31)। */
+      (bal ? ` · आख़िरी बची रकम <b>${INRp(bal.balance)}</b>` : "") +
+      (gapDays > 1
+        ? `<br><br>⚠️ <b>${esc(dayLabel(nxt) || nxt)} से आज तक</b> का हिसाब अभी ` +
+          `बाक़ी है (${gapDays} दिन) — उतना और दीजिए, तो पूरा हो जाएगा।`
+        : "") +
+      `<br><span class="muted">आख़िरी बची रकम को अपनी बैंक ऐप में दिख रही रकम से ` +
+      `मिला लीजिए — मिल जाए तो फ़ाइल पूरी है।</span>` });
+}
+
 function renderRecon(total, allRows) {
   $("rResult").hidden = false;
 
@@ -6579,7 +6739,7 @@ function renderRecon(total, allRows) {
           `<b>${INR(done.meta.closing)}</b> — दोनों हूबहू ✅` });
     }
     const rows = (allRows || []).filter((t) => t.balance != null);
-    if (rows.length < 2) box.innerHTML = head;
+    if (rows.length < 2) box.innerHTML = head + coverCard(allRows || []);
     else {
       const v = verifyLedger(rows, rows[0].type === "debit"
         ? rows[0].balance + rows[0].amount : rows[0].balance - rows[0].amount);
@@ -6595,9 +6755,8 @@ function renderRecon(total, allRows) {
             title: `${v.checked} में से ${v.checked} पंक्तियों का हिसाब मिला`,
             body: "हर सौदे के बाद बची रकम सही बैठती है — कोई अंक ग़लत नहीं पढ़ा गया ✅" +
               (done ? "" : `<br><span class="muted">⚠️ फ़ाइल के ऊपर «#» वाली पंक्ति नहीं है, ` +
-                `इसलिए यह नहीं बताया जा सकता कि पूरा statement आया या नहीं। आख़िरी बची रकम ` +
-                `<b>${INR(rows[rows.length - 1].balance)}</b> — इसे बैंक की छपी हुई closing से ` +
-                `ख़ुद मिला लीजिए।</span>`) }));
+                `इसलिए यह नहीं बताया जा सकता कि पूरा statement आया या नहीं।</span>`) }) +
+        coverCard(allRows || []));
     }
   }
   const sum = (a) => a.reduce((x, m) => x + m.t.amount, 0);
@@ -6606,8 +6765,10 @@ function renderRecon(total, allRows) {
     ["🆕 नई", String(RECON.matched.length + RECON.maybe.length + RECON.noBill.length +
       (RECON.credits || []).length), "जुड़ने वाली", "#199e70"],
     ["🔁 पहले से थीं", String((RECON.dupes || []).length), "दुबारा नहीं जुड़ेंगी", "#898781"],
-    ["✅ बिल मिला", INR(sum(RECON.matched)), RECON.matched.length + " entries", "#0ca30c"],
-    ["❓ बिल बाकी", INR(sum(RECON.noBill)), RECON.noBill.length + " entries", "#d55181"]
+    /* 💰 डिब्बे में पूरा अंक कटकर «₹48,95,…» बनता था — न पढ़ा जाता है, न
+       अंदाज़ा लगता है। लाख/करोड़ में वही बात एक नज़र में समझ आती है। */
+    ["✅ बिल मिला", INRshort(sum(RECON.matched)), RECON.matched.length + " entries", "#0ca30c"],
+    ["❓ बिल बाकी", INRshort(sum(RECON.noBill)), RECON.noBill.length + " entries", "#d55181"]
   ].map(([k, v, s, c]) => `
     <div class="card tile tilt"><div class="k">${k}</div><div class="v">${v}</div>
       <div class="s">${s}</div><div class="bar"><i style="width:70%;background:${c}"></i></div></div>`).join("");
@@ -11232,7 +11393,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "e8b75d20b1a7";
+const APP_BUILD = "e0758a3e9341";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
