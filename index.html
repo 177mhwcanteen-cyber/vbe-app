@@ -3820,7 +3820,15 @@ function renderBills() {
     return expMatch(e, sq);
   }).slice(0, 200);
 
-  searchNote("fNote", "fSearch", sq, rows.length);
+  /* अवधि के बाहर कितने और हैं — वही जाँच, वही छन्नी, बस तारीख़ हटाकर।
+     गिनती के लिए ही, दिखाने के लिए नहीं। */
+  let outside = 0;
+  if (sq) {
+    const inIds = {};
+    rows.forEach((e) => { inIds[e._id] = 1; });
+    outside = EXP.filter((e) => !inIds[e._id] && expMatch(e, sq)).length;
+  }
+  searchNote("fNote", "fSearch", sq, rows.length, null, outside);
   $("billEmpty").hidden = rows.length > 0;
   if (!rows.length) {
     $("billEmpty").innerHTML = gfx.empty("hello", "इस अवधि में कोई बिल नहीं",
@@ -9798,14 +9806,31 @@ function expMatch(e, sq) {
  * खोज के नीचे की पट्टी — app बताए कि उसने क्या समझा और क्या मिला।
  * बिना बताए ढूँढना ही भ्रम की जड़ थी।
  */
-function searchNote(boxId, inputId, sq, found, redo) {
+function searchNote(boxId, inputId, sq, found, redo, outside) {
   const box = $(boxId);
   if (!box) return;
   if (!sq) { box.innerHTML = ""; box.hidden = true; return; }
   box.hidden = false;
   const clear = `<button type="button" class="sx" onclick="clearSearch('${inputId}')">✕</button>`;
+
+  /* 🩸 यही वह चुप्पी थी जिससे भरोसा टूटा। पहले «कुछ नहीं मिला» लिखकर बात
+     ख़त्म कर दी जाती थी, जबकि जवाब मौजूद था — बस चुनी हुई अवधि से बाहर।
+     अब अवधि के बाहर की गिनती हमेशा साथ लिखी जाती है, और एक टैप में पूरा
+     हिसाब खुल जाता है। ऐप को कभी यह नहीं कहना चाहिए कि «नहीं है», जब वह
+     सिर्फ़ «यहाँ नहीं है»। */
+  const wider = outside > 0
+    ? `<button type="button" class="sx go" onclick="setRange('all')">📅 अवधि के बाहर ${
+        outside} और — पूरा हिसाब देखिए</button>`
+    : "";
+
   if (found) {
-    box.innerHTML = `<div class="snote"><span>${esc(sq.label)} · <b>${found}</b> मिलीं</span>${clear}</div>`;
+    box.innerHTML = `<div class="snote"><span>${esc(sq.label)} · <b>${found}</b> मिलीं</span>${
+      wider}${clear}</div>`;
+    return;
+  }
+  if (outside > 0) {
+    box.innerHTML = `<div class="snote"><span>${esc(sq.label)} — <b>इस अवधि में</b> कुछ नहीं,
+      पर पूरे हिसाब में <b>${outside}</b> मिलीं</span>${wider}${clear}</div>`;
     return;
   }
   // कुछ न मिले तो सूखा "कुछ नहीं" नहीं — आगे का रास्ता
@@ -11155,7 +11180,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "71c2b5fb874e";
+const APP_BUILD = "c34dd54aba0a";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -11408,7 +11433,7 @@ async function mergeAllDupes(btn) {
 
 /* ══════════ 📜 हिसाब — हर पैसा, समय के हिसाब से ══════════ */
 
-function ledgerRows() {
+function ledgerRows(ignoreRange) {
   const acc = $("lAccount").value, type = $("lType").value;
   const bill = $("lBill").value;
   const sq = parseQuery($("lSearch").value);
@@ -11419,8 +11444,19 @@ function ledgerRows() {
     if (t.mergedInto) return false;
     if (acc && t.accountId !== acc) return false;
     if (type && t.type !== type) return false;
-    // तारीख़ से खोजा है तो ऊपर की अवधि आड़े न आए — माँगा हुआ दिन ही दिखे
-    if (!(sq && sq.kind === "date") && !inRange(t.date)) return false;
+    /* 🩸 9 जुलाई का ₹5,000 «PAINTER GHANU» वाला पेमेंट डेटा में पूरा
+       दर्ज था, फिर भी खोजने पर नहीं मिला — और विक्रम जी को लगा कि उनकी
+       आधी statement ही नहीं चढ़ी।
+
+       वजह यही लकीर थी। ऊपर की अवधि «इस महीने» पर थी और पेमेंट जुलाई का
+       था, इसलिए खोज उसे चुपचाप छाँट देती और «कुछ नहीं मिला» लिख देती।
+
+       🔑 UTR और बिल नंबर **दुनिया में एक ही** होते हैं — उन्हें ढूँढते
+       समय अवधि का कोई मतलब नहीं। इसलिए अब वे भी तारीख़ की तरह अवधि से
+       ऊपर हैं। बाक़ी खोजों पर अवधि लगी रहती है, पर बाहर जो मिला उसकी
+       गिनती नीचे लिख दी जाती है — चुप्पी कभी नहीं। */
+    if (!ignoreRange && !(sq && (sq.kind === "date" || sq.kind === "ref"))
+        && !inRange(t.date)) return false;
     if (bill === "no" && (t.matchedReceiptId || t.billPhotoId)) return false;
     if (bill === "yes" && !(t.matchedReceiptId || t.billPhotoId)) return false;
     return txnMatch(t, sq);
@@ -11443,7 +11479,10 @@ function txnBillBadge(t) {
 
 function renderLedger() {
   const rows = ledgerRows();
-  searchNote("lNote", "lSearch", parseQuery($("lSearch").value), rows.length);
+  const sq = parseQuery($("lSearch").value);
+  // खोजा हो तो देख लो कि अवधि के **बाहर** कितने और पड़े हैं
+  const out = sq ? ledgerRows(true).length - rows.length : 0;
+  searchNote("lNote", "lSearch", sq, rows.length, null, out);
   const inSum = rows.filter((t) => t.type === "credit").reduce((a, t) => a + (t.amount || 0), 0);
   const outSum = rows.filter((t) => t.type === "debit").reduce((a, t) => a + (t.amount || 0), 0);
   const noBill = rows.filter((t) => t.type === "debit" && !t.matchedReceiptId && !t.billPhotoId).length;
@@ -13944,7 +13983,8 @@ function missingRows() {
   const sort = $("mSort").value;
   let rows = BANKTXNS.filter((t) =>
     t.type === "debit" && !t.matched && !t.matchedReceiptId && !t.billPhotoId &&
-    ((sq && sq.kind === "date") || inRange(t.date)) && (!acc || t.accountId === acc));
+    ((sq && (sq.kind === "date" || sq.kind === "ref")) || inRange(t.date)) &&
+    (!acc || t.accountId === acc));
   rows = rows.filter((t) => txnMatch(t, sq));
   rows.sort((a, b) => sort === "amount" ? (b.amount || 0) - (a.amount || 0)
     : sort === "party" ? String(a.party || "").localeCompare(String(b.party || ""))
