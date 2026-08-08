@@ -4517,17 +4517,47 @@ function noNameRows() {
     !String(t.party || "").trim());
 }
 
-/** 🔗 बची रकम की जंज़ीर — हर खाते की अलग, क्योंकि हर खाते का अपना क्रम है। */
+/* ══════════ 🔗 बची रकम की जंज़ीर — और मेरी अपनी बड़ी ग़लती ═════════
+
+   🩸 विक्रम जी के असली हिसाब पर पहली रिपोर्ट यह आई:
+
+           «बची रकम की जंज़ीर टूटी है: 297»
+           जंज़ीर: 1705 में से 1408 पंक्तियों का हिसाब मिला
+
+   यानी ऐप उनसे कह रहा था कि उनके हिसाब में 297 जगह अंक ग़लत हैं। **वह
+   ग़लत था — ग़लती जाँच में थी, हिसाब में नहीं।**
+
+   दो वजहें:
+
+   1️⃣ **बिना बची-रकम वाली पंक्तियाँ बीच में पड़ी थीं।** 2,609 में से सिर्फ़
+      1,705 पर बची रकम है — GPay/PhonePe की statement में वह छपती ही
+      नहीं, और फास्ट-entry वाली पंक्तियों पर भी नहीं होती। पुरानी जाँच
+      उन्हें **छोड़ देती** थी, पर उनका पैसा तो सचमुच निकला है। इसलिए हर
+      ऐसी पंक्ति के बाद वाली कड़ी अपने-आप «टूटी» दिखती।
+
+   2️⃣ **एक ही खाते में दो अलग फ़ाइलें।** हर फ़ाइल का अपना क्रम-नंबर 0 से
+      शुरू होता है, इसलिए दोनों को एक साथ क्रम में लगाने पर एक ही दिन की
+      पंक्तियाँ आपस में गड्डमड्ड हो जाती हैं।
+
+   ✅ सही तरीक़ा: **जंज़ीर उसी हद तक जाँची जाए जिस हद तक बैंक ने ख़ुद लिखी
+      है** — यानी एक खाते की, एक ही स्रोत से आई, लगातार पंक्तियाँ। बाक़ी
+      पंक्तियाँ ग़लत नहीं हैं — उन पर बैंक ने बची रकम छापी ही नहीं, इसलिए
+      उनकी जाँच **हो ही नहीं सकती**। और «जाँच नहीं हो सकी» को «ग़लत है»
+      कहना सबसे बुरा झूठ होता।                                          */
 function chainCheck() {
   const by = {};
   BANKTXNS.forEach((t) => {
     if (!t || t.retired || t.mergedInto || t.balance == null) return;
-    (by[t.accountId || ""] = by[t.accountId || ""] || []).push(t);
+    /* 🔑 खाता **और स्रोत** — दोनों से बँटवारा। एक ही खाते की दो फ़ाइलें
+       अलग-अलग जाँची जाती हैं, क्योंकि हर फ़ाइल अपने-आप में पूरी है। */
+    const k = (t.accountId || "") + "|" + (t.source || "?");
+    (by[k] = by[k] || []).push(t);
   });
+
   let checked = 0, bad = 0;
   const where = [];
-  Object.keys(by).forEach((a) => {
-    const rows = by[a].slice().sort((x, y) =>
+  Object.keys(by).forEach((k) => {
+    const rows = by[k].slice().sort((x, y) =>
       String(x.date).localeCompare(String(y.date)) ||
       ((x.srcSeq || 0) - (y.srcSeq || 0)));
     if (rows.length < 2) return;
@@ -4535,9 +4565,14 @@ function chainCheck() {
       ? rows[0].balance + rows[0].amount : rows[0].balance - rows[0].amount;
     const v = verifyLedger(rows, open);
     checked += v.checked; bad += v.bad.length;
-    v.bad.slice(0, 3).forEach((b) => where.push({ acc: a, r: b.r, want: b.want }));
+    v.bad.slice(0, 3).forEach((b) =>
+      where.push({ acc: k.split("|")[0], r: b.r, want: b.want }));
   });
-  return { checked, bad, where };
+
+  // 🤷 जिन पर बैंक ने बची रकम छापी ही नहीं — इनकी जाँच हो ही नहीं सकती
+  const noBal = BANKTXNS.filter((t) => t && !t.retired && !t.mergedInto &&
+    t.balance == null).length;
+  return { checked, bad, where, noBal };
 }
 
 /** 📅 बीच के ख़ाली महीने — कुल कितने। */
@@ -4582,8 +4617,12 @@ function healthReport() {
       go: "closeSheet('hzSheet');goTab('recon')", w: 5 },
     { k: "chain", ic: "🔗", cls: "bad", n: chain.bad, amt: null,
       t: "बची रकम की जंज़ीर टूटी है",
-      s: chain.bad ? "कोई अंक ग़लत पढ़ा गया, या कोई पंक्ति छूटी — सबसे भारी ग़लती यही है"
-        : chain.checked + " में से " + chain.checked + " पंक्तियों का हिसाब मिला",
+      s: (chain.bad
+        ? "कोई अंक ग़लत पढ़ा गया, या कोई पंक्ति छूटी — सबसे भारी ग़लती यही है"
+        : chain.checked.toLocaleString("en-IN") + " में से " +
+          chain.checked.toLocaleString("en-IN") + " पंक्तियों का हिसाब मिला") +
+        (chain.noBal ? " · " + chain.noBal.toLocaleString("en-IN") +
+          " पंक्तियों पर बैंक ने बची रकम छापी ही नहीं, उनकी जाँच हो नहीं सकती" : ""),
       go: "closeSheet('hzSheet');goTab('pass')", w: 3 },
     { k: "dup", ic: "🔁", cls: "bad", n: dup.length,
       amt: sum(dup, (d) => d.a && d.a.amount),
@@ -4651,7 +4690,14 @@ function renderHealth() {
     return;
   }
   const col = h.score >= 90 ? "#00C48C" : h.score >= 70 ? "#FFB020" : "#FF5A5F";
-  const bad = h.items.filter((i) => i.n > 0);
+  /* 🩸 «गए हुए पैसे पर बिल नहीं: 2,270 · ₹1.74 करोड़» — यह सबसे बड़ा अंक है
+     और ग़लतियों की सूची में सबसे ऊपर बैठकर डरा देता था। पर वह **ग़लती है
+     ही नहीं** — काम बाक़ी है। इसीलिए उसका वज़न शून्य रखा गया था।
+
+     अंक में शून्य रखना काफ़ी नहीं था; उसे **आँख के सामने भी** ग़लतियों से
+     अलग बैठना चाहिए। वरना ऐप कहता कुछ है और दिखाता कुछ और। */
+  const bad = h.items.filter((i) => i.n > 0 && i.w > 0);
+  const todo = h.items.filter((i) => i.n > 0 && !i.w);
   const ok = h.items.filter((i) => !i.n);
 
   box.innerHTML = `
@@ -4664,14 +4710,25 @@ function renderHealth() {
     </div>
     <div class="muted" style="text-align:center;font-size:12.5px;margin-bottom:16px">
       ${h.rows.toLocaleString("en-IN")} पंक्तियाँ जाँची गईं ·
-      ${bad.length ? `<b style="color:${col}">${bad.length} बातें ध्यान देने लायक़</b>`
-        : "<b style=\"color:#6FE3B8\">सब ठीक है</b>"}</div>
+      ${bad.length ? `<b style="color:${col}">${bad.length} बातें ठीक करने लायक़</b>`
+        : "<b style=\"color:#6FE3B8\">कोई ग़लती नहीं</b>"}</div>
 
+    ${bad.length ? `<div class="cmdGrp">⚠️ ये ठीक करने लायक़ हैं</div>` : ""}
     ${bad.map((i) => `
       <div class="hzRow ${i.cls}" onclick="${i.go}">
         ${e3(i.ic, i.cls === "bad" ? "bad" : "warn")}
-        <div class="mid"><b>${i.n} ${esc(i.t)}</b><small>${esc(i.s)}</small></div>
+        <div class="mid"><b>${i.n.toLocaleString("en-IN")} ${esc(i.t)}</b>
+          <small>${esc(i.s)}</small></div>
         <div class="n">${i.amt ? INRshort(i.amt) : "›"}</div>
+      </div>`).join("")}
+
+    ${todo.length ? `<div class="cmdGrp">📋 यह ग़लती नहीं — काम बाक़ी है</div>` : ""}
+    ${todo.map((i) => `
+      <div class="hzRow" onclick="${i.go}">
+        ${e3(i.ic, "", "sm")}
+        <div class="mid"><b>${i.n.toLocaleString("en-IN")} ${esc(i.t)}</b>
+          <small>${esc(i.s)}</small></div>
+        <div class="n" style="color:var(--ink-2)">${i.amt ? INRshort(i.amt) : "›"}</div>
       </div>`).join("")}
 
     ${ok.length ? `<div class="cmdGrp">✅ ये सब ठीक हैं</div>` : ""}
@@ -4698,10 +4755,14 @@ async function copyHealth(el) {
   const h = healthReport();
   const L = ["🩺 VBE — पूरी जाँच · " + todayISO(),
     "हिसाब की सेहत: " + h.score + "/100 · " + h.rows + " पंक्तियाँ", ""];
-  h.items.forEach((i) => L.push((i.n ? "❌ " : "✅ ") + i.t + ": " + i.n +
+  h.items.forEach((i) => L.push(
+    (!i.n ? "✅ " : i.w ? "❌ " : "📋 ") + i.t + ": " + i.n +
     (i.amt ? " · " + INR(i.amt) : "")));
+  L.push("", "(📋 = ग़लती नहीं, काम बाक़ी — अंक पर कोई असर नहीं)");
   L.push("", "— जंज़ीर: " + h.chain.checked + " में से " +
-    (h.chain.checked - h.chain.bad) + " पंक्तियों का हिसाब मिला");
+    (h.chain.checked - h.chain.bad) + " पंक्तियों का हिसाब मिला" +
+    (h.chain.noBal ? " (" + h.chain.noBal +
+      " पर बची रकम छपी ही नहीं — जाँच हो नहीं सकती)" : ""));
   try {
     L.push("", "== खाते ==");
     const bal = accBalances();
@@ -13208,7 +13269,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "bf1664b7bb73";
+const APP_BUILD = "75d083645364";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
