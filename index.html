@@ -1153,6 +1153,30 @@
   .flagRow .ft b { color: var(--ink); }
   .muted { color: var(--muted); font-size: 12.5px; }
 
+  /* ══════════ 🩺 पूरी जाँच ════════════════════════════════════════ */
+  .hzRing { width: 132px; height: 132px; margin: 4px auto 14px; position: relative;
+    display: grid; place-items: center; border-radius: 50%; }
+  .hzRing .num { font-size: 34px; font-weight: 850; letter-spacing: -1.5px;
+    line-height: 1; }
+  .hzRing .of { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .hzRow { display: flex; gap: 12px; align-items: center; padding: 13px 12px;
+    border-radius: var(--r-m); cursor: pointer; min-height: 62px;
+    border: 1px solid var(--border); margin-bottom: 8px;
+    background: rgba(255,255,255,.025);
+    transition: border-color var(--t) var(--ease), background var(--t) var(--ease); }
+  .hzRow:hover { border-color: var(--border-2); background: rgba(255,255,255,.05); }
+  .hzRow:active { transform: scale(.99); }
+  .hzRow.ok { cursor: default; opacity: .78; }
+  .hzRow .mid { flex: 1; min-width: 0; }
+  .hzRow .mid b { display: block; font-size: 14px; }
+  .hzRow .mid small { color: var(--muted); font-size: 11.5px; line-height: 1.55; }
+  .hzRow .n { font-size: 17px; font-weight: 800; white-space: nowrap; }
+  .hzRow.bad  { border-color: rgba(255,95,109,.42); }
+  .hzRow.bad  .n { color: #FF9EA1; }
+  .hzRow.warn { border-color: rgba(255,184,77,.38); }
+  .hzRow.warn .n { color: #FFCF8B; }
+  .hzRow.ok   .n { color: #6FE3B8; font-size: 15px; }
+
   /* ══════════ 🌌 बैंक-आकाशगंगा ═══════════════════════════════════
 
      आठ खातों को एक-एक करके पढ़कर तौलना मुश्किल है — «कौन-सा भारी है, कौन
@@ -2632,6 +2656,16 @@
       <div id="syncBar"></div>
       <div id="meStamp"></div>
       <button class="wide danger" onclick="closeSheet('meSheet');signOut()">🚪 Logout</button>
+    </div>
+  </div>
+
+  <!-- 🩺 पूरी जाँच -->
+  <div id="hzSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:600px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>🩺 पूरी जाँच</h3>
+        <button class="x" onclick="closeSheet('hzSheet')">✕</button></div>
+      <div id="hzBody"></div>
     </div>
   </div>
 
@@ -4184,6 +4218,13 @@ function renderStamp() {
         onclick="setCrisp(${crispOn() ? "false" : "true"})">${
         crispOn() ? "बंद कीजिए" : "चालू कीजिए"}</button>
     </div>
+    <div class="stampRow" onclick="closeSheet('meSheet');openHealth()"
+         style="cursor:pointer">
+      <span style="font-size:17px">🩺</span>
+      <div style="flex:1;min-width:0">पूरी जाँच
+        <div class="muted">गड़बड़ कहाँ है, कितनी है — और हर एक का इलाज कहाँ</div></div>
+      <span style="color:var(--muted)">›</span>
+    </div>
     <div class="stampRow" onclick="closeSheet('meSheet');openAdvice()"
          style="cursor:pointer">
       <span style="font-size:17px">🧠</span>
@@ -4395,6 +4436,284 @@ function renderAll() {
 }
 
 function monthKey(d) { return d ? d.toISOString().slice(0, 7) : ""; }
+
+/* ══════════ 🩺 पूरी जाँच ════════════════════════════════════════════
+
+   विक्रम जी: «कहाँ पर गड़बड़-घोटाला है, कहाँ क्या दिक़्क़त हो रही है… पार्टी
+   का नाम सही हो, आया-गया पैसा एक-दूसरे से मिला हुआ हो, double UTR न हो,
+   unique UPI transaction record double न हो।»
+
+   ये सारी जाँचें ऐप में पहले से थीं — पर **बिखरी हुई**: कोई Overview पर,
+   कोई 🏦 मिलान पर, कोई 📊 वाले पर्दे में। यानी «हालत कैसी है» जानने के लिए
+   पाँच जगह घूमना पड़ता था, और कोई एक जगह छूट जाती थी।
+
+   अब एक ही पन्ना, नौ जाँचें, और हर एक के आगे **गिनती, रकम और इलाज**।
+
+   🛑 यह पन्ना कुछ **ठीक नहीं करता — सिर्फ़ दिखाता है।** हर इलाज पर उन्हीं
+      की उँगली चाहिए। ऐप न अपने-आप जोड़ता है, न मिटाता है।              */
+
+/**
+ * 🚨 एक ही UTR, दो अलग-अलग रकमों पर — यानी वह UTR है ही नहीं।
+ *
+ * यह `dropFakeUtrs` वाली जाँच का सहेजे हुए डेटा पर चलने वाला रूप है। वहाँ
+ * यह एक फ़ाइल के अंदर देखा जाता है; यहाँ पूरे हिसाब पर, क्योंकि दो अलग
+ * फ़ाइलों से आई पंक्तियों पर भी वही नक़ली नंबर लग सकता है।
+ */
+function fakeUtrGroups() {
+  const by = {};
+  BANKTXNS.forEach((t) => {
+    if (!t || t.retired || t.mergedInto) return;
+    const u = String(t.utr || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (u.length < 8) return;
+    (by[u] = by[u] || []).push(t);
+  });
+  return Object.keys(by).map((u) => {
+    const g = by[u];
+    if (g.length < 2) return null;
+    /* ↩️ वापसी वाला जोड़ा नक़ली नहीं है — पैसा गया और लौट आया, बैंक दोनों
+       पर वही नंबर छापता है। इसलिए वही छूट यहाँ भी। */
+    const amts = new Set(g.map((t) => Math.round((t.amount || 0) * 100)));
+    const dirs = new Set(g.map((t) => t.type));
+    if (amts.size === 1 && dirs.size === 2 && g.length === 2) return null;
+    if (amts.size === 1 && dirs.size === 1) return null;   // सचमुच दोहरी entry
+    return { utr: u, rows: g };
+  }).filter(Boolean);
+}
+
+/* ══════════ 🔁 वही सौदा दो बार — बैंक की दो पंक्तियों में ══════════
+
+   🩸 यह जाँच ऐप में **थी ही नहीं**, और विक्रम जी ने ठीक यही माँगी:
+      «double UTR न हो, unique UPI transaction record double न हो।»
+
+   जो `findDupes()` पहले से था वह **बैंक-पंक्ति ↔ बिल** मिलाता है — यानी
+   «यह पंक्ति और यह बिल एक ही पैसा हैं»। वह ज़रूरी है, पर अलग सवाल है।
+
+   यहाँ वाला सवाल यह है: **एक ही सौदा बैंक की सूची में दो बार तो नहीं चढ़
+   गया?** import के वक़्त `findExisting` इसे रोकता है, पर अगर दो अलग
+   फ़ाइलों से, दो अलग दस्तावेज़-नंबरों के साथ अंदर आ गया (जैसे एक बार UTR
+   के साथ और एक बार बिना), तो कोई नहीं बताता।
+
+   ↩️ **वापसी वाला जोड़ा छोड़ दिया जाता है** — पैसा गया और लौट आया, बैंक
+      दोनों पर वही UTR छापता है। वे दो अलग सौदे हैं, दोहरी entry नहीं।  */
+function twinTxns() {
+  const by = {};
+  BANKTXNS.forEach((t) => {
+    if (!t || t.retired || t.mergedInto) return;
+    const u = String(t.utr || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (u.length < 8) return;
+    /* चाबी में **दिशा और रकम भी** — वरना वापसी वाला जोड़ा भी दोहरा गिना
+       जाता, और वह सबसे आम ग़लत चेतावनी होती। */
+    const k = u + "|" + (t.type || "") + "|" + Math.round((t.amount || 0) * 100);
+    (by[k] = by[k] || []).push(t);
+  });
+  return Object.keys(by).map((k) => by[k]).filter((g) => g.length > 1)
+    .map((g) => ({ utr: String(g[0].utr || ""), rows: g,
+      amount: g[0].amount, date: g[0].date, extra: g.length - 1 }));
+}
+
+/** 🪪 जिन पंक्तियों पर नाम है ही नहीं। */
+function noNameRows() {
+  return BANKTXNS.filter((t) => t && !t.retired && !t.mergedInto &&
+    !String(t.party || "").trim());
+}
+
+/** 🔗 बची रकम की जंज़ीर — हर खाते की अलग, क्योंकि हर खाते का अपना क्रम है। */
+function chainCheck() {
+  const by = {};
+  BANKTXNS.forEach((t) => {
+    if (!t || t.retired || t.mergedInto || t.balance == null) return;
+    (by[t.accountId || ""] = by[t.accountId || ""] || []).push(t);
+  });
+  let checked = 0, bad = 0;
+  const where = [];
+  Object.keys(by).forEach((a) => {
+    const rows = by[a].slice().sort((x, y) =>
+      String(x.date).localeCompare(String(y.date)) ||
+      ((x.srcSeq || 0) - (y.srcSeq || 0)));
+    if (rows.length < 2) return;
+    const open = rows[0].type === "debit"
+      ? rows[0].balance + rows[0].amount : rows[0].balance - rows[0].amount;
+    const v = verifyLedger(rows, open);
+    checked += v.checked; bad += v.bad.length;
+    v.bad.slice(0, 3).forEach((b) => where.push({ acc: a, r: b.r, want: b.want }));
+  });
+  return { checked, bad, where };
+}
+
+/** 📅 बीच के ख़ाली महीने — कुल कितने। */
+function gapMonths() {
+  try {
+    return accCoverage().reduce((n, c) => n + (c.gaps || 0), 0);
+  } catch (e) { return 0; }
+}
+
+/**
+ * 🩺 पूरी सेहत — नौ जाँचें, और एक अंक।
+ *
+ * वज़न सोच-समझकर हैं: «UTR बाकी» कोई ग़लती नहीं, बस अधूरापन है। पर
+ * «जंज़ीर टूटी» का मतलब है कोई **अंक ग़लत** है — और बैंकिंग में उससे बुरा
+ * कुछ नहीं। इसलिए उसका वज़न सबसे भारी।
+ */
+function healthReport() {
+  const live = BANKTXNS.filter((t) => t && !t.retired && !t.mergedInto);
+  const dup = (typeof findDupes === "function" ? findDupes() : [])
+    .filter((d) => d.sure);
+  const fake = fakeUtrGroups();
+  const need = typeof needUtr === "function" ? needUtr() : [];
+  const noNm = noNameRows();
+  const chain = chainCheck();
+  const gaps = gapMonths();
+  const accTw = typeof findAccTwins === "function" ? findAccTwins() : [];
+  const billTw = typeof findBillTwins === "function" ? findBillTwins() : [];
+  const noBill = live.filter((t) => t.type === "debit" &&
+    !t.matchedReceiptId && !t.billPhotoId);
+  const sum = (a, f) => a.reduce((x, r) => x + (Number(f(r)) || 0), 0);
+
+  const tw = twinTxns();
+  const items = [
+    { k: "twin", ic: "🔁", cls: "bad", n: tw.length,
+      amt: tw.reduce((x, g) => x + (g.amount || 0) * g.extra, 0),
+      t: "वही सौदा बैंक में दो बार",
+      s: "एक ही UTR, वही रकम, वही दिशा — यानी एक ही पैसा दो बार चढ़ा हुआ है",
+      go: "closeSheet('hzSheet');goTab('pass')", w: 3 },
+    { k: "accTw", ic: "🏦", cls: "bad", n: accTw.length, amt: null,
+      t: "दो खाते असल में एक ही हैं",
+      s: "पैसा दो हिस्सों में बँटा है — जब तक अलग हैं, हिसाब कभी नहीं मिलेगा",
+      go: "closeSheet('hzSheet');goTab('recon')", w: 5 },
+    { k: "chain", ic: "🔗", cls: "bad", n: chain.bad, amt: null,
+      t: "बची रकम की जंज़ीर टूटी है",
+      s: chain.bad ? "कोई अंक ग़लत पढ़ा गया, या कोई पंक्ति छूटी — सबसे भारी ग़लती यही है"
+        : chain.checked + " में से " + chain.checked + " पंक्तियों का हिसाब मिला",
+      go: "closeSheet('hzSheet');goTab('pass')", w: 3 },
+    { k: "dup", ic: "🔁", cls: "bad", n: dup.length,
+      amt: sum(dup, (d) => d.a && d.a.amount),
+      t: "बैंक की पंक्ति और बिल — एक ही पैसा",
+      s: "वही UTR दोनों पर — जोड़ दीजिए, वरना ख़र्च दुगुना गिना जाएगा",
+      go: "closeSheet('hzSheet');openDupes()", w: 2 },
+    { k: "fake", ic: "🚨", cls: "bad", n: fake.length, amt: null,
+      t: "एक UTR, अलग-अलग सौदों पर",
+      s: "यह UTR है ही नहीं — अक्सर सामने वाले का खाता नंबर होता है",
+      go: "closeSheet('hzSheet');goTab('pass')", w: 2 },
+    { k: "billTw", ic: "🧾", cls: "bad", n: billTw.length, amt: null,
+      t: "दोहरे बिल", s: "वही UTR दो बिलों पर लगा हुआ है",
+      go: "closeSheet('hzSheet');goTab('bills')", w: 2 },
+    { k: "gaps", ic: "📅", cls: "warn", n: gaps, amt: null,
+      t: "बीच के ख़ाली महीने",
+      s: "उस महीने का कुछ भी नहीं चढ़ा — उसका कोई सौदा मिलेगा ही नहीं",
+      go: "closeSheet('hzSheet');openCoverage()", w: 2 },
+    { k: "need", ic: "⏳", cls: "warn", n: need.length,
+      amt: sum(need, (e) => e.billTotal),
+      t: "पेमेंट का UTR बाकी",
+      s: "UTR के बिना यह बैंक की पंक्ति से कभी अपने-आप नहीं जुड़ेगा",
+      go: "closeSheet('hzSheet');openNeedUtr()", w: 1 },
+    { k: "noNm", ic: "🪪", cls: "warn", n: noNm.length,
+      amt: sum(noNm, (t) => t.amount),
+      t: "पंक्तियों पर नाम नहीं",
+      s: "«किसका आया, किसे गया» का जवाब ही नहीं है",
+      go: "closeSheet('hzSheet');goTab('pass')", w: 0.5 },
+    { k: "noBill", ic: "⚖️", cls: "warn", n: noBill.length,
+      amt: sum(noBill, (t) => t.amount),
+      t: "गए हुए पैसे पर बिल नहीं",
+      s: "बैंक से पैसा गया, पर उसका बिल कहीं दर्ज नहीं",
+      go: "closeSheet('hzSheet');goTab('missing')", w: 0 }
+  ];
+
+  /* 💯 अंक — और यहाँ एक ज़रूरी बात।
+
+     पहली कोशिश में हर जाँच का वज़न सीधा जोड़ दिया था, और नतीजा यह हुआ कि
+     **एक ही क़िस्म की गड़बड़ पूरा अंक खा जाती थी** — 221 जगह जंज़ीर टूटी तो
+     अंक सीधा 0, चाहे बाक़ी सब ठीक हो। ऐसा अंक कुछ बताता ही नहीं।
+
+     इसलिए हर जाँच की अपनी **ऊपरी हद** है। 0 तभी आएगा जब सचमुच हर तरह की
+     गड़बड़ एक साथ हो — और तब 0 सही भी है।
+
+     🛑 «बिल नहीं लगा» का वज़न शून्य है, जान-बूझकर। वह ग़लती नहीं है — काम
+        बाक़ी है। ग़लती और अधूरेपन को एक तराज़ू में तौलना ही ग़लत होता। */
+  const CAP = { twin: 20, accTw: 20, chain: 25, dup: 15, fake: 10, billTw: 10,
+                gaps: 10, need: 6, noNm: 6, noBill: 0 };
+  const penalty = items.reduce((x, i) =>
+    x + Math.min(CAP[i.k] == null ? 100 : CAP[i.k], i.n * i.w), 0);
+  const score = live.length
+    ? Math.max(0, Math.min(100, Math.round(100 - penalty)))
+    : 100;
+  return { items, score, rows: live.length, chain };
+}
+
+function openHealth() { renderHealth(); openSheet("hzSheet"); }
+
+function renderHealth() {
+  const box = $("hzBody");
+  if (!box) return;
+  const h = healthReport();
+  if (!h.rows) {
+    box.innerHTML = gfx.empty("seek", "अभी कुछ जाँचने को नहीं",
+      "🏦 मिलान वाले पन्ने से statement डालिए, फिर पूरी जाँच यहीं दिखेगी।");
+    return;
+  }
+  const col = h.score >= 90 ? "#00C48C" : h.score >= 70 ? "#FFB020" : "#FF5A5F";
+  const bad = h.items.filter((i) => i.n > 0);
+  const ok = h.items.filter((i) => !i.n);
+
+  box.innerHTML = `
+    <div class="hzRing" style="background:conic-gradient(${col} ${h.score}%,
+      rgba(255,255,255,.07) ${h.score}% 100%)">
+      <div style="width:106px;height:106px;border-radius:50%;background:var(--surface-2);
+        display:grid;place-items:center;text-align:center">
+        <div><div class="num" style="color:${col}">${h.score}</div>
+          <div class="of">हिसाब की सेहत</div></div></div>
+    </div>
+    <div class="muted" style="text-align:center;font-size:12.5px;margin-bottom:16px">
+      ${h.rows.toLocaleString("en-IN")} पंक्तियाँ जाँची गईं ·
+      ${bad.length ? `<b style="color:${col}">${bad.length} बातें ध्यान देने लायक़</b>`
+        : "<b style=\"color:#6FE3B8\">सब ठीक है</b>"}</div>
+
+    ${bad.map((i) => `
+      <div class="hzRow ${i.cls}" onclick="${i.go}">
+        ${e3(i.ic, i.cls === "bad" ? "bad" : "warn")}
+        <div class="mid"><b>${i.n} ${esc(i.t)}</b><small>${esc(i.s)}</small></div>
+        <div class="n">${i.amt ? INRshort(i.amt) : "›"}</div>
+      </div>`).join("")}
+
+    ${ok.length ? `<div class="cmdGrp">✅ ये सब ठीक हैं</div>` : ""}
+    ${ok.map((i) => `
+      <div class="hzRow ok">
+        ${e3(i.ic, "good", "sm")}
+        <div class="mid"><b>${esc(i.t)} — कुछ नहीं</b><small>${esc(i.s)}</small></div>
+        <div class="n">✓</div>
+      </div>`).join("")}
+
+    <div class="stampRow" style="margin-top:14px;cursor:pointer" onclick="copyHealth(this)">
+      <span style="font-size:17px">📤</span>
+      <div style="flex:1;min-width:0">पूरी रिपोर्ट कॉपी कीजिए
+        <div class="muted">अपने Claude को दिखाइए, या CA को भेज दीजिए</div></div>
+      <span style="color:var(--muted)">›</span>
+    </div>
+    <div class="badge lo" style="display:block;line-height:1.7;margin-top:10px">
+      🛑 यह पन्ना कुछ <b>ठीक नहीं करता — सिर्फ़ दिखाता है।</b> हर इलाज पर
+      आपकी उँगली चाहिए। ऐप न अपने-आप जोड़ता है, न मिटाता है।
+      <br>🔒 रिपोर्ट में पूरा खाता नंबर कभी नहीं जाता।</div>`;
+}
+
+async function copyHealth(el) {
+  const h = healthReport();
+  const L = ["🩺 VBE — पूरी जाँच · " + todayISO(),
+    "हिसाब की सेहत: " + h.score + "/100 · " + h.rows + " पंक्तियाँ", ""];
+  h.items.forEach((i) => L.push((i.n ? "❌ " : "✅ ") + i.t + ": " + i.n +
+    (i.amt ? " · " + INR(i.amt) : "")));
+  L.push("", "— जंज़ीर: " + h.chain.checked + " में से " +
+    (h.chain.checked - h.chain.bad) + " पंक्तियों का हिसाब मिला");
+  try {
+    L.push("", "== खाते ==");
+    const bal = accBalances();
+    Object.keys(bal).forEach((a) => L.push("- " + safeAccLabel(a) + ": " +
+      INR(bal[a].balance) + " (" + bal[a].date + " तक)"));
+  } catch (e) {}
+  await copyText(L.join("\n"));
+  const was = el.innerHTML;
+  el.innerHTML = `<span style="font-size:17px">✅</span>
+    <div style="flex:1">कॉपी हो गया</div>`;
+  setTimeout(() => { el.innerHTML = was; }, 2600);
+}
 
 /* ══════════ 🌌 बैंक-आकाशगंगा ═══════════════════════════════════════ */
 function openGalaxy() { renderGalaxy(); openSheet("galSheet"); }
@@ -12889,7 +13208,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "3bdb27d82364";
+const APP_BUILD = "bf1664b7bb73";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
