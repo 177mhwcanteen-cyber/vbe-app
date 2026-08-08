@@ -7,64 +7,231 @@
 <title>VBE खरीद-हिसाब Dashboard</title>
 <style>
   /* ── Palette (validated: dataviz reference, dark mode) ─────────────── */
+  /* ══════════════════════════════════════════════════════════════════
+     🎨 AURORA — पूरी ऐप का एक ही ग्राफ़िक्स इंजन
+
+     विक्रम जी: «पूरे ऐप के अंदर बढ़िया लेवल का ग्राफ़िक्स स्थापित करना है
+     — सिर्फ़ सुंदर UI नहीं, पूरी ऐप में एक समान graphics language, motion
+     system, chart engine, glass, lighting, depth और premium business feel।»
+
+     इसलिए **हर रंग, हर छाया, हर गति यहीं से** आती है। नीचे कहीं सीधा hex
+     नहीं लिखा जाता — तभी पूरी ऐप एक साथ बदलती है, टुकड़ों में नहीं।
+
+     🛑 और एक शर्त सबसे ऊपर: यह बैंकिंग ऐप है। जहाँ चमक और साफ़ पढ़ाई में
+        चुनना पड़े, वहाँ हमेशा **पढ़ाई** जीतेगी।
+     ══════════════════════════════════════════════════════════════════ */
   :root {
     color-scheme: dark;
-    --page:        #0d0d0d;
-    --surface:     #1a1a19;
-    --surface-2:   #222221;
-    --ink:         #ffffff;
-    --ink-2:       #c3c2b7;
-    --muted:       #898781;
-    --grid:        #2c2c2a;
-    --border:      rgba(255,255,255,0.10);
-    --s1: #3987e5;  /* blue    */
-    --s2: #008300;  /* green   */
-    --s3: #d55181;  /* magenta */
-    --s4: #c98500;  /* yellow  */
-    --s5: #199e70;  /* aqua    */
-    --good:     #0ca30c;
-    --warning:  #fab219;
-    --serious:  #ec835a;
-    --critical: #d03b3b;
-    --glow-a: rgba(57,135,229,0.22);
-    --glow-b: rgba(213,81,129,0.12);
+
+    /* ── रंग ───────────────────────────────────────────────────────── */
+    --brand:       #6C5CE7;   /* Electric Indigo — मुख्य पहचान */
+    --brand-2:     #8B7CF0;   /* हल्का — hover और झलक */
+    --accent:      #00D1FF;   /* Cyan — चमक, AI, सक्रिय बिंदु */
+    --page:        #0B1020;
+    --surface:     #12182A;
+    --surface-2:   #171F34;
+    --surface-3:   #1D2740;   /* सबसे ऊपर उठा हुआ — पर्दे का सिर */
+    --ink:         #F3F5FB;
+    --ink-2:       #AFB7CE;
+    --muted:       #7C88A6;
+    --grid:        rgba(255,255,255,0.06);
+    --border:      rgba(255,255,255,0.08);
+    --border-2:    rgba(255,255,255,0.14);
+
+    /* ── हालत — और हर एक के साथ चिह्न भी रहता है, सिर्फ़ रंग नहीं ──── */
+    --good:     #00C48C;   /* आया · सही */
+    --warning:  #FFB020;   /* ध्यान देने लायक़ */
+    --serious:  #FF8A5B;
+    --critical: #FF5A5F;   /* गया · नुक़सान */
+
+    /* ── चार्ट की लड़ियाँ — एक ही परिवार, आपस में अलग पहचानी जाने वाली ── */
+    --s1: #6C5CE7;  /* indigo  */
+    --s2: #00D1FF;  /* cyan    */
+    --s3: #00C48C;  /* emerald */
+    --s4: #FFB020;  /* amber   */
+    --s5: #FF5A5F;  /* coral   */
+    --s6: #A78BFA;  /* violet  */
+
+    /* ── पृष्ठभूमि की रौशनी ────────────────────────────────────────── */
+    --glow-a: rgba(108,92,231,0.28);
+    --glow-b: rgba(0,209,255,0.14);
+
+    /* ── गहराई (elevation) — सपाट कार्ड नहीं, परतें ───────────────── */
+    --sheen:  inset 0 1px 0 rgba(255,255,255,0.07);
+    --e1: var(--sheen), 0 1px 2px rgba(0,0,0,.28), 0 8px 24px rgba(0,0,0,.34);
+    --e2: var(--sheen), 0 2px 6px rgba(0,0,0,.32), 0 16px 40px rgba(0,0,0,.42);
+    --e3: var(--sheen), 0 4px 10px rgba(0,0,0,.38), 0 32px 64px rgba(0,0,0,.52);
+    --ring: 0 0 0 3px rgba(108,92,231,.34);
+
+    /* ── गोलाई ─────────────────────────────────────────────────────── */
+    --r-s: 10px; --r-m: 14px; --r-l: 18px; --r-xl: 24px; --r-pill: 999px;
+
+    /* ── गति — उछाल कहीं नहीं ──────────────────────────────────────── */
+    --ease:    cubic-bezier(.22,.61,.36,1);
+    --ease-in: cubic-bezier(.55,.06,.68,.19);
+    --t-fast:  120ms;
+    --t:       220ms;
+    --t-slow:  320ms;
+
+    /* ── 8px की जाली ───────────────────────────────────────────────── */
+    --sp1: 4px; --sp2: 8px; --sp3: 12px; --sp4: 16px;
+    --sp5: 24px; --sp6: 32px; --sp7: 48px;
+  }
+
+  /* ☀️ दिन की रौशनी — वही tokens, दूसरी क़ीमतें। ऐप का ढाँचा नहीं बदलता। */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --page: #F5F7FC; --surface: #FFFFFF; --surface-2: #FBFCFE;
+      --surface-3: #FFFFFF;
+      --ink: #0E1424; --ink-2: #3D4762; --muted: #6B7590;
+      --grid: rgba(14,20,36,0.07); --border: rgba(14,20,36,0.10);
+      --border-2: rgba(14,20,36,0.16);
+      --glow-a: rgba(108,92,231,0.12); --glow-b: rgba(0,209,255,0.09);
+      --sheen: inset 0 1px 0 rgba(255,255,255,0.9);
+      --e1: var(--sheen), 0 1px 2px rgba(14,20,36,.06), 0 8px 24px rgba(14,20,36,.07);
+      --e2: var(--sheen), 0 2px 6px rgba(14,20,36,.08), 0 16px 40px rgba(14,20,36,.10);
+      --e3: var(--sheen), 0 4px 10px rgba(14,20,36,.10), 0 32px 64px rgba(14,20,36,.14);
+    }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { -webkit-text-size-adjust: 100%; }
   body {
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: "Inter", "SF Pro Display", system-ui, -apple-system,
+                 "Segoe UI", sans-serif;
     background: var(--page);
     color: var(--ink);
     min-height: 100vh;
-    background-image:
-      radial-gradient(1100px 500px at 85% -10%, var(--glow-a), transparent 60%),
-      radial-gradient(900px 500px at -10% 40%, var(--glow-b), transparent 55%);
-    background-attachment: fixed;
+    /* 🔢 रकम के अंक ऊपर-नीचे सीध में — हिसाब वाली ऐप में यह सजावट नहीं,
+       पढ़ने की ज़रूरत है। ₹1,11,111 और ₹9,99,999 की चौड़ाई एक रहे। */
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ══════════ 🌌 पृष्ठभूमि — बहुत धीमी, बिल्कुल पीछे ═══════════════
+
+     दो नरम radial gradient और 1.5% शोर। शोर इसलिए कि बड़े gradient पर
+     रंग की पट्टियाँ (banding) दिखने लगती हैं — फ़ोन की स्क्रीन पर वह
+     सस्ता लगता है।
+
+     🐢 रौशनी 40 सेकंड में एक चक्कर लेती है — इतनी धीमी कि दिखे नहीं, बस
+        महसूस हो। कोई कण, कोई तैरती चीज़ नहीं: यह हिसाब का पन्ना है।
+
+     ⚡ रफ़्तार: यह परत `position: fixed` है और सिर्फ़ `transform` चलता है,
+        इसलिए पन्ना ऊपर-नीचे करने पर कुछ भी दुबारा नहीं बनता।         */
+  body::before, body::after {
+    content: ""; position: fixed; inset: -20%; z-index: -2;
+    pointer-events: none;
+  }
+  body::before {
+    background:
+      radial-gradient(60% 45% at 82% 4%, var(--glow-a), transparent 62%),
+      radial-gradient(55% 45% at 8% 62%, var(--glow-b), transparent 58%);
+    animation: auroraDrift 40s var(--ease) infinite alternate;
+    will-change: transform;
+  }
+  body::after {
+    /* 1.5% शोर — बहुत हल्का, पर पट्टियाँ इसी से मिटती हैं */
+    opacity: .035; z-index: -1;
+    background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'>\
+<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/>\
+</filter><rect width='140' height='140' filter='url(%23n)' opacity='.5'/></svg>");
+  }
+  @keyframes auroraDrift {
+    from { transform: translate3d(0,0,0) scale(1); }
+    to   { transform: translate3d(-3%, 2%, 0) scale(1.06); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body::before { animation: none; }
   }
   a { color: var(--s1); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
-  /* ── 3D glass cards ────────────────────────────────────────────────── */
+  /* ══════════ 🏔️ गहराई — सपाट कार्ड नहीं, परतें ═══════════════════
+
+     हर कार्ड की तीन चीज़ें हैं: अपनी सतह, ऊपरी किनारे पर रौशनी की एक
+     बारीक झलक (sheen), और नीचे नरम छाया। तीनों मिलकर वह «उठा हुआ» एहसास
+     देती हैं जो सिर्फ़ border से कभी नहीं आता।
+
+     🪟 काँच (glass) सिर्फ़ वहाँ जहाँ उससे **क्रम साफ़ होता है** — सिर की
+        पट्टी और पर्दे। हर कार्ड पर blur लगाना फ़ोन को धीमा करता है और
+        पढ़ना मुश्किल करता है, इसलिए कार्ड ठोस रहते हैं।              */
   .card {
-    background: linear-gradient(160deg, rgba(255,255,255,0.055), rgba(255,255,255,0.015));
+    background:
+      linear-gradient(168deg, rgba(255,255,255,.05), rgba(255,255,255,.012) 62%),
+      var(--surface);
     border: 1px solid var(--border);
-    border-radius: 18px;
-    box-shadow:
-      0 1px 0 rgba(255,255,255,0.06) inset,
-      0 12px 30px rgba(0,0,0,0.45),
-      0 2px 6px rgba(0,0,0,0.35);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 18px;
+    border-radius: var(--r-l);
+    box-shadow: var(--e1);
+    padding: var(--sp4);
+    transition: box-shadow var(--t) var(--ease), transform var(--t) var(--ease),
+                border-color var(--t) var(--ease);
   }
-  .tilt { transform-style: preserve-3d; transition: transform .18s ease, box-shadow .18s ease; will-change: transform; }
-  .tilt:hover { box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 22px 44px rgba(0,0,0,0.55), 0 4px 10px rgba(0,0,0,0.4); }
-  @media (prefers-reduced-motion: reduce) { .tilt { transition: none !important; transform: none !important; } }
+  .card:hover { box-shadow: var(--e2); border-color: var(--border-2); }
+
+  /* 🧲 «चुम्बकी» दबाव — हर छूने लायक़ चीज़ दबने पर ज़रा सिकुड़ती है।
+     220ms नहीं, 120ms — क्योंकि जवाब तुरंत लगना चाहिए। */
+  .card:active, .tile:active { transform: scale(.985); }
+
+  .tilt { transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease);
+    will-change: transform; }
+  .tilt:hover { box-shadow: var(--e2); }
+  @media (prefers-reduced-motion: reduce) {
+    .tilt, .card { transition: none !important; transform: none !important; }
+  }
+
+  /* ✨ ऊपर की तरफ़ रौशनी की एक बारीक लकीर — यही «premium» का असली राज़ है,
+     चमकीले रंग नहीं। बहुत हल्की, पर उसके बिना कार्ड चिपका हुआ लगता है। */
+  .card, .sheetBox, .tile { position: relative; }
+  .card::before, .tile::before {
+    content: ""; position: absolute; inset: 0 0 auto; height: 1px;
+    border-radius: inherit; pointer-events: none;
+    background: linear-gradient(90deg, transparent,
+      rgba(255,255,255,.22) 22%, rgba(255,255,255,.22) 78%, transparent);
+    opacity: .6;
+  }
+
+  /* ══════════ 💀 लोडिंग — ख़ाली डिब्बा नहीं, चमकती हुई परछाईं ══════ */
+  .skel {
+    border-radius: var(--r-m);
+    background: linear-gradient(100deg,
+      rgba(255,255,255,.045) 20%, rgba(255,255,255,.10) 42%,
+      rgba(255,255,255,.045) 64%);
+    background-size: 240% 100%;
+    animation: skelShimmer 1.5s var(--ease) infinite;
+  }
+  @keyframes skelShimmer { from { background-position: 130% 0; }
+                           to   { background-position: -30% 0; } }
+  @media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+
+  /* ══════════ 🎞️ पन्ना और सूची — आते हुए दिखें, टपकें नहीं ═══════ */
+  .view { animation: pageIn var(--t-slow) var(--ease) both; }
+  @keyframes pageIn {
+    from { opacity: 0; transform: translate3d(0, 8px, 0); }
+    to   { opacity: 1; transform: none; }
+  }
+  .mrow, .covAcc, .itmCard { animation: rowIn var(--t) var(--ease) both; }
+  @keyframes rowIn {
+    from { opacity: 0; transform: translate3d(0, 6px, 0); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .view, .mrow, .covAcc, .itmCard { animation: none !important; }
+  }
 
   /* ── Layout ────────────────────────────────────────────────────────── */
   .wrap { max-width: 1100px; margin: 0 auto; padding: 10px 14px 60px; }
 
   /* ऊपर की पट्टी — 44px, एक ही लाइन, और ऊपर खींचने पर चिपकी रहे */
+  /* 🪟 सिर की पट्टी भी काँच की — नीचे की सूची उसके पीछे से सरकती दिखे,
+     इसलिए हमेशा पता रहता है कि पन्ना चल रहा है। */
+  header.top { backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    background: color-mix(in srgb, var(--page) 72%, transparent);
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--t) var(--ease); }
+  header.top.stuck { border-bottom-color: var(--border); }
   header.top { position: sticky; top: 0; z-index: 40;
     display: flex; align-items: center; justify-content: space-between;
     gap: 10px; padding: 6px 0 8px; margin-bottom: 8px;
@@ -73,7 +240,7 @@
   .brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
   .logo {
     width: 32px; height: 32px; border-radius: 10px; flex: 0 0 auto;
-    background: conic-gradient(from 210deg, #3987e5, #d55181, #c98500, #3987e5);
+    background: conic-gradient(from 210deg, #6C5CE7, #A78BFA, #FFB020, #6C5CE7);
     box-shadow: 0 4px 12px rgba(57,135,229,0.4), 0 0 0 1px rgba(255,255,255,0.12) inset;
     display: grid; place-items: center; font-size: 16px;
   }
@@ -89,22 +256,43 @@
   .meWho .logo { width: 40px; height: 40px; font-size: 19px; }
   button.wide { width: 100%; margin-top: 12px; padding: 12px; border-radius: 12px; }
 
+  /* ══════════ 🔘 बटन — जवाब तुरंत, चमक नपी-तुली ═══════════════════
+
+     हर बटन कम-से-कम 44px ऊँचा (अँगूठे की नाप), दबने पर 120ms में ज़रा
+     सिकुड़ता है, और keyboard से चलाने पर साफ़ घेरा दिखाता है।
+
+     🩸 पहले «primary» बटन पर सीधा नीला hex लिखा था — इसलिए थीम बदलने पर
+        वह अकेला पुराना रह जाता। अब वह भी tokens से आता है।           */
   button {
     font: inherit; color: var(--ink); cursor: pointer;
-    background: linear-gradient(160deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
+    background: linear-gradient(168deg, rgba(255,255,255,.075), rgba(255,255,255,.02));
     border: 1px solid var(--border);
-    padding: 9px 14px; border-radius: 11px;
-    transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    padding: 10px 15px; border-radius: var(--r-m);
+    min-height: 40px;
+    transition: transform var(--t-fast) var(--ease),
+                border-color var(--t) var(--ease),
+                background var(--t) var(--ease),
+                box-shadow var(--t) var(--ease);
   }
-  button:active { transform: scale(.97); }
-  button:disabled { opacity: .5; }
+  button:hover { border-color: var(--border-2); background:
+    linear-gradient(168deg, rgba(255,255,255,.10), rgba(255,255,255,.03)); }
+  button:active { transform: scale(.98); }
+  button:focus-visible { outline: none; box-shadow: var(--ring); }
+  button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
   button.primary {
-    background: linear-gradient(160deg, #3987e5, #256abf);
-    border-color: rgba(255,255,255,0.18);
-    box-shadow: 0 6px 16px rgba(57,135,229,0.32);
-    font-weight: 600;
+    background: linear-gradient(150deg, var(--brand-2), var(--brand) 58%, #5A4BD6);
+    border-color: rgba(255,255,255,.20);
+    box-shadow: 0 6px 18px rgba(108,92,231,.36), var(--sheen);
+    color: #fff; font-weight: 650; letter-spacing: .1px;
   }
-  button.danger { border-color: rgba(208,59,59,.5); color: #ff9c9c; }
+  button.primary:hover {
+    box-shadow: 0 10px 26px rgba(108,92,231,.46), var(--sheen);
+    background: linear-gradient(150deg, #9B8DF5, var(--brand-2) 58%, var(--brand));
+  }
+  button.danger { border-color: rgba(255,90,95,.45); color: #FF9EA1;
+    background: linear-gradient(168deg, rgba(255,90,95,.14), rgba(255,90,95,.05)); }
+  button.wide { min-height: 46px; }
   @media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
 
   /* टैब — बड़े गोल डिब्बों की जगह पतली पट्टी: एक बार में दुगुने टैब दिखें */
@@ -115,7 +303,9 @@
   nav.tabs button { white-space: nowrap; border: 0; background: transparent;
     border-radius: 0; padding: 9px 10px 8px; font-size: 12.5px; color: var(--muted);
     position: relative; min-height: 44px; letter-spacing: .1px; }
-  nav.tabs button.active { color: #fff; font-weight: 700; }
+  nav.tabs button { transition: color var(--t) var(--ease); }
+  nav.tabs button:hover { color: var(--ink-2); }
+  nav.tabs button.active { color: var(--ink); font-weight: 700; }
   nav.tabs button.active::after {
     content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px;
     border-radius: 2px; background: linear-gradient(90deg, var(--s1), var(--s3));
@@ -173,7 +363,7 @@
   .abTxt small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 3px; }
   .badge.asked { border-color: rgba(213,81,129,.45); color: #ffc2d8; }
 
-  .fab.busy { background: linear-gradient(160deg, #3987e5, #256abf);
+  .fab.busy { background: linear-gradient(160deg, #6C5CE7, #256abf);
     box-shadow: 0 10px 26px rgba(57,135,229,.45), 0 2px 6px rgba(0,0,0,.4); }
   .fab.busy::after { content: ""; position: absolute; inset: -4px; border-radius: 50%;
     border: 2px solid rgba(57,135,229,.55); border-top-color: transparent;
@@ -195,7 +385,7 @@
      विक्रम जी के तीन बटन दबाने का इंतज़ार करता है */
   .jobCard.dupe { align-items: flex-start; border-color: rgba(208,59,59,.55);
     background: linear-gradient(160deg, rgba(208,59,59,.14), transparent 72%); }
-  .jobCard.dupe .jobTxt b { color: #ff9c9c; }
+  .jobCard.dupe .jobTxt b { color: #FF9EA1; }
   .jobIco { font-size: 21px; flex: 0 0 auto; }
 
   /* ── 🎯 «अभी क्या बाक़ी है» — एक नज़र में पूरी हालत ─────────────── */
@@ -217,8 +407,8 @@
   .tRow .tt b { display: block; }
   .tRow .tt small { color: var(--muted); font-size: 11.5px; }
   .tRow .tm { flex: 0 0 auto; font-size: 15px; }
-  .tRow.no .tt b { color: #f0c064; }
-  .tRow.bad .tt b { color: #ff9c9c; }
+  .tRow.no .tt b { color: #FFCF8B; }
+  .tRow.bad .tt b { color: #FF9EA1; }
 
   /* ── 👥 मेरी टीम ─────────────────────────────────────────────── */
   .tmRow { display: flex; gap: 11px; align-items: center; padding: 11px 0;
@@ -259,7 +449,7 @@
   .bTag b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bTag.on { border-color: rgba(25,158,112,.55); color: #86e3bf;
     background: rgba(25,158,112,.14); }
-  .bTag.off { border-color: rgba(201,133,0,.55); color: #f0c064;
+  .bTag.off { border-color: rgba(201,133,0,.55); color: #FFCF8B;
     background: rgba(201,133,0,.12); }
 
   /* ── 📖 बहीखाता — CA को भेजने लायक़ काग़ज़ ───────────────────────── */
@@ -287,8 +477,8 @@
 
   .bRow { border: 1px solid var(--border); border-radius: 14px; padding: 11px;
     margin-top: 9px; background: rgba(255,255,255,.025); }
-  .bRow.in { border-left: 3px solid #0ca30c; }
-  .bRow.out { border-left: 3px solid #d03b3b; }
+  .bRow.in { border-left: 3px solid #00C48C; }
+  .bRow.out { border-left: 3px solid #FF5A5F; }
   .bHead { display: flex; gap: 9px; align-items: baseline; flex-wrap: wrap; }
   .bHead .bAmt { font-size: 16px; font-weight: 800; letter-spacing: -.4px; }
   .bRow.in .bAmt { color: #58d858; }
@@ -300,7 +490,7 @@
     display: grid; gap: 4px; font-size: 12.5px; }
   .bStory .sl { display: flex; gap: 7px; }
   .bStory .sl span:first-child { flex: 0 0 104px; color: var(--muted); }
-  .bStory .miss { color: #f0c064; }
+  .bStory .miss { color: #FFCF8B; }
 
   /* 👑 पक्के लोग — ढूँढना नहीं पड़े, एक टैप */
   .regWrap { margin: 4px 0 12px; }
@@ -333,7 +523,7 @@
   .tile, .bcard, .mrow.txn { transition: transform .12s ease; }
   .jobTxt { flex: 1; min-width: 0; font-size: 13.5px; }
   .jobTxt small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
-  .jobTxt small.bad { color: #ff9c9c; }
+  .jobTxt small.bad { color: #FF9EA1; }
 
   .shotWrap { display: flex; flex-direction: column; gap: 9px; }
   .shotCard { display: flex; gap: 11px; align-items: center; padding: 9px;
@@ -359,13 +549,13 @@
   .fsNote { color: var(--ink-2); background: rgba(255,255,255,.05); }
   .fsOk { color: #7de3b6; background: rgba(25,158,112,.14);
     border: 1px solid rgba(25,158,112,.35); }
-  .fsWarn { color: #ffd88a; background: rgba(250,178,25,.13);
+  .fsWarn { color: #FFCF8B; background: rgba(250,178,25,.13);
     border: 1px solid rgba(250,178,25,.38); }
 
   /* 🟡 UTR बाकी — आँख में चुभे */
   .pending, .bcard.pending { border-color: rgba(250,178,25,.5) !important; }
   .utrTag { font-size: 11px; padding: 2px 8px; border-radius: 999px;
-    color: #ffd88a; border: 1px solid rgba(250,178,25,.45);
+    color: #FFCF8B; border: 1px solid rgba(250,178,25,.45);
     background: rgba(250,178,25,.12); }
 
   /* 🏦 बिल से बैंक की entry चुनना */
@@ -378,7 +568,7 @@
   .tpRow.fits { border-left: 3px solid var(--good); padding-left: 9px;
     background: linear-gradient(90deg, rgba(12,163,12,.10), transparent 55%); }
   .tpAmt { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700;
-    font-size: 14px; color: #ff9c9c; }
+    font-size: 14px; color: #FF9EA1; }
   .tpMid { flex: 1; min-width: 0; }
   .tpName { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tpSub { font-size: 11.5px; color: var(--muted); margin-top: 2px;
@@ -467,7 +657,7 @@
     background: linear-gradient(260deg, rgba(208,59,59,.14), transparent 75%); }
   .pbIn b, .pbOut b { display: block; font-size: 16px; margin-top: 2px;
     font-variant-numeric: tabular-nums; }
-  .pbIn b { color: #7de07d; } .pbOut b { color: #ff9d9d; }
+  .pbIn b { color: #6FE3B8; } .pbOut b { color: #FF9EA1; }
   .pbIn small, .pbOut small { display: block; font-size: 10.5px; }
 
   /* 📊 बैलेंस की चाल — शून्य की लकीर के साथ */
@@ -475,7 +665,7 @@
   .pbChart svg { width: 100%; height: 84px; display: block; }
   .pbChartFoot { display: flex; justify-content: space-between; gap: 8px;
     margin-top: 4px; font-size: 10.5px; font-variant-numeric: tabular-nums; }
-  .pbChartFoot .lo { color: #ff9d9d; } .pbChartFoot .hi { color: #7de07d; }
+  .pbChartFoot .lo { color: #FF9EA1; } .pbChartFoot .hi { color: #6FE3B8; }
 
   /* 🛑 «यह खाता मेल नहीं खाता» — लाल, और रास्ता साथ में */
   .amClash { margin-top: 9px; padding: 10px 11px; border-radius: 12px;
@@ -490,7 +680,7 @@
     padding: 4px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 800;
     letter-spacing: .4px; line-height: 1.5; border: 1px solid transparent;
     white-space: normal; text-align: left; }
-  .uChip.on { color: #7de07d; border-color: rgba(12,163,12,.45);
+  .uChip.on { color: #6FE3B8; border-color: rgba(12,163,12,.45);
     background: linear-gradient(100deg, rgba(12,163,12,.18), rgba(12,163,12,.05)); }
   .uChip.off { color: #ffb3b3; border-color: rgba(208,59,59,.55);
     background: linear-gradient(100deg, rgba(208,59,59,.20), rgba(208,59,59,.05)); }
@@ -501,9 +691,9 @@
   .uBarTop { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .uBarTop b { font-size: 13px; letter-spacing: .5px; word-break: break-word; }
   .uBarTop span { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums;
-    color: #ff9d9d; flex: 0 0 auto; }
+    color: #FF9EA1; flex: 0 0 auto; }
   .uBar i { display: block; height: 6px; border-radius: 3px; margin: 6px 0 4px;
-    background: linear-gradient(90deg, #d03b3b, rgba(208,59,59,.35)); }
+    background: linear-gradient(90deg, #FF5A5F, rgba(208,59,59,.35)); }
   .uBar.none .uBarTop b { color: #ffb3b3; }
   .uBar.none i { background: linear-gradient(90deg, #e0a82a, rgba(224,168,42,.3)); }
   .uBar small { font-size: 11px; color: var(--muted); }
@@ -541,8 +731,8 @@
   .dTxt small { display: block; font-size: 11.5px; color: var(--muted);
     line-height: 1.5; margin-top: 1px; word-break: break-word; }
   .dMark { flex: 0 0 auto; font-weight: 800; font-size: 15px; }
-  .docRow.yes .dMark { color: #7de07d; }
-  .docRow.no  .dMark { color: #ff9d9d; }
+  .docRow.yes .dMark { color: #6FE3B8; }
+  .docRow.no  .dMark { color: #FF9EA1; }
   .docRow.hm  .dMark { color: #ffd479; }
   .docFix { margin-top: 11px; padding: 11px; border-radius: 13px;
     border: 1px solid var(--border); background: var(--surface-2); font-size: 12.5px; }
@@ -593,7 +783,7 @@
   .pbLine { display: flex; align-items: baseline; gap: 9px; }
   .pbAmt { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums;
     flex: 0 0 auto; }
-  .pbTxn.in .pbAmt { color: #7de07d; } .pbTxn.out .pbAmt { color: #ff9d9d; }
+  .pbTxn.in .pbAmt { color: #6FE3B8; } .pbTxn.out .pbAmt { color: #FF9EA1; }
   /* नाम कभी कटता नहीं — दो लाइनों में चला जाता है */
   .pbWho { flex: 1; min-width: 0; font-size: 13px; color: var(--ink);
     line-height: 1.4; word-break: break-word; }
@@ -611,11 +801,11 @@
   .pbDayFoot { display: flex; align-items: center; gap: 10px;
     padding: 8px 12px; border-top: 1px solid var(--grid); font-size: 12px;
     font-variant-numeric: tabular-nums; background: var(--surface-2); }
-  .pbDayFoot .i { color: #7de07d; } .pbDayFoot .o { color: #ff9d9d; }
+  .pbDayFoot .i { color: #6FE3B8; } .pbDayFoot .o { color: #FF9EA1; }
   .pbMeter { flex: 1; min-width: 0; height: 6px; border-radius: 3px;
     background: var(--grid); overflow: hidden; display: flex; }
   .pbMeter i { display: block; height: 100%; }
-  .pbMeter i.i { background: #0ca30c; } .pbMeter i.o { background: #d03b3b; }
+  .pbMeter i.i { background: #00C48C; } .pbMeter i.o { background: #FF5A5F; }
 
   /* ⚡ वाले गोल बटन के लिए नीचे जगह — कोई बटन उसके नीचे न दबे */
   #v-pass { padding-bottom: 92px; }
@@ -649,7 +839,7 @@
   .utrRow { display: flex; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--grid); }
   .utrRow:last-child { border-bottom: 0; }
   .uAmt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
-    color: #ff9d9d; }
+    color: #FF9EA1; }
   .uMx { flex: 1; min-width: 0; }
   .uMx b { display: block; font-size: 13.5px; }
   .uMx small { display: block; font-size: 11.5px; color: var(--muted); }
@@ -810,7 +1000,7 @@
   .pbRight svg.sp { display: block; width: 56px; height: 18px; margin-top: 2px; opacity: .85; }
   .pbD { flex: 0 0 auto; font-size: 11.5px; padding: 3px 7px; border-radius: 999px;
     color: var(--muted); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
-  .pbD.up { color: #ff9c9c; border-color: rgba(208,59,59,.45); }
+  .pbD.up { color: #FF9EA1; border-color: rgba(208,59,59,.45); }
   .pbD.down { color: #7de3b6; border-color: rgba(25,158,112,.45); }
   .pbNew { flex: 0 0 auto; font-size: 11px; padding: 3px 7px; border-radius: 999px;
     color: #cfe3ff; border: 1px solid rgba(57,135,229,.45); }
@@ -834,7 +1024,7 @@
     background: transparent; border: 0; border-radius: 0; padding: 11px 2px;
     text-align: left; min-height: 46px; }
   .tdAmt { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700;
-    font-size: 14.5px; color: #ff9c9c; }
+    font-size: 14.5px; color: #FF9EA1; }
   .tdName { flex: 1; min-width: 0; font-size: 13.5px; color: var(--ink);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   @media (max-width: 400px) { .tdAmt { font-size: 13.5px; } .tdName { font-size: 12.5px; } }
@@ -860,7 +1050,7 @@
   .lkTag { font-size: 11px; padding: 2px 7px; border-radius: 999px; margin-left: 6px;
     background: rgba(25,158,112,.3); border: 1px solid rgba(25,158,112,.5); }
   .lkFoot { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
-  .pay.cash .payAmt { color: #ffd88a; }
+  .pay.cash .payAmt { color: #FFCF8B; }
 
   /* 🔍 खोज ने क्या समझा — भ्रम की जड़ यही थी कि वह चुपचाप ढूँढती थी */
   .snote { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px;
@@ -969,7 +1159,7 @@
   .adPt p { margin: 0; font-size: 13px; line-height: 1.65; color: var(--muted); }
   .adPt.good b { color: #86e3bf; }
   .adPt.warn b { color: #ffcf8b; }
-  .adPt.bad  b { color: #ff9c9c; }
+  .adPt.bad  b { color: #FF9EA1; }
   .adNums { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
     margin: 12px 0 4px; }
   .adNums::-webkit-scrollbar { display: none; }
@@ -1008,7 +1198,7 @@
   .covM.has b { color: #86e3bf; }
   .covM.gap { border-color: rgba(208,59,59,.5); border-style: dashed;
     background: rgba(208,59,59,.08); }
-  .covM.gap b { color: #ff9c9c; }
+  .covM.gap b { color: #FF9EA1; }
 
   /* ── 🪪 पार्टी Master ────────────────────────────────────────────── */
   .pmAsk { border: 1px solid rgba(139,92,246,.5); border-radius: 18px;
@@ -1033,7 +1223,7 @@
     background: rgba(255,255,255,.05); color: var(--ink); }
   .pmBtns .yes { border-color: rgba(25,158,112,.55); color: #86e3bf;
     background: rgba(25,158,112,.16); }
-  .pmBtns .no { border-color: rgba(208,59,59,.45); color: #ff9c9c;
+  .pmBtns .no { border-color: rgba(208,59,59,.45); color: #FF9EA1;
     background: rgba(208,59,59,.12); }
 
   .pmRow { display: flex; gap: 11px; align-items: flex-start; padding: 12px 2px;
@@ -1070,7 +1260,7 @@
   .bell .cnt { position: absolute; top: -4px; right: -4px; min-width: 19px;
     height: 19px; padding: 0 5px; border-radius: 999px; font-size: 11px;
     font-weight: 800; color: #fff; display: grid; place-items: center;
-    background: #d03b3b; box-shadow: 0 0 0 2px var(--page); }
+    background: #FF5A5F; box-shadow: 0 0 0 2px var(--page); }
 
   /* एक चेतावनी = एक कार्ड। रंग ही बता दे कि कितनी भारी है। */
   .wdCard { display: flex; gap: 12px; align-items: flex-start; padding: 14px;
@@ -1089,10 +1279,10 @@
 
   .wd1 { border-color: rgba(201,133,0,.5);
     background: linear-gradient(150deg, rgba(201,133,0,.15), transparent 76%); }
-  .wd1 .wdIco { background: rgba(201,133,0,.2) } .wd1 .nums { color: #f0c064 }
+  .wd1 .wdIco { background: rgba(201,133,0,.2) } .wd1 .nums { color: #FFCF8B }
   .wd2 { border-color: rgba(208,59,59,.5);
     background: linear-gradient(150deg, rgba(208,59,59,.15), transparent 76%); }
-  .wd2 .wdIco { background: rgba(208,59,59,.2) } .wd2 .nums { color: #ff9c9c }
+  .wd2 .wdIco { background: rgba(208,59,59,.2) } .wd2 .nums { color: #FF9EA1 }
   .wd3 { border-color: rgba(230,190,60,.45);
     background: linear-gradient(150deg, rgba(230,190,60,.13), transparent 76%); }
   .wd3 .wdIco { background: rgba(230,190,60,.18) } .wd3 .nums { color: #ecd27a }
@@ -1146,7 +1336,7 @@
   .lkFit { display: inline-block; margin-top: 3px; padding: 2px 8px;
     border-radius: 999px; font-size: 10.5px; font-weight: 700; }
   .lkFit.ex { background: rgba(25,158,112,.2); color: #86e3bf; }
-  .lkFit.cl { background: rgba(201,133,0,.2); color: #f0c064; }
+  .lkFit.cl { background: rgba(201,133,0,.2); color: #FFCF8B; }
 
   .lkTot { display: flex; gap: 10px; align-items: center; margin: 12px 0;
     padding: 13px; border-radius: 15px; font-size: 13.5px;
@@ -1257,7 +1447,7 @@
     align-items: center; padding: 11px 13px; margin: -2px -2px 12px;
     border-radius: 0 0 16px 16px; font-size: 13.5px; font-weight: 600;
     color: #fff; border: 1px solid rgba(57,135,229,.55);
-    background: linear-gradient(115deg, #2c6fc4, #3987e5 55%, #5aa0f0);
+    background: linear-gradient(115deg, #2c6fc4, #6C5CE7 55%, #5aa0f0);
     box-shadow: 0 6px 22px rgba(57,135,229,.35);
     animation: newSlide .4s cubic-bezier(.2,.9,.3,1.2); }
   @keyframes newSlide { from { transform: translateY(-16px); opacity: 0 } }
@@ -1347,9 +1537,9 @@
   .vyDoc .rt small { font-size: 10.5px; }
   .vySt { display: inline-block; padding: 2px 8px; border-radius: 999px;
     font-size: 10.5px; font-weight: 700; margin-top: 3px; }
-  .vySt.no { background: rgba(201,133,0,.18); color: #f0c064; }
+  .vySt.no { background: rgba(201,133,0,.18); color: #FFCF8B; }
   .vySt.ok { background: rgba(25,158,112,.18); color: #86e3bf; }
-  .vySt.due { background: rgba(208,59,59,.18); color: #ff9c9c; }
+  .vySt.due { background: rgba(208,59,59,.18); color: #FF9EA1; }
 
   /* 🌉 अकेला पुल — बहीखाते की क्रेडिट लकीर पर */
   .brdg { display: flex; gap: 8px; align-items: center; margin-top: 8px;
@@ -1379,7 +1569,7 @@
     border: 1px solid var(--border); border-radius: 14px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
     transition: border-color .16s ease, box-shadow .16s ease, background .16s ease; }
-  .fx input::placeholder, .fx textarea::placeholder { color: #6d6b66; }
+  .fx input::placeholder, .fx textarea::placeholder { color: #68738F; }
   .fx input:focus, .fx select:focus, .fx textarea:focus {
     outline: none; border-color: var(--s1);
     background: linear-gradient(180deg, rgba(57,135,229,.10), rgba(255,255,255,.02));
@@ -1401,7 +1591,7 @@
   .fxWarn { border: 1px solid rgba(201,133,0,.55); border-radius: 14px;
     background: linear-gradient(150deg, rgba(201,133,0,.15), transparent 75%);
     padding: 12px 13px; margin-bottom: 14px; font-size: 13px; line-height: 1.65; }
-  .fxWarn b { color: #f0c064; }
+  .fxWarn b { color: #FFCF8B; }
   .fxWarn .ar { font-size: 15px; font-weight: 800; letter-spacing: .3px;
     margin: 6px 0; display: block; }
 
@@ -1448,13 +1638,46 @@
   .mrow .mx b { color: var(--ink); }
   .mrow .amt { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
   .mrow select { font: inherit; color: var(--ink); background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 7px 9px; margin-top: 6px; max-width: 100%; }
-  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); white-space: nowrap; }
-  .badge.hi { color: #fff; background: rgba(12,163,12,.25); border-color: rgba(12,163,12,.5); }
-  .badge.lo { color: #fff; background: rgba(250,178,25,.22); border-color: rgba(250,178,25,.5); }
+  /* ══════════ 🏷️ हालत की गोली (status pill) ═══════════════════════
+
+     🩸 पहले «lo» वाली गोली गाढ़े पीले पर सफ़ेद अक्षर थी — बड़ा डिब्बा बनते
+        ही वह पढ़ने लायक़ ही नहीं रहती थी (जैसे सलाह वाले पन्ने पर)।
+
+     अब रंग सिर्फ़ **किनारे और हल्की झलक** में है, अक्षर हमेशा साफ़ रंग के।
+     WCAG AA इसी से बचता है, और चमक भी नहीं जाती।                     */
+  .badge { font-size: 11.5px; padding: 3px 10px; border-radius: var(--r-pill);
+    border: 1px solid var(--border); color: var(--ink-2); white-space: nowrap;
+    background: rgba(255,255,255,.03); }
+  .badge.hi { color: #6FE3B8; background: rgba(0,196,140,.10);
+    border-color: rgba(0,196,140,.38); }
+  .badge.lo { color: #FFCF8B; background: rgba(255,176,32,.09);
+    border-color: rgba(255,176,32,.34); }
+  /* बड़े, कई-पंक्ति वाले डिब्बे के रूप में — तब गोलाई कम, हवा ज़्यादा */
+  .badge[style*="display:block"], .badge[style*="display: block"] {
+    border-radius: var(--r-m); padding: 12px 14px; font-size: 12.5px;
+    color: var(--ink-2); }
+  .badge[style*="display:block"] b, .badge[style*="display: block"] b { color: var(--ink); }
+
+  /* ══════════ ✍️ हर input — चाहे कहीं भी लिखा हो ══════════════════
+     पहले सिर्फ़ .fx और .form वाले खाने सजे हुए थे; बाक़ी जगह browser का
+     सादा डिब्बा दिखता था और वही अकेला पुराना लगता। */
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    font: inherit; color: var(--ink);
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+    border: 1px solid var(--border); border-radius: var(--r-m);
+    padding: 11px 13px; min-height: 44px;
+    transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease),
+                background var(--t) var(--ease);
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--brand); box-shadow: var(--ring);
+    background: linear-gradient(180deg, rgba(108,92,231,.12), rgba(255,255,255,.02));
+  }
+  input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 
   /* हिसाब — money in vs out reads at a glance */
   .amt.in  { color: var(--good); }
-  .amt.out { color: #ff7b7b; }
+  .amt.out { color: #FF9EA1; }
   /* 📥 एक साथ कई रसीदें — फोटो बाईं ओर, उसके ख़ाने दाईं ओर */
   .bkRow { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--grid); }
   .bkRow:last-of-type { border-bottom: 0; }
@@ -1469,7 +1692,7 @@
      से अलग रंग का, ताकि दिख जाए कि यहाँ कुछ ख़र्च होता है। */
   .aiGo { width: 100%; margin-top: 8px; font-weight: 700;
     color: #fff; border: 0;
-    background: linear-gradient(135deg, #d55181, #b8407a); }
+    background: linear-gradient(135deg, #A78BFA, #b8407a); }
   .aiGo:disabled { opacity: .75; }
   .aiGo.done { background: var(--surface-2); color: var(--ink-2);
     border: 1px solid var(--border); font-weight: 600; }
@@ -1480,7 +1703,7 @@
 
   .mrow.txn { border-left: 3px solid transparent; padding-left: 10px; border-radius: 0 10px 10px 0; }
   .mrow.txn.in  { border-left-color: var(--good); background: linear-gradient(90deg, rgba(12,163,12,.10), transparent 40%); }
-  .mrow.txn.out { border-left-color: #d03b3b; background: linear-gradient(90deg, rgba(208,59,59,.10), transparent 40%); }
+  .mrow.txn.out { border-left-color: #FF5A5F; background: linear-gradient(90deg, rgba(208,59,59,.10), transparent 40%); }
   .pname { font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: .2px; margin-bottom: 2px; }
   button.mini { padding: 6px 12px; font-size: 12px; border-radius: 9px; }
 
@@ -1510,7 +1733,7 @@
   .shots { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
   .shots img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); }
   .hint { display: block; font-size: 11.5px; margin-top: 3px; }
-  .hint.up { color: #ff9d9d; } .hint.down { color: #7de07d; } .hint.same { color: var(--muted); }
+  .hint.up { color: #FF9EA1; } .hint.down { color: #6FE3B8; } .hint.same { color: var(--muted); }
   .thinking { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
     background: var(--s1); margin-right: 6px; animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
@@ -1544,15 +1767,32 @@
   .sheet { position: fixed; inset: 0; z-index: 60; display: flex;
     align-items: flex-end; justify-content: center;
     background: rgba(0,0,0,.66); backdrop-filter: blur(7px); }
+  /* 🪟 पर्दा — यहीं काँच सचमुच काम का है: नीचे का पन्ना धुँधला दिखता रहे
+     तो पता चलता रहता है कि यह ऊपर खुला हुआ डिब्बा है, नया पन्ना नहीं। */
   .sheetBox { width: 100%; max-width: 560px; max-height: 92vh; overflow: auto;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 20px 20px 0 0; padding: 16px 16px 24px;
-    box-shadow: 0 -18px 50px rgba(0,0,0,.6); animation: slideUp .22s ease; }
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--surface-3) 92%, transparent),
+      color-mix(in srgb, var(--surface) 94%, transparent) 34%);
+    border: 1px solid var(--border-2);
+    border-radius: var(--r-xl) var(--r-xl) 0 0; padding: var(--sp4) var(--sp4) var(--sp5);
+    box-shadow: var(--e3);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    animation: slideUp var(--t-slow) var(--ease); }
   @media (min-width: 620px) {
     .sheet { align-items: center; }
-    .sheetBox { border-radius: 20px; }
+    .sheetBox { border-radius: var(--r-xl); }
   }
-  @keyframes slideUp { from { transform: translateY(26px); opacity: 0; } to { transform: none; opacity: 1; } }
+  /* 📱 छोटे/कमज़ोर फ़ोन पर भारी blur हकलाता है — वहाँ ठोस सतह बेहतर है।
+     चमक से ज़्यादा ज़रूरी यह है कि पन्ना अटके नहीं। */
+  @media (max-width: 420px) {
+    .sheetBox { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      background: var(--surface); }
+  }
+  @keyframes slideUp {
+    from { transform: translate3d(0, 26px, 0); opacity: 0; }
+    to   { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .sheetBox { animation: none; } }
   .sheetHead { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
   .sheetHead h3 { flex: 1; min-width: 0; font-size: 16px; }
   .sheetHead .x { padding: 8px 13px; border-radius: 12px; font-size: 15px; }
@@ -1576,7 +1816,7 @@
   .acc .ad { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; font-variant-numeric: tabular-nums; }
   .acc .arow { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .badge.ok2 { background: rgba(25,158,112,.18); border-color: rgba(25,158,112,.5); color: #86e3bf; }
-  .badge.warn2 { background: rgba(201,133,0,.18); border-color: rgba(201,133,0,.5); color: #f0c064; }
+  .badge.warn2 { background: rgba(201,133,0,.18); border-color: rgba(201,133,0,.5); color: #FFCF8B; }
 
   /* UPI ऐप चुनने के बटन */
   .upiApps { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
@@ -1613,7 +1853,7 @@
     white-space: nowrap; font-size: clamp(12px, 3.6vw, 16px); }
   .tile .sp { margin-top: 8px; height: 26px; display: block; width: 100%; }
   .tile .d { font-size: 11.5px; font-weight: 700; margin-top: 3px; }
-  .tile .d.up { color: #ff9d9d; } .tile .d.down { color: #7de07d; } .tile .d.flat { color: var(--muted); }
+  .tile .d.up { color: #FF9EA1; } .tile .d.down { color: #6FE3B8; } .tile .d.flat { color: var(--muted); }
 
   .skel { border-radius: 10px; height: 13px; margin: 7px 0;
     background: linear-gradient(90deg, var(--surface-2) 25%, #2e2e2c 37%, var(--surface-2) 63%);
@@ -1650,12 +1890,12 @@
   .aurora i { position: absolute; display: block; border-radius: 50%;
     animation: drift 26s ease-in-out infinite; }
   .aurora i:nth-child(1) { width: 46vw; height: 46vw; left: -8%; top: 2%;
-    background: radial-gradient(circle, #3987e5 0%, transparent 70%); }
+    background: radial-gradient(circle, #6C5CE7 0%, transparent 70%); }
   .aurora i:nth-child(2) { width: 40vw; height: 40vw; right: -6%; top: 22%;
-    background: radial-gradient(circle, #d55181 0%, transparent 70%);
+    background: radial-gradient(circle, #A78BFA 0%, transparent 70%);
     animation-delay: -9s; }
   .aurora i:nth-child(3) { width: 38vw; height: 38vw; left: 18%; bottom: 4%;
-    background: radial-gradient(circle, #199e70 0%, transparent 70%);
+    background: radial-gradient(circle, #00C48C 0%, transparent 70%);
     animation-delay: -17s; }
   @keyframes drift {
     0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
@@ -1709,7 +1949,7 @@
   .ud { border: 1px solid rgba(201,133,0,.4); border-radius: 14px; margin-bottom: 9px;
     background: linear-gradient(150deg, rgba(201,133,0,.14), rgba(255,255,255,.02)); }
   .udTop { display: flex; align-items: center; gap: 11px; padding: 12px 13px; cursor: pointer; }
-  .udAmt { font-size: 16px; font-weight: 700; color: #f0c064;
+  .udAmt { font-size: 16px; font-weight: 700; color: #FFCF8B;
     font-variant-numeric: tabular-nums; white-space: nowrap; }
   .udWho { flex: 1; min-width: 0; line-height: 1.35; }
   .udWho b { font-size: 14px; display: block; }
@@ -1718,7 +1958,7 @@
   .ud.open .udMore { display: block; }
   .udRow { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px;
     padding: 9px 0; border-top: 1px solid var(--grid); cursor: pointer; font-size: 12.5px; }
-  .udRow b { text-align: right; color: #f0c064; }
+  .udRow b { text-align: right; color: #FFCF8B; }
   .udRow small { grid-column: 1 / -1; color: var(--muted); }
 
   /* 🩷 चालान बाकी — गुलाबी, जब तक नंबर न आए */
@@ -1764,7 +2004,7 @@
   .paySum div { text-align: center; }
   .paySum span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
   .paySum b { font-size: 15px; font-variant-numeric: tabular-nums; }
-  .ok2t { color: #7de07d; } .duet { color: #ff9d9d; }
+  .ok2t { color: #6FE3B8; } .duet { color: #FF9EA1; }
 
   /* staff */
   .stf { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--grid); }
@@ -3044,7 +3284,20 @@ const FIREBASE_CONFIG = {
 const ALLOWED_UIDS = ["OSEMzBorjgVnWM04yFATVGmc79S2", "LoDJzLE8Qce1Wao5VDHYOLELClQ2"];
 /* ════════════════════════════════════════════════ */
 
-const SERIES = ["#3987e5", "#008300", "#d55181", "#c98500", "#199e70"]; // validated dark palette
+/* 🎨 चार्ट की लड़ियाँ — CSS वाले tokens से पढ़ी जाती हैं, यहाँ दुबारा नहीं
+   लिखी जातीं। थीम बदले तो चार्ट भी उसी वक़्त बदलें, एक version पीछे नहीं।
+
+   🛑 आपस में अलग पहचानी जानी चाहिए — रंग-अंधता में भी। इसलिए सिर्फ़ रंग
+      नहीं बदलता, हर लड़ी की चमक (lightness) भी अलग रखी गई है।         */
+function cssVar(name, fallback) {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  } catch (e) { return fallback; }
+}
+const SERIES = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6"]
+  .map((n, i) => cssVar(n, ["#6C5CE7", "#00D1FF", "#00C48C",
+                            "#FFB020", "#FF5A5F", "#A78BFA"][i]));
 // पैसे गिनते वक़्त दशमलव सिर्फ़ जगह खाता है और अंक कार्ड से बाहर धकेलता है।
 const INR = n => "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
 
@@ -3527,23 +3780,121 @@ async function refreshData(btn) {
 }
 
 /* ── Chart defaults (mark specs: thin marks, 4px rounded ends, hairline grid) ── */
-Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", sans-serif';
-Chart.defaults.color = "#c3c2b7";
-Chart.defaults.borderColor = "#2c2c2a";
-Chart.defaults.plugins.legend.labels.boxWidth = 10;
-Chart.defaults.plugins.legend.labels.boxHeight = 10;
-Chart.defaults.plugins.tooltip.backgroundColor = "#222221";
-Chart.defaults.plugins.tooltip.borderColor = "rgba(255,255,255,0.12)";
+/* ══════════ 📊 चार्ट इंजन ═══════════════════════════════════════════
+
+   विक्रम जी की माँग: «premium chart rendering — smooth curved lines,
+   gradient fills, glow on active data point, interactive tooltip, soft
+   grid lines, animated transitions.»
+
+   सब कुछ यहीं एक जगह तय होता है, ताकि ऐप का हर चार्ट एक जैसा दिखे —
+   Overview वाला भी, Pricebook वाला भी, व्यापार वाला भी।
+
+   ⚡ रफ़्तार: भराव (fill) canvas का अपना gradient है, कोई तस्वीर या छाया
+      नहीं — इसलिए 60 FPS पर चलता है।                                 */
+Chart.defaults.font.family = '"Inter", system-ui, -apple-system, "Segoe UI", sans-serif';
+Chart.defaults.color = cssVar("--ink-2", "#AFB7CE");
+Chart.defaults.borderColor = cssVar("--grid", "rgba(255,255,255,.06)");
+Chart.defaults.plugins.legend.labels.boxWidth = 9;
+Chart.defaults.plugins.legend.labels.boxHeight = 9;
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.padding = 14;
+Chart.defaults.plugins.tooltip.backgroundColor = cssVar("--surface-3", "#1D2740");
+Chart.defaults.plugins.tooltip.borderColor = cssVar("--border-2", "rgba(255,255,255,.14)");
 Chart.defaults.plugins.tooltip.borderWidth = 1;
-Chart.defaults.plugins.tooltip.titleColor = "#ffffff";
-Chart.defaults.plugins.tooltip.bodyColor = "#c3c2b7";
+Chart.defaults.plugins.tooltip.titleColor = cssVar("--ink", "#F3F5FB");
+Chart.defaults.plugins.tooltip.bodyColor = cssVar("--ink-2", "#AFB7CE");
+Chart.defaults.plugins.tooltip.padding = 11;
+Chart.defaults.plugins.tooltip.cornerRadius = 12;
+Chart.defaults.plugins.tooltip.displayColors = false;
 Chart.defaults.maintainAspectRatio = false;
+// 🎞️ अवधि बदलने पर नया रूप — झटके से नहीं, 600ms में
+Chart.defaults.animation = { duration: 600, easing: "easeOutQuart" };
+Chart.defaults.animations = { colors: false, x: { duration: 0 } };
+Chart.defaults.elements.line.tension = 0.38;          // मुड़ी हुई लकीर
+Chart.defaults.elements.line.borderCapStyle = "round";
+Chart.defaults.elements.line.borderJoinStyle = "round";
+Chart.defaults.elements.point.radius = 0;             // साफ़ लकीर
+Chart.defaults.elements.point.hoverRadius = 6;
+Chart.defaults.elements.point.hoverBorderWidth = 3;
+Chart.defaults.elements.bar.borderRadius = 7;
+Chart.defaults.elements.bar.borderSkipped = false;
+Chart.defaults.elements.arc.borderWidth = 0;
+
+/** रंग को पारदर्शी बनाओ — «#6C5CE7» + .18 → rgba(...) */
+function alphaOf(hex, a) {
+  const h = String(hex || "").replace("#", "");
+  if (h.length !== 6) return hex;
+  const n = parseInt(h, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+/**
+ * लकीर के नीचे का भराव — रंग से पारदर्शी तक।
+ * canvas का अपना gradient चाहिए, इसलिए यह एक function है जिसे Chart.js
+ * हर बार नाप के साथ बुलाता है (पन्ना घुमाने पर भी सही रहे)।
+ */
+function chartFill(color) {
+  return (ctx) => {
+    const { chart } = ctx;
+    const area = chart.chartArea;
+    if (!area) return alphaOf(color, .16);
+    const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+    g.addColorStop(0, alphaOf(color, .34));
+    g.addColorStop(0.55, alphaOf(color, .10));
+    g.addColorStop(1, alphaOf(color, 0));
+    return g;
+  };
+}
+
+/* ✨ सक्रिय बिंदु पर चमक — उँगली जहाँ है, वहीं रौशनी। यही वह छोटी चीज़ है
+   जो चार्ट को «ज़िंदा» बनाती है, और इसकी क़ीमत कुछ भी नहीं। */
+const glowPoint = {
+  id: "glowPoint",
+  afterDatasetsDraw(chart) {
+    const act = chart.getActiveElements ? chart.getActiveElements() : [];
+    if (!act.length) return;
+    const c = chart.ctx;
+    act.forEach((a) => {
+      const el = a.element;
+      if (!el || el.x == null) return;
+      const col = (chart.data.datasets[a.datasetIndex] || {}).borderColor;
+      const color = typeof col === "string" ? col : cssVar("--accent", "#00D1FF");
+      c.save();
+      c.shadowColor = color; c.shadowBlur = 16;
+      c.fillStyle = color;
+      c.beginPath(); c.arc(el.x, el.y, 4.5, 0, Math.PI * 2); c.fill();
+      c.restore();
+    });
+  }
+};
+try { Chart.register(glowPoint); } catch (e) {}
 
 function mkChart(id, cfg) {
   if (charts[id]) charts[id].destroy();
+  /* 🌈 हर line/area चार्ट को अपने-आप gradient भराव — हर जगह हाथ से लिखने
+     पर एक-दो जगह छूट जाती और वही अकेला सपाट दिखता। */
+  try {
+    if (cfg.type === "line") {
+      (cfg.data.datasets || []).forEach((d) => {
+        if (d.fill === false) return;
+        if (typeof d.borderColor === "string" && d.backgroundColor == null) {
+          d.backgroundColor = chartFill(d.borderColor);
+          d.fill = true;
+        }
+        if (d.borderWidth == null) d.borderWidth = 2.5;
+        if (d.pointHoverBackgroundColor == null) d.pointHoverBackgroundColor = d.borderColor;
+        if (d.pointHoverBorderColor == null)
+          d.pointHoverBorderColor = cssVar("--page", "#0B1020");
+      });
+    }
+  } catch (e) { /* चार्ट सजाने में दिक़्क़त हो तो भी चार्ट बनना चाहिए */ }
   charts[id] = new Chart($(id), cfg);
 }
-const gridOpts = { grid: { color: "#2c2c2a" }, border: { color: "#383835" } };
+const gridOpts = {
+  grid: { color: cssVar("--grid", "rgba(255,255,255,.06)"), drawTicks: false },
+  border: { display: false },
+  ticks: { padding: 8 }
+};
 
 /* ── Renders ── */
 function renderAll() {
@@ -3621,7 +3972,7 @@ function renderTiles() {
       color: gfx.C.warn, pct: billPct }),
     gfx.tile({ k: "🧾 बिल दर्ज", v: String(bills.length),
       s: bills.length ? pend.length + " approve बाकी" : "इस अवधि में कोई बिल नहीं",
-      color: "#199e70",
+      color: "#00C48C",
       pct: bills.length ? 100 - (pend.length / bills.length) * 100 : 0 }),
     /* पहले यहाँ pct:70 लिखा था — यानी पट्टी कुछ नाप ही नहीं रही थी, बस
        भरी हुई दिख रही थी। जो चीज़ कुछ नापती नहीं, वह दिखनी नहीं चाहिए:
@@ -3648,7 +3999,7 @@ function renderTiles() {
     // नकद बैंक में कहीं नहीं दिखता — इसलिए उसका अपना अलग अंक, वरना बिल
     // हमेशा अधूरा दिखता रहता और नकद का हिसाब कहीं बैठता ही नहीं
     gfx.tile({ k: "🪙 नकद दिया", v: INR(cash.sum), n: cash.sum,
-      s: cash.n + " बार · बैंक से अलग", color: "#c98500",
+      s: cash.n + " बार · बैंक से अलग", color: "#FFB020",
       pct: outSum ? Math.min(100, (cash.sum / (outSum + cash.sum)) * 100) : 0 })
   ] : []).join("");
   attachTilt();
@@ -3823,9 +4174,9 @@ function renderCharts() {
   mkChart("chDaily", {
     type: "bar",
     data: { labels: days, datasets: [
-      { label: "आया", data: inD, backgroundColor: "#0ca30c",
+      { label: "आया", data: inD, backgroundColor: "#00C48C",
         borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom", maxBarThickness: 12 },
-      { label: "गया", data: outD, backgroundColor: "#d03b3b",
+      { label: "गया", data: outD, backgroundColor: "#FF5A5F",
         borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom", maxBarThickness: 12 }
     ] },
     options: { plugins: { legend: { display: true },
@@ -3852,7 +4203,7 @@ function renderCharts() {
   mkChart("chAccount", {
     type: "doughnut",
     data: { labels: at.labels, datasets: [{ data: at.values,
-      backgroundColor: SERIES.slice(0, at.labels.length), borderColor: "#1a1a19", borderWidth: 2 }] },
+      backgroundColor: SERIES.slice(0, at.labels.length), borderColor: "#12182A", borderWidth: 2 }] },
     options: { cutout: "62%", plugins: { legend: { position: "right" },
       tooltip: { callbacks: { label: c => c.label + ": " + INR(c.raw) } } } }
   });
@@ -3868,10 +4219,15 @@ function renderCharts() {
   mkChart("chStaff", {
     type: "line",
     data: { labels: months, datasets: [
-      { label: "आया", data: months.map(m => byMonth[m].in), borderColor: "#0ca30c",
-        borderWidth: 2, pointRadius: 4, tension: .25, fill: false },
-      { label: "गया", data: months.map(m => byMonth[m].out), borderColor: "#d03b3b",
-        borderWidth: 2, pointRadius: 4, tension: .25, fill: false }
+      /* 🌈 भराव mkChart अपने-आप लगाता है — यहाँ fill:false लिखा था,
+         इसलिए यही एक चार्ट सपाट रह जाता था। बिंदु भी अब छोटे और भरे हुए,
+         खोखले घेरे नहीं। */
+      { label: "आया", data: months.map(m => byMonth[m].in), borderColor: "#00C48C",
+        borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: "#00C48C",
+        pointBorderWidth: 0, tension: .38 },
+      { label: "गया", data: months.map(m => byMonth[m].out), borderColor: "#FF5A5F",
+        borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: "#FF5A5F",
+        pointBorderWidth: 0, tension: .38 }
     ] },
     options: { interaction: { mode: "index", intersect: false },
       plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ": " + INR(c.raw) } } },
@@ -4079,7 +4435,7 @@ function renderPriceItem(p) {
       delta: p.lastRate != null && prev ? pctChange(p.lastRate, prev) : null,
       deltaWhat: "पिछली बार से", color: gfx.C.bill, spark: rates.slice(-14) }),
     gfx.tile({ k: "पिछली 3 का औसत", v: p.avg3Rate != null ? INR(p.avg3Rate) : "—",
-      s: lo != null ? `सबसे सस्ता ₹${lo} · सबसे महँगा ₹${hi}` : "", color: "#199e70",
+      s: lo != null ? `सबसे सस्ता ₹${lo} · सबसे महँगा ₹${hi}` : "", color: "#00C48C",
       pct: p.lastRate != null && hi > lo ? 100 - ((p.lastRate - lo) / (hi - lo)) * 100 : 60 }),
     gfx.tile({ k: "कुल खरीदें", v: String((p.history || []).length),
       s: hist.length ? "आख़िरी " + esc(dayLabel(hist[hist.length - 1].date || "")) : "",
@@ -4094,7 +4450,7 @@ function renderPriceItem(p) {
     data: { labels: hist.map(h => h.date || ""),
       datasets: [{ data: hist.map(h => h.rate), borderColor: SERIES[0], borderWidth: 2,
         pointRadius: 4, pointHoverRadius: 7, pointBackgroundColor: SERIES[0],
-        pointBorderColor: "#1a1a19", pointBorderWidth: 2, tension: 0.25, fill: false }] },
+        pointBorderColor: "#12182A", pointBorderWidth: 2, tension: 0.25, fill: true }] },
     options: { interaction: { mode: "index", intersect: false },
       plugins: { legend: { display: false },
         tooltip: { callbacks: {
@@ -7038,14 +7394,14 @@ function renderRecon(total, allRows) {
   }
   const sum = (a) => a.reduce((x, m) => x + m.t.amount, 0);
   $("rTiles").innerHTML = [
-    ["पढ़ी गईं", String(total), "statement की entries", "#3987e5"],
+    ["पढ़ी गईं", String(total), "statement की entries", "#6C5CE7"],
     ["🆕 नई", String(RECON.matched.length + RECON.maybe.length + RECON.noBill.length +
-      (RECON.credits || []).length), "जुड़ने वाली", "#199e70"],
-    ["🔁 पहले से थीं", String((RECON.dupes || []).length), "दुबारा नहीं जुड़ेंगी", "#898781"],
+      (RECON.credits || []).length), "जुड़ने वाली", "#00C48C"],
+    ["🔁 पहले से थीं", String((RECON.dupes || []).length), "दुबारा नहीं जुड़ेंगी", "#7C88A6"],
     /* 💰 डिब्बे में पूरा अंक कटकर «₹48,95,…» बनता था — न पढ़ा जाता है, न
        अंदाज़ा लगता है। लाख/करोड़ में वही बात एक नज़र में समझ आती है। */
-    ["✅ बिल मिला", INRshort(sum(RECON.matched)), RECON.matched.length + " entries", "#0ca30c"],
-    ["❓ बिल बाकी", INRshort(sum(RECON.noBill)), RECON.noBill.length + " entries", "#d55181"]
+    ["✅ बिल मिला", INRshort(sum(RECON.matched)), RECON.matched.length + " entries", "#00C48C"],
+    ["❓ बिल बाकी", INRshort(sum(RECON.noBill)), RECON.noBill.length + " entries", "#A78BFA"]
   ].map(([k, v, s, c]) => `
     <div class="card tile tilt"><div class="k">${k}</div><div class="v">${v}</div>
       <div class="s">${s}</div><div class="bar"><i style="width:70%;background:${c}"></i></div></div>`).join("");
@@ -9072,19 +9428,19 @@ function parseVyapar(pages) {
 /** विक्रम जी की पाँचों फ़र्म। `pre` = बिल-नंबर में आने वाले उनके कोड। */
 const FIRMS = [
   { id: "vbe", short: "VBE", name: "वंदे भारत इंटरप्राइजेज",
-    en: "VANDE BHARAT ENTERPRISES", pre: ["VBE", "VB"], color: "#3987e5" },
+    en: "VANDE BHARAT ENTERPRISES", pre: ["VBE", "VB"], color: "#6C5CE7" },
   { id: "sh", short: "SH", name: "श्री हिंगलाज इन्फोटेक",
-    en: "SHREE HINGLAJ INFRATECH", pre: ["SH", "SHI", "HINGLAJ"], color: "#d55181" },
+    en: "SHREE HINGLAJ INFRATECH", pre: ["SH", "SHI", "HINGLAJ"], color: "#A78BFA" },
   { id: "bc", short: "BC", name: "बेस्ट चॉइस ट्रेडर",
-    en: "BEST CHOICE TRADER", pre: ["BC", "BCT"], color: "#c98500" },
+    en: "BEST CHOICE TRADER", pre: ["BC", "BCT"], color: "#FFB020" },
   { id: "bi", short: "BI", name: "ब्राइट इंडिया इंटरप्राइजेज",
-    en: "BRIGHT INDIA ENTERPRISES", pre: ["BI", "BIE"], color: "#0ca30c" },
+    en: "BRIGHT INDIA ENTERPRISES", pre: ["BI", "BIE"], color: "#00C48C" },
   { id: "ub", short: "UB", name: "उज्जवल भारत इन्फोटेक",
     en: "UJJWAL BHARAT INFOTECH", pre: ["UB", "UBI"], color: "#8b5cf6" }
 ];
 const firmOf = (id) => FIRMS.filter((f) => f.id === id)[0] || null;
 const firmName = (id) => { const f = firmOf(id); return f ? f.name : "बिना फ़र्म"; };
-const firmColor = (id) => { const f = firmOf(id); return f ? f.color : "#898781"; };
+const firmColor = (id) => { const f = firmOf(id); return f ? f.color : "#7C88A6"; };
 
 /**
  * बिल-नंबर से फ़र्म का अंदाज़ा — «SH/2026-27/08» → श्री हिंगलाज,
@@ -9114,10 +9470,10 @@ function firmFromName(name) {
 
 /** चार काग़ज़ — क्रम वही जो असल ज़िंदगी में है। */
 const VY_PARTS = [
-  { k: "quote", ic: "📐", nm: "कोटेशन", color: "#898781" },
-  { k: "challan", ic: "🚚", nm: "चालान", color: "#3987e5" },
+  { k: "quote", ic: "📐", nm: "कोटेशन", color: "#7C88A6" },
+  { k: "challan", ic: "🚚", nm: "चालान", color: "#6C5CE7" },
   { k: "invoice", ic: "🧾", nm: "इनवॉइस", color: "#8b5cf6" },
-  { k: "payin", ic: "📥", nm: "पेमेंट-इन", color: "#0ca30c" }
+  { k: "payin", ic: "📥", nm: "पेमेंट-इन", color: "#00C48C" }
 ];
 const partOf = (k) => VY_PARTS.filter((p) => p.k === k)[0] || VY_PARTS[1];
 
@@ -9739,7 +10095,7 @@ function renderVyapar() {
   all.forEach((x) => { cnt[x.firmId || ""] = (cnt[x.firmId || ""] || 0) + 1; });
   const live = FIRMS.filter((f) => cnt[f.id]);
   $("vyFirms").innerHTML = (live.length > 1 || cnt[""] ? [{ id: "", name: "सारी फ़र्म",
-      color: "#898781" }].concat(live) : live)
+      color: "#7C88A6" }].concat(live) : live)
     .map((f) => `<button type="button" class="fmB${VY_FIRM === f.id ? " on" : ""}"
       ${VY_FIRM === f.id ? `style="background:${f.color}"` : ""}
       onclick="setVyFirm('${f.id}')">
@@ -9770,16 +10126,16 @@ function renderVyapar() {
 
   $("vyTiles").innerHTML = [
     gfx.tile({ k: "🚚 माल गया", v: INR(chSum), n: chSum,
-      s: by.challan.length + " चालान", color: "#3987e5", pct: 100,
+      s: by.challan.length + " चालान", color: "#6C5CE7", pct: 100,
       onclick: "setVyView('challan')" }),
     gfx.tile({ k: "🧾 बिल बना", v: INR(inSum), n: inSum,
       s: by.invoice.length + " इनवॉइस", color: "#8b5cf6",
       pct: chSum ? (inSum / chSum) * 100 : 0, onclick: "setVyView('invoice')" }),
     gfx.tile({ k: "🔴 बिल बाक़ी", v: INR(gapSum), n: gapSum,
-      s: unbilled.length + " चालान पर", color: "#d03b3b",
+      s: unbilled.length + " चालान पर", color: "#FF5A5F",
       pct: chSum ? (gapSum / chSum) * 100 : 0, onclick: "setVyView('party')" }),
     gfx.tile({ k: "🟢 पैसा आया", v: INR(gotSum), n: gotSum,
-      s: by.payin.length + " पेमेंट-इन", color: "#0ca30c",
+      s: by.payin.length + " पेमेंट-इन", color: "#00C48C",
       pct: inSum ? (gotSum / inSum) * 100 : 0, onclick: "setVyView('payin')" })
   ].join("");
   attachTilt();
@@ -9926,7 +10282,7 @@ function renderVyParties(box) {
       <div class="gapCard${r.gap > 0 ? " hot" : ""}" onclick="openVyParty('${esc(r.key)}')">
         <div class="gapTop">
           <div class="nm">${esc(unitShort(r.party))}<small>${esc(r.party || "")}</small></div>
-          <div class="amt" style="color:${r.gap > 0 ? "#ff9c9c" : "#86e3bf"}">
+          <div class="amt" style="color:${r.gap > 0 ? "#FF9EA1" : "#86e3bf"}">
             ${INR(r.gap || r.due)}<small>${r.gap > 0 ? "का बिल बाक़ी"
               : r.due > 0 ? "पैसा बाक़ी" : "सब पूरा"}</small></div>
         </div>
@@ -9937,9 +10293,9 @@ function renderVyParties(box) {
           ${r.oldest ? `<span>⏳ सबसे पुराना चालान ${vyAge(r.oldest)} दिन</span>` : ""}
         </div>
         <div class="gapBar">
-          <i style="width:${Math.min(100, 100 - gp - dp)}%;background:#0ca30c"></i>
-          <i style="width:${Math.min(100, dp)}%;background:#c98500"></i>
-          <i style="width:${Math.min(100, gp)}%;background:#d03b3b"></i>
+          <i style="width:${Math.min(100, 100 - gp - dp)}%;background:#00C48C"></i>
+          <i style="width:${Math.min(100, dp)}%;background:#FFB020"></i>
+          <i style="width:${Math.min(100, gp)}%;background:#FF5A5F"></i>
         </div>
       </div>`;
     }).join("");
@@ -11451,7 +11807,7 @@ function pbChart(rows) {
   const y = (n) => H - PAD - ((n - lo) / span) * (H - PAD * 2);
   const line = v.map((n, i) => `${x(i).toFixed(1)},${y(n).toFixed(1)}`).join(" ");
   const up = v[v.length - 1] >= v[0];
-  const col = up ? "#0ca30c" : "#d03b3b";
+  const col = up ? "#00C48C" : "#FF5A5F";
   const u = "pb" + Math.random().toString(36).slice(2, 7);
   const zero = y(0);
   const loI = v.indexOf(Math.min(...v)), hiI = v.indexOf(Math.max(...v));
@@ -11467,8 +11823,8 @@ function pbChart(rows) {
         stroke-width="1" stroke-dasharray="3 3" opacity=".7"/>
       <polyline points="${line}" fill="none" stroke="${col}" stroke-width="2"
         stroke-linejoin="round" stroke-linecap="round"/>
-      <circle cx="${x(hiI)}" cy="${y(v[hiI])}" r="2.6" fill="#0ca30c"/>
-      <circle cx="${x(loI)}" cy="${y(v[loI])}" r="2.6" fill="#d03b3b"/>
+      <circle cx="${x(hiI)}" cy="${y(v[hiI])}" r="2.6" fill="#00C48C"/>
+      <circle cx="${x(loI)}" cy="${y(v[loI])}" r="2.6" fill="#FF5A5F"/>
     </svg>
     <div class="pbChartFoot">
       <span class="lo">सबसे नीचे ${INR(Math.min(...v))}</span>
@@ -11673,7 +12029,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "eefdceac29c6";
+const APP_BUILD = "e8024ca3d85d";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -12452,7 +12808,7 @@ function renderRepeat() {
       s: "यही रफ़्तार रही तो", color: gfx.C.warn, pct: 80 }),
     gfx.tile({ k: "🔴 देर हो गई", v: String(lateOnes.length),
       s: lateOnes.length ? "इनका पैसा अटका है" : "एक भी नहीं",
-      color: lateOnes.length ? gfx.C.out : "#199e70",
+      color: lateOnes.length ? gfx.C.out : "#00C48C",
       pct: firm.length ? 100 - (lateOnes.length / firm.length) * 100 : 100 })
   ].join("");
 
@@ -12700,8 +13056,8 @@ function showParty(key) {
         <span style="margin-top:3px">आख़िरी ${esc(dayLabel(p.last) || "—")}</span></div>
     </div>
     <div class="muted" style="margin-bottom:10px">📅 चुनी अवधि में —
-      <b style="color:#ff9d9d">${INR(outSum)}</b> गया ·
-      <b style="color:#7de07d">${INR(inSum)}</b> आया · ${rows.length} बार</div>
+      <b style="color:#FF9EA1">${INR(outSum)}</b> गया ·
+      <b style="color:#6FE3B8">${INR(inSum)}</b> आया · ${rows.length} बार</div>
     ${noBill ? `<div class="badge lo" style="margin-bottom:10px">⚠️ ${noBill} पेमेंट का बिल अभी बाकी है</div>` : ""}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
       <button type="button" class="primary mini" onclick="openPay('${esc(p.name)}')">💸 पेमेंट करें</button>
@@ -13210,7 +13566,7 @@ function rangeSummary() {
     : "पूरा हिसाब";
   if (!rows.length && !bills) return `📅 <b>${when}</b> · इस अवधि में कुछ नहीं`;
   return `📅 <b>${when}</b> · ${rows.length} entries · ` +
-    `<b style="color:#d03b3b">${INR(out)}</b> गए · <b style="color:#0ca30c">${INR(inn)}</b> आए` +
+    `<b style="color:#FF5A5F">${INR(out)}</b> गए · <b style="color:#00C48C">${INR(inn)}</b> आए` +
     (bills ? ` · ${bills} बिल` : "");
 }
 
@@ -13848,7 +14204,7 @@ function toast(text) {
     el = document.createElement("div");
     el.id = "toast";
     el.style.cssText = "position:fixed;left:50%;bottom:26px;transform:translateX(-50%);" +
-      "background:#222221;border:1px solid rgba(255,255,255,.14);color:#f0efe7;" +
+      "background:#171F34;border:1px solid rgba(255,255,255,.14);color:#f0efe7;" +
       "padding:11px 18px;border-radius:14px;font-size:13px;z-index:90;max-width:90vw;" +
       "box-shadow:0 10px 30px rgba(0,0,0,.5)";
     document.body.appendChild(el);
@@ -14542,7 +14898,7 @@ const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const gfx = {
   /** पाँच रंग, पाँच मतलब — इसके बाहर कोई रंग नहीं। */
-  C: { in: "#0ca30c", out: "#d03b3b", bill: "#3987e5", warn: "#c98500", ai: "#d55181" },
+  C: { in: "#00C48C", out: "#FF5A5F", bill: "#6C5CE7", warn: "#FFB020", ai: "#A78BFA" },
 
   /* 🅰️ नाम का गोल चिह्न ─────────────────────────────────────────────
      हर आदमी के नाम के दो अक्षर, और नाम से ही तय हुआ अपना रंग। रंग नाम के
@@ -14735,56 +15091,56 @@ const gfx = {
         <ellipse cx="29" cy="78" rx="5.5" ry="4.5" fill="#e0aa7d"/>
         <ellipse cx="67" cy="78" rx="5.5" ry="4.5" fill="#e0aa7d"/>
         <path d="M31 76 h16 v13 h-16 z" fill="#2c6fbb"/>
-        <path d="M49 76 h16 v13 h-16 z" fill="#3987e5"/>
+        <path d="M49 76 h16 v13 h-16 z" fill="#6C5CE7"/>
         <path d="M47 75 q1 1.5 0 3 v13 q1-1.5 2-1.5 v-13 q-1 0-2-1.5z" fill="#e8eef7"/>
         <path d="M34 80 h10 M34 84 h8 M52 80 h10 M52 84 h7" stroke="#cfe0f5"
           stroke-width="1.3" stroke-linecap="round" opacity=".75"/></g>`,
       // 🤔 ठोड़ी पर हाथ
       hand: `<g>
-        <path d="M64 92 q4-14 -3-22" stroke="#e6e0d0" stroke-width="7"
+        <path d="M64 92 q4-14 -3-22" stroke="#F3F5FB" stroke-width="7"
           fill="none" stroke-linecap="round"/>
         <ellipse cx="57" cy="68" rx="7.5" ry="6.5" fill="#e0aa7d"/>
         <path d="M51 66.5 q6-2.5 12 0 M51.5 70 q6-2 11 0" stroke="#c98f6a"
           stroke-width="1.3" fill="none" stroke-linecap="round"/></g>`,
       // ☝️ उठी हुई उँगली
       point: `<g>
-        <path d="M72 92 q10-8 8-24" stroke="#e6e0d0" stroke-width="7"
+        <path d="M72 92 q10-8 8-24" stroke="#F3F5FB" stroke-width="7"
           fill="none" stroke-linecap="round"/>
         <ellipse cx="80" cy="64" rx="6.5" ry="7" fill="#e0aa7d"/>
         <rect x="77.5" y="46" width="5" height="16" rx="2.5" fill="#e0aa7d"/>
-        <circle cx="80" cy="40" r="4" fill="#fab219"/>
-        <circle cx="80" cy="40" r="7.5" fill="none" stroke="#fab219"
+        <circle cx="80" cy="40" r="4" fill="#FFB020"/>
+        <circle cx="80" cy="40" r="7.5" fill="none" stroke="#FFB020"
           stroke-width="1.5" opacity=".5"/></g>`,
       // 🎉 दोनों हाथ ऊपर
       cheer: `<g>
-        <path d="M30 90 q-14-8 -14-30" stroke="#e6e0d0" stroke-width="7"
+        <path d="M30 90 q-14-8 -14-30" stroke="#F3F5FB" stroke-width="7"
           fill="none" stroke-linecap="round"/>
-        <path d="M66 90 q14-8 14-30" stroke="#e6e0d0" stroke-width="7"
+        <path d="M66 90 q14-8 14-30" stroke="#F3F5FB" stroke-width="7"
           fill="none" stroke-linecap="round"/>
         <ellipse cx="16" cy="56" rx="6.5" ry="7" fill="#e0aa7d"/>
         <ellipse cx="80" cy="56" rx="6.5" ry="7" fill="#e0aa7d"/>
-        <g fill="#fab219"><circle cx="10" cy="34" r="2.6"/><circle cx="86" cy="32" r="2.2"/>
+        <g fill="#FFB020"><circle cx="10" cy="34" r="2.6"/><circle cx="86" cy="32" r="2.2"/>
           <circle cx="48" cy="8" r="2.4"/></g>
-        <g fill="#d55181"><circle cx="24" cy="18" r="2"/><circle cx="72" cy="18" r="2.4"/></g>
-        <g fill="#199e70"><circle cx="6" cy="46" r="1.8"/><circle cx="90" cy="44" r="1.8"/></g></g>`,
+        <g fill="#A78BFA"><circle cx="24" cy="18" r="2"/><circle cx="72" cy="18" r="2.4"/></g>
+        <g fill="#00C48C"><circle cx="6" cy="46" r="1.8"/><circle cx="90" cy="44" r="1.8"/></g></g>`,
       // 👋 हाथ हिलाकर नमस्ते
       wave: `<g>
-        <path d="M68 90 q14-6 15-26" stroke="#e6e0d0" stroke-width="7"
+        <path d="M68 90 q14-6 15-26" stroke="#F3F5FB" stroke-width="7"
           fill="none" stroke-linecap="round"/>
         <ellipse cx="83" cy="60" rx="7" ry="7.5" fill="#e0aa7d"/>
         <path d="M78 55 v-9 M83 54 v-11 M88 56 v-8" stroke="#e0aa7d"
           stroke-width="3.4" stroke-linecap="round"/>
-        <path d="M74 46 q-3-5 -1-9 M92 44 q3-5 1-9" stroke="#fab219"
+        <path d="M74 46 q-3-5 -1-9 M92 44 q3-5 1-9" stroke="#FFB020"
           stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".8"/>
         <ellipse cx="29" cy="80" rx="5.5" ry="4.5" fill="#e0aa7d"/></g>`,
       // 🔍 लेंस लिए हुए — कुछ खोज रहे हैं
       lens: `<g>
-        <path d="M66 92 q10-6 12-18" stroke="#e6e0d0" stroke-width="7"
+        <path d="M66 92 q10-6 12-18" stroke="#F3F5FB" stroke-width="7"
           fill="none" stroke-linecap="round"/>
         <ellipse cx="78" cy="72" rx="7" ry="6.5" fill="#e0aa7d"/>
         <circle cx="80" cy="50" r="12" fill="#bcd8f5" opacity=".35"/>
-        <circle cx="80" cy="50" r="12" fill="none" stroke="#8ab4e8" stroke-width="3.2"/>
-        <path d="M74 60 l-4 8" stroke="#8ab4e8" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="80" cy="50" r="12" fill="none" stroke="#A99BF5" stroke-width="3.2"/>
+        <path d="M74 60 l-4 8" stroke="#A99BF5" stroke-width="5" stroke-linecap="round"/>
         <path d="M73 45 q4-5 9-4" stroke="#fff" stroke-width="2"
           fill="none" stroke-linecap="round" opacity=".7"/>
         <ellipse cx="29" cy="80" rx="5.5" ry="4.5" fill="#e0aa7d"/></g>`,
@@ -14793,21 +15149,21 @@ const gfx = {
         <ellipse cx="28" cy="79" rx="5.5" ry="4.5" fill="#e0aa7d"/>
         <ellipse cx="68" cy="79" rx="5.5" ry="4.5" fill="#e0aa7d"/>
         <rect x="29" y="72" width="38" height="23" rx="3" fill="#f4efe4"/>
-        <rect x="29" y="72" width="38" height="6" rx="3" fill="#3987e5"/>
+        <rect x="29" y="72" width="38" height="6" rx="3" fill="#6C5CE7"/>
         <circle cx="36" cy="85" r="4" fill="#d0c6b2"/>
         <path d="M43 82 h19 M43 86 h15 M43 90 h11" stroke="#b6ab95"
           stroke-width="1.6" stroke-linecap="round"/></g>`,
       // 🧹 झाड़ू — दोहरी entry की सफ़ाई
       broom: `<g>
         <ellipse cx="28" cy="79" rx="5.5" ry="4.5" fill="#e0aa7d"/>
-        <path d="M70 92 q10-8 9-22" stroke="#e6e0d0" stroke-width="7"
+        <path d="M70 92 q10-8 9-22" stroke="#F3F5FB" stroke-width="7"
           fill="none" stroke-linecap="round"/>
         <ellipse cx="79" cy="68" rx="6.5" ry="6" fill="#e0aa7d"/>
         <path d="M79 66 L83 32" stroke="#a9762f" stroke-width="3.4" stroke-linecap="round"/>
         <path d="M77 34 q6-5 12-1 l-3 12 q-6 3-12-1z" fill="#d8a441"/>
         <path d="M79 36 v10 M83 35 v11 M87 36 v10" stroke="#b07f22"
           stroke-width="1.2" stroke-linecap="round"/>
-        <g fill="#8ab4e8" opacity=".7"><circle cx="20" cy="42" r="1.8"/>
+        <g fill="#A99BF5" opacity=".7"><circle cx="20" cy="42" r="1.8"/>
           <circle cx="14" cy="52" r="1.4"/><circle cx="24" cy="33" r="1.3"/></g></g>`,
       // 🏦 पासबुक — दोनों हाथों में खुली हुई, हरा और लाल पन्ना
       pass: `<g>
@@ -14820,12 +15176,12 @@ const gfx = {
           stroke-width="1.3" stroke-linecap="round" opacity=".85"/>
         <path d="M53 79 h9 M53 83 h6 M53 87 h8" stroke="#ffb0b0"
           stroke-width="1.3" stroke-linecap="round" opacity=".85"/>
-        <path d="M35 70 l3-4 3 4" stroke="#0ca30c" stroke-width="2"
+        <path d="M35 70 l3-4 3 4" stroke="#00C48C" stroke-width="2"
           fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M56 66 l3 4 3-4" stroke="#d03b3b" stroke-width="2"
+        <path d="M56 66 l3 4 3-4" stroke="#FF5A5F" stroke-width="2"
           fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>`,
       // 💤 सो रहे हैं
-      zzz: `<g fill="#8ab4e8" opacity=".9" font-family="system-ui"
+      zzz: `<g fill="#A99BF5" opacity=".9" font-family="system-ui"
           font-weight="700" text-anchor="middle">
         <text x="76" y="32" font-size="13">z</text>
         <text x="85" y="21" font-size="9.5">z</text>
@@ -14834,12 +15190,12 @@ const gfx = {
       coins: `<g>
         <ellipse cx="26" cy="76" rx="5.5" ry="4.5" fill="#e0aa7d"/>
         <ellipse cx="70" cy="76" rx="5.5" ry="4.5" fill="#e0aa7d"/>
-        <ellipse cx="48" cy="87" rx="16" ry="5" fill="#c98500"/>
-        <ellipse cx="48" cy="82" rx="14" ry="4.5" fill="#fab219"/>
+        <ellipse cx="48" cy="87" rx="16" ry="5" fill="#FFB020"/>
+        <ellipse cx="48" cy="82" rx="14" ry="4.5" fill="#FFB020"/>
         <ellipse cx="48" cy="77.5" rx="11" ry="4" fill="#ffd166"/>
-        <circle cx="20" cy="64" r="4.5" fill="#fab219"/>
+        <circle cx="20" cy="64" r="4.5" fill="#FFB020"/>
         <circle cx="78" cy="61" r="3.6" fill="#ffd166"/>
-        <circle cx="88" cy="72" r="2.6" fill="#fab219" opacity=".8"/></g>`
+        <circle cx="88" cy="72" r="2.6" fill="#FFB020" opacity=".8"/></g>`
     };
 
     return `<svg class="toon" viewBox="0 0 96 96" width="${S}" height="${S}"
@@ -14847,14 +15203,14 @@ const gfx = {
       <defs>
         <linearGradient id="sf${u}" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stop-color="#f2a93b"/><stop offset=".55" stop-color="#e0713f"/>
-          <stop offset="1" stop-color="#d55181"/>
+          <stop offset="1" stop-color="#A78BFA"/>
         </linearGradient>
         <linearGradient id="kt${u}" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#f4f1e8"/><stop offset="1" stop-color="#d9d3c2"/>
         </linearGradient>
         <radialGradient id="gl${u}" cx=".5" cy=".5" r=".5">
-          <stop offset="0" stop-color="#3987e5" stop-opacity=".30"/>
-          <stop offset="1" stop-color="#3987e5" stop-opacity="0"/>
+          <stop offset="0" stop-color="#6C5CE7" stop-opacity=".30"/>
+          <stop offset="1" stop-color="#6C5CE7" stop-opacity="0"/>
         </radialGradient>
       </defs>
 
@@ -18607,7 +18963,7 @@ function openCoverage() {
           <small>${c.n.toLocaleString("en-IN")} पंक्तियाँ</small></div>
         <div class="muted" style="font-size:11.5px;margin-bottom:9px">
           ${esc(dayLabel(c.from))} → ${esc(dayLabel(c.to))}${
-          c.gaps ? ` · <b style="color:#ff9c9c">${c.gaps} महीना ख़ाली</b>` : ""}</div>
+          c.gaps ? ` · <b style="color:#FF9EA1">${c.gaps} महीना ख़ाली</b>` : ""}</div>
         <div class="covGrid">${c.list.map((m) => `
           <div class="covM ${m.n ? "has" : "gap"}">
             <b>${m.n || "—"}</b><small>${m.label}</small></div>`).join("")}</div>
