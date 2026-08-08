@@ -11393,7 +11393,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "f7558954f6ff";
+const APP_BUILD = "6e05f01d2944";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -14672,10 +14672,55 @@ const gfx = {
   photo(url, alt) {
     if (!url) return `<div class="thx" title="फोटो नहीं">🧾</div>`;
     return `<img class="th" src="${esc(this.imgUrl(url))}" alt="${esc(alt || "")}" loading="lazy"
-      onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'thx',textContent:'🧾'}))"
+      onerror="driveImgFallback(this, '${esc(url)}')"
       onclick="event.stopPropagation();lightbox('${esc(url)}')">`;
   }
 };
+
+/* ══════════ 🔒 फ़ोटो का दूसरा रास्ता ═════════════════════════════════
+
+   ऑडिट में निकला कि ऐप से Drive पर चढ़ने वाली **हर** फ़ाइल «link वाला कोई
+   भी देख सकता है» पर सेट थी — बिल की फ़ोटो भी, और बैंक की असली statement
+   भी। वह लकीर हटा दी गई (Main.gs देखें)।
+
+   पर उसका एक असर है: Drive का सीधा thumbnail अब सिर्फ़ तभी आता है जब
+   browser विक्रम जी की Google वाली cookie साथ भेजे। कुछ browser तीसरे
+   पक्ष की cookie रोक देते हैं — तब तस्वीर की जगह टूटा icon आ जाता।
+
+   निजता के लिए तस्वीर गँवाना कोई सौदा नहीं है, इसलिए दूसरा रास्ता है:
+   फ़ाइल bot से माँग ली जाती है — वही रास्ता जिस पर token और «VBE फ़ोल्डर
+   के अंदर ही» दोनों पहरे लगे हैं (driveFetch_)।
+
+   🧠 एक बार लाई हुई तस्वीर याद रख ली जाती है, ताकि वही सूची दुबारा बनने
+      पर bot से दुबारा न माँगनी पड़े।                                    */
+
+const DRIVE_IMG = {};             // file id → dataUrl (इसी सत्र के लिए)
+const DRIVE_IMG_BAD = {};         // जो सचमुच नहीं आई — बार-बार मत माँगो
+
+function driveIdOf(url) {
+  const m = String(url || "").match(/\/d\/([A-Za-z0-9_-]{20,})/) ||
+            String(url || "").match(/[?&]id=([A-Za-z0-9_-]{20,})/);
+  return m ? m[1] : null;
+}
+
+const driveBroken = (img) => {
+  if (!img || !img.replaceWith) return;
+  img.replaceWith(Object.assign(document.createElement("div"),
+    { className: "thx", textContent: "🧾" }));
+};
+
+async function driveImgFallback(img, url) {
+  const id = driveIdOf(url);
+  if (!id || DRIVE_IMG_BAD[id]) return driveBroken(img);
+  if (DRIVE_IMG[id]) { img.src = DRIVE_IMG[id]; return; }
+  img.removeAttribute("onerror");            // दुबारा यहीं मत लौटो
+  try {
+    const r = await botCall("fetch", { id });
+    if (r && r.ok && r.dataUrl) { DRIVE_IMG[id] = r.dataUrl; img.src = r.dataUrl; return; }
+  } catch (e) { /* नीचे वाला icon ही सही */ }
+  DRIVE_IMG_BAD[id] = 1;
+  driveBroken(img);
+}
 
 function lightbox(url) {
   let el = $("lightbox");
@@ -14686,7 +14731,8 @@ function lightbox(url) {
     document.body.appendChild(el);
   }
   el.innerHTML = `<button type="button" class="x">✕</button>` +
-    `<img src="${esc(gfx.imgUrl(url, true))}">` +
+    `<img src="${esc(gfx.imgUrl(url, true))}"` +
+    ` onerror="driveImgFallback(this, '${esc(url)}')">` +
     `<a class="badge" style="position:absolute;bottom:16px;padding:9px 16px"
         href="${esc(url)}" target="_blank" rel="noopener">↗️ Drive में खोलें</a>`;
   el.hidden = false;
@@ -17012,6 +17058,66 @@ function driveOrphans() {
     /^(image\/|application\/pdf)/.test(String(f.mime || "")));
 }
 
+/* ══════════ 🔒 «link वाला कोई भी» — ताला लगाइए ═════════════════════
+
+   ऐप से Drive पर चढ़ने वाली हर फ़ाइल पहले «link वाला कोई भी देख सकता है»
+   पर सेट होती थी — बिल की फ़ोटो भी, और **बैंक की असली statement भी।**
+   वह लकीर हट चुकी है, इसलिए आगे से सब निजी चढ़ेगी।
+
+   पर जो पहले चढ़ चुकी हैं वे आज भी खुली पड़ी हैं, और Drive का लिंक कभी
+   बदलता नहीं — यानी वे अपने-आप कभी बंद नहीं होंगी। यह बटन उन्हीं के लिए
+   है। bot ख़ुद VBE-Bills में घूमकर हर खुली फ़ाइल बंद कर देता है; कुछ
+   मिटता नहीं, नाम भी नहीं बदलता।                                       */
+
+let LOCK_BUSY = false, LOCK_RES = null;
+
+function lockCard() {
+  if (LOCK_BUSY) {
+    return gfx.insight({ icon: "🔒", tone: "warn", title: "ताला लगा रहा हूँ…",
+      body: "bot पूरे VBE-Bills में घूम रहा है। आधा मिनट लग सकता है।" });
+  }
+  if (LOCK_RES && LOCK_RES.ok) {
+    const r = LOCK_RES;
+    return gfx.insight({ icon: "✅", tone: "down",
+      title: r.closed ? `${r.closed} फ़ाइलों पर ताला लग गया` : "सब पहले से बंद थीं",
+      body: `${r.checked} फ़ाइलें देखीं · ${r.already} पहले से निजी` +
+        (r.failed ? ` · ${r.failed} पर नहीं लगा` : "") +
+        (r.samples && r.samples.length
+          ? `<br><span class="muted">जैसे: ${r.samples.slice(0, 4).map(esc).join(" · ")}</span>`
+          : "") });
+  }
+  if (LOCK_RES && LOCK_RES.error) {
+    return gfx.insight({ icon: "⚠️", tone: "up", title: "ताला नहीं लगा",
+      body: esc(LOCK_RES.error) + `<br><button type="button" class="mini primary"
+        onclick="runDriveLock()">🔄 फिर कोशिश करें</button>` });
+  }
+  return gfx.insight({ icon: "🔒", tone: "warn",
+    title: "पुरानी फ़ाइलें «लिंक वाला कोई भी» पर पड़ी हो सकती हैं",
+    body: `ऐप से चढ़ी हर फ़ाइल पहले खुली रहती थी — <b>बैंक की statement भी</b>।
+      अब ऐसा नहीं होता, पर <b>पुरानी फ़ाइलें अपने-आप बंद नहीं होंगी</b>,
+      क्योंकि Drive का लिंक कभी बदलता नहीं।
+      <br><button type="button" class="mini primary" style="margin-top:9px"
+        onclick="runDriveLock()">🔒 सब पर ताला लगा दीजिए</button>
+      <br><span class="muted">कुछ मिटेगा नहीं, नाम भी नहीं बदलेगा — सिर्फ़
+      «कौन देख सकता है» बदलेगा।</span>` });
+}
+
+async function runDriveLock() {
+  if (LOCK_BUSY) return;
+  LOCK_BUSY = true; LOCK_RES = null; renderDriveClean();
+  try {
+    const r = await botCall("drivelock", { max: 3000 });
+    LOCK_RES = (r && r.ok) ? r
+      : { error: (r && r.error) || "जवाब नहीं आया" };
+    if (LOCK_RES.ok) await auditLog("drive_lockdown", null,
+      { checked: r.checked, closed: r.closed });
+  } catch (e) {
+    LOCK_RES = { error: e.message };
+  } finally {
+    LOCK_BUSY = false; renderDriveClean();
+  }
+}
+
 function renderDriveClean() {
   const box = $("dcBody");
   if (!box) return;
@@ -17052,7 +17158,7 @@ function renderDriveClean() {
   const dupes = DC.dupes || [];
   const files = DC.files || [];
 
-  box.innerHTML = `
+  box.innerHTML = lockCard() + `
     <div class="bahiTop">
       <div><div class="bk">📁 फ़ाइलें</div><div class="bv">${files.length}</div>
         <div class="bs">${DC.folders} फ़ोल्डर${DC.capped ? " · और भी हैं" : ""}</div></div>
