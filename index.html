@@ -13149,7 +13149,11 @@ function renderPass() {
     const dout = rows.filter((r) => r.t.type === "debit");
     const dinSum = din.reduce((a, r) => a + (r.t.amount || 0), 0);
     const doutSum = dout.reduce((a, r) => a + (r.t.amount || 0), 0);
+    /* 🔗 दिन के अंत की बची रकम **पुराने-से-नए** वाले क्रम की आख़िरी
+       पंक्ति से आती है — यह अंक है, सजावट नहीं, इसलिए इसे उलटने से पहले
+       ही निकाल लिया जाता है। */
     const endB = rows[rows.length - 1].bal;
+    const newFirst = (a) => a.slice().reverse();
     const net = dinSum - doutSum;
     return `
     <div class="pbDay">
@@ -13158,9 +13162,9 @@ function renderPass() {
         ${endB == null ? "" : `<span>दिन के अंत में <b>${INR(endB)}</b></span>`}
       </div>
       ${din.length ? `<div class="pbSec in"><div class="pbSecHead">🟢 आया</div>
-        ${din.map((r) => pbRow(r, "in")).join("")}</div>` : ""}
+        ${newFirst(din).map((r) => pbRow(r, "in")).join("")}</div>` : ""}
       ${dout.length ? `<div class="pbSec out"><div class="pbSecHead">🔴 गया</div>
-        ${dout.map((r) => pbRow(r, "out")).join("")}</div>` : ""}
+        ${newFirst(dout).map((r) => pbRow(r, "out")).join("")}</div>` : ""}
       <div class="pbDayFoot">
         <div class="pbMeter">
           ${dinSum ? `<i class="i" style="width:${(dinSum / biggest) * 100}%"></i>` : ""}
@@ -13413,7 +13417,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "0e7ca8ca70df";
+const APP_BUILD = "edbd439ea1c3";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -19436,8 +19440,20 @@ function bahiUtrAudit(rows) {
     if (seen[r.utr]) dupes.push({ utr: r.utr, a: seen[r.utr], b: r });
     else seen[r.utr] = r;
   });
-  return { n: out.length, withUtr, dupes,
-    pct: out.length ? Math.round((withUtr / out.length) * 100) : 100 };
+  /* 🩸 उनकी स्क्रीन पर लिखा आया: «1287 / 1290 गए हुए पेमेंट पर UTR है
+     (100%)» — जबकि तीन पर था ही नहीं। Math.round ने 99.77 को 100 बना
+     दिया।
+
+     एक बैंकिंग ऐप में «100%» का मतलब **सब** होता है। 99.77 को 100 लिखना
+     छोटी बात नहीं — वह आदमी को यह भरोसा दिला देता है कि कुछ बचा ही नहीं,
+     जबकि नीचे उसी पन्ने पर लिखा है कि तीन बचे हैं। ऐप का ख़ुद से उलटा
+     बोलना सबसे बुरा है।
+
+     इसलिए अब नीचे की तरफ़ गिना जाता है — 100 सिर्फ़ तब, जब सचमुच सब हों। */
+  const pct = !out.length ? 100
+    : withUtr === out.length ? 100
+    : Math.min(99, Math.floor((withUtr / out.length) * 100));
+  return { n: out.length, withUtr, dupes, pct };
 }
 
 /* 💰 बहीखाते की जंज़ीर वाली पंक्ति में **पैसे भी** दिखने चाहिए। बाक़ी ऐप में
@@ -19475,9 +19491,21 @@ function renderBahi() {
       "ऊपर की तारीख़-पट्टी से दूसरी अवधि चुन लीजिए, या इस खाते की statement डाल दीजिए।");
     return;
   }
+  /* 🔃 विक्रम जी: «खाते में सबसे लेटेस्ट चीज़ ऊपर नज़र आनी चाहिए, जबकि वह
+     सबसे नीचे नज़र आ रही है और सबसे पुरानी चीज़ सबसे ऊपर — यह बड़ी दिक़्क़त है।»
+
+     बात बिल्कुल सही। हिसाब **बनाते** वक़्त पुराने से नए की तरफ़ चलना पड़ता
+     है (बची रकम की जंज़ीर उसी क्रम से बनती है), पर **देखते** वक़्त आदमी को
+     हमेशा «अभी क्या हुआ» चाहिए — 1,290 पंक्तियों में सबसे नीचे तक स्क्रॉल
+     करके आज का सौदा ढूँढना किसी काम का नहीं।
+
+     🛑 इसलिए क्रम सिर्फ़ **दिखाने** के लिए उलटा किया जाता है। जोड़, जंज़ीर
+        और ओपनिंग→क्लोज़िंग वाली जाँच उसी पुराने-से-नए क्रम पर चलती है —
+        उसे छूने से हिसाब ही बिगड़ जाता।                                  */
   const rows = all.map(bahiRow);
-  const ins = rows.filter((r) => r.t.type === "credit");
-  const outs = rows.filter((r) => r.t.type !== "credit");
+  const newFirst = (a) => a.slice().reverse();
+  const ins = newFirst(rows.filter((r) => r.t.type === "credit"));
+  const outs = newFirst(rows.filter((r) => r.t.type !== "credit"));
   const sum = (a) => a.reduce((x, r) => x + (r.t.amount || 0), 0);
   const inSum = sum(ins), outSum = sum(outs);
   const aud = pbAudit(acc), op = pbOpening(acc);
@@ -19526,12 +19554,12 @@ function renderBahi() {
     </div>
 
     <div class="bahiSec">🔴 जो पैसा गया <small>${outs.length} पंक्तियाँ ·
-      ${INR(outSum)}</small></div>
+      ${INR(outSum)} · नया सबसे ऊपर</small></div>
     ${outs.length ? outs.map(bahiCard).join("")
       : `<div class="muted">इस अवधि में कुछ नहीं गया।</div>`}
 
     <div class="bahiSec">🟢 जो पैसा आया <small>${ins.length} पंक्तियाँ ·
-      ${INR(inSum)}</small></div>
+      ${INR(inSum)} · नया सबसे ऊपर</small></div>
     ${ins.length ? ins.map(bahiCard).join("")
       : `<div class="muted">इस अवधि में कुछ नहीं आया।</div>`}`;
 }
