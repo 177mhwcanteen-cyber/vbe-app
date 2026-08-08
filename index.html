@@ -1896,6 +1896,16 @@
        बहीखाता बैंक वाले टैब से खुलता है, यानी पर्दा वहीं से बुलाया जाता है। -->
   <!-- 🔔 क्या-क्या अधूरा है -->
   <!-- 🪪 पार्टी Master -->
+  <!-- 🪪 जिनका नाम अधूरा है -->
+  <div id="snSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:560px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>🪪 नाम पूरे कीजिए</h3>
+        <button class="x" onclick="closeSheet('snSheet')">✕</button></div>
+      <div id="snBody"></div>
+    </div>
+  </div>
+
   <!-- 🧠 पैसों की सलाह -->
   <div id="adSheet" class="sheet" hidden>
     <div class="sheetBox" style="max-width:560px">
@@ -3466,6 +3476,13 @@ function renderStamp() {
   const box = $("meStamp");
   if (!box) return;
   box.innerHTML = `
+    <div class="stampRow" onclick="closeSheet('meSheet');openShortNames()"
+         style="cursor:pointer">
+      <span style="font-size:17px">🪪</span>
+      <div style="flex:1;min-width:0">नाम पूरे कीजिए
+        <div class="muted">बैंक जहाँ नाम काट देता है, वहाँ पूरा नाम जोड़िए</div></div>
+      <span style="color:var(--muted)">›</span>
+    </div>
     <div class="stampRow" onclick="closeSheet('meSheet');openAdvice()"
          style="cursor:pointer">
       <span style="font-size:17px">🧠</span>
@@ -11673,7 +11690,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "0c3478d5ce23";
+const APP_BUILD = "7bd827a22b93";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -18153,6 +18170,225 @@ async function unlinkBank(btn) {
 
 
 
+
+/* ══════════ 🪪 कटा हुआ नाम पूरा करो ═══════════════════════════════════
+
+   विक्रम जी: «सबसे महत्वपूर्ण चीज़ — हर व्यक्ति का नाम पक्का होना चाहिए।
+   किस व्यक्ति का आया, उसके लिए अलग कॉलम बनाया गया था, उसमें नाम ज़रूर
+   जाना चाहिए। पार्टी ने पेमेंट किया है, या किसी पार्टी को पेमेंट किया है —
+   उस पार्टी का नाम पक्का आना चाहिए।»
+
+   उनकी दोनों असली फ़ाइलों पर नापकर देखा:
+
+       AU  (999 पंक्तियाँ) — बिना नाम **0**              ✅
+       SBI ( 31 पंक्तियाँ) — बिना नाम 4, और बाक़ी **कटे** ❌
+
+   SBI की PDF में विवरण का खाना छोटा है और बैंक नाम वहीं **काट देता है** —
+   आगे कुछ छपता ही नहीं:
+
+       CHQ TRFR FROM 0012523545173 OF STN HQ      ← «JALIPA» है ही नहीं
+       CHQ TRFR FROM 0042953593968 OF HQ 110      ← «ARMD BDE» है ही नहीं
+
+   यानी यह पढ़ने की ग़लती नहीं है — काग़ज़ पर ही अधूरा है। इसलिए इलाज भी
+   पढ़ने में नहीं, **जोड़ने में** है: ऐप के पास पूरे नाम पहले से मौजूद हैं —
+   व्यापार की पार्टियों में, संपर्क में, और दूसरी statement की पंक्तियों में।
+
+       «HQ 110»  +  «CDR SIR ,Hq 110 Armd Bde»   →   पूरा नाम मिल गया
+
+   🛑 और वही पुराना पक्का नियम: **दो दावेदार हों तो कुछ मत मानो।** एक ही
+      नाम मिले तभी जोड़ो, वरना विक्रम जी से पूछो। ग़लत नाम जोड़ने से दो अलग
+      पार्टियों का हिसाब एक हो जाता है — वह न मिलने से कहीं बुरा है।     */
+
+/** जो पूरे नाम ऐप के पास पहले से हैं — सबसे भरोसेमंद पहले। */
+function nameSources() {
+  const out = [];
+  const add = (nm, src) => {
+    const t = String(nm || "").trim();
+    if (t.length < 4 || t.split(/\s+/).length < 2) return;   // एक शब्द «पूरा» नहीं
+    out.push({ name: t, key: pKey(t), src });
+  };
+  try { vyParties("").forEach((x) => add(x.party, "व्यापार")); } catch (e) {}
+  try { (VYP && VYP.names ? Object.values(VYP.names) : []).forEach(
+    (nm) => add(nm, "पार्टी Master")); } catch (e) {}
+  try { Object.values(CONTACTS || {}).forEach((c) => add(c && c.name, "संपर्क")); } catch (e) {}
+  try { FIRMS.forEach((f) => { add(f.name, "अपनी फ़र्म"); add(f.en, "अपनी फ़र्म"); }); } catch (e) {}
+  /* 📚 और सबसे क़ीमती — दूसरी statement की पंक्तियाँ। AU वाली फ़ाइल में
+     नाम पूरे आते हैं, SBI वाली में कटे — इसलिए एक फ़ाइल दूसरी को सुधार
+     देती है। सिर्फ़ वही नाम जो ख़ुद कटे हुए न हों। */
+  BANKTXNS.forEach((t) => {
+    if (!t || t.retired) return;
+    const nm = String(t.party || "").trim();
+    if (!nm || t.partyTruncated || looksCut(nm)) return;
+    if (/^चेक जमा|^अपना चेक|^चेक वापस|^बैंक |^SI |^अपने खाते|^PABL|^आयकर/.test(nm)) return;
+    add(nm, "बैंक");
+  });
+  const seen = {};
+  return out.filter((x) => (seen[x.key] ? false : (seen[x.key] = 1)));
+}
+
+/** नाम के शब्द — pKey सब जोड़ देता है, इसलिए यहाँ अलग तरीक़ा। */
+function nameWords(s) {
+  return String(s || "").toUpperCase()
+    .replace(/[^A-Z0-9\u0900-\u097F]+/g, " ").trim().split(" ").filter(Boolean);
+}
+
+/**
+ * कटे नाम के पूरे दावेदार।
+ *
+ * 🩸 पहली कोशिश में यह शुरुआत से मिलाता था, और एक भी नाम नहीं मिला —
+ *    क्योंकि पूरा नाम अक्सर **आगे से भी लंबा** होता है:
+ *
+ *        बैंक में  : «HQ 110»
+ *        व्यापार में: «CDR SIR ,Hq 110 Armd Bde»
+ *                        └──────┬────┘
+ *                        कटा हिस्सा बीच में पड़ा है, शुरू में नहीं
+ *
+ *    इसलिए मिलान इस तरह होता है: कटे नाम के शब्द पूरे नाम में **उसी क्रम
+ *    में, लगातार** मिलने चाहिए, और उसके बाद कम-से-कम एक शब्द और हो
+ *    (वरना वह «पूरा» नहीं, वही नाम है)।
+ *
+ * 🛑 आख़िरी शब्द अधूरा हो सकता है («MANJIND» → «MANJINDER»), बाक़ी हूबहू।
+ *    इसीलिए «HQ 11» «HQ 110» और «HQ 115» दोनों से चिपकता है — और तभी
+ *    ऐप दोनों दिखाकर पूछता है, चुपचाप एक नहीं चुनता।
+ */
+function nameMatches(cut, pool) {
+  const cw = nameWords(cut);
+  if (!cw.length) return [];
+  /* एक ही शब्द हो तो कम-से-कम तीन अक्षर — «CO» और «GE» हर नाम से चिपक
+     जाते। तीन पर «RWA» जैसे असली छोटे नाम बच जाते हैं। */
+  if (cw.length === 1 && cw[0].length < 3) return [];
+  return (pool || nameSources()).filter((x) => {
+    const fw = nameWords(x.name);
+    if (fw.length <= cw.length) return false;
+    for (let st = 0; st + cw.length <= fw.length; st++) {
+      let ok = true;
+      for (let i = 0; i < cw.length && ok; i++) {
+        const last = i === cw.length - 1;
+        ok = last ? fw[st + i].indexOf(cw[i]) === 0 : fw[st + i] === cw[i];
+      }
+      // मिल गया, और आगे कुछ और भी है → यही «पूरा» नाम है
+      if (ok && st + cw.length < fw.length) return true;
+    }
+    return false;
+  });
+}
+
+/** नाम अधूरा लगता है या नहीं — काग़ज़ की कटाई, नाम की छोटाई नहीं। */
+function nameLooksShort(nm) {
+  const t = String(nm || "").trim();
+  if (!t) return true;
+  if (/^चेक जमा|^अपना चेक|^चेक वापस|^बैंक |^SI |^अपने खाते|^PABL|^आयकर/.test(t)) return false;
+  return looksCut(t) || t.split(/\s+/).length <= 2;
+}
+
+/** जिन पंक्तियों का नाम अधूरा या ग़ायब है — और उनका सुझाव। */
+function shortNames() {
+  const pool = nameSources();
+  const map = {};
+  BANKTXNS.forEach((t) => {
+    if (!t || t.retired || t.mergedInto) return;
+    const nm = String(t.party || "").trim();
+    if (!nameLooksShort(nm)) return;
+    const k = nm ? pKey(nm) : "«" + (t.chequeNo || t._id) + "»";
+    const m = map[k] = map[k] || { key: k, name: nm, n: 0, sum: 0, rows: [],
+      chq: t.chequeNo || null, date: t.date };
+    m.n++; m.sum += t.amount || 0; m.rows.push(t);
+    if (String(t.date) < String(m.date)) m.date = t.date;
+    if (!m.chq && t.chequeNo) m.chq = t.chequeNo;
+  });
+  return Object.values(map).map((m) => {
+    m.hits = m.name ? nameMatches(m.name, pool) : [];
+    return m;
+  }).sort((a, b) => (b.hits.length ? 1 : 0) - (a.hits.length ? 1 : 0) || b.sum - a.sum);
+}
+
+/** पूरा नाम अपनाओ — उस अधूरे नाम वाली हर पंक्ति पर, पुराना नाम सँभालकर। */
+async function adoptName(cutKey, full) {
+  const rows = BANKTXNS.filter((t) => t && !t.retired &&
+    pKey(String(t.party || "").trim()) === cutKey);
+  if (!rows.length || !full) return 0;
+  const bt = batcher();
+  rows.forEach((t) => {
+    const old = String(t.party || "").trim();
+    t.partyAliases = [...new Set((t.partyAliases || []).concat(old ? [old] : []))].slice(0, 6);
+    t.party = full; t.partyKey = pKey(full);
+    t.partyTruncated = false; t.partyFull = true;
+    bt.update("vbe_bank_txns", t._id, { party: full, partyKey: pKey(full),
+      partyAliases: t.partyAliases, partyTruncated: false, partyFull: true });
+  });
+  await bt.done();
+  await auditLog("bank_name_complete", null, { from: cutKey, to: full, rows: rows.length });
+  return rows.length;
+}
+
+let SN_BUSY = false;
+
+function openShortNames() { renderShortNames(); openSheet("snSheet"); }
+
+async function pickName(cutKey, full) {
+  if (SN_BUSY) return;
+  SN_BUSY = true; renderShortNames();
+  try {
+    const n = await adoptName(cutKey, full);
+    toast(n ? n + " पंक्तियों पर पूरा नाम लग गया" : "कुछ नहीं बदला");
+  } catch (e) { toast("नहीं हुआ: " + e.message); }
+  finally { SN_BUSY = false; renderShortNames(); refreshAll(); }
+}
+
+/** ✍️ हाथ से नाम — जब ऐप के पास कोई दावेदार ही न हो। */
+async function typeName(cutKey, shown) {
+  const nm = (prompt("पूरा नाम लिखिए\n(«" + shown + "» वाली हर पंक्ति पर लग जाएगा)",
+    shown || "") || "").trim();
+  if (nm && nm !== shown) await pickName(cutKey, nm);
+}
+
+function renderShortNames() {
+  const box = $("snBody");
+  if (!box) return;
+  const list = shortNames();
+  const withHit = list.filter((m) => m.hits.length === 1);
+  const many = list.filter((m) => m.hits.length > 1);
+  const none = list.filter((m) => !m.hits.length);
+
+  box.innerHTML = `
+    <div class="toonBox" style="margin-bottom:12px">
+      <div class="toonArt">${gfx.toon(list.length ? "seek" : "party", 66)}</div>
+      <div class="toonSay"><b>${list.length
+        ? list.length + " नाम अधूरे लग रहे हैं"
+        : "हर पंक्ति पर पूरा नाम है"}</b>
+        <p>SBI की statement में विवरण का खाना छोटा है और बैंक नाम वहीं
+          <b>काट देता है</b> — «HQ 110» के आगे «Armd Bde» छपता ही नहीं।
+          ऐप के पास पूरे नाम पहले से हैं, बस जोड़ने हैं।</p></div>
+    </div>
+    ${withHit.length ? `<div class="badge lo" style="display:block;margin-bottom:10px">
+      ✅ <b>${withHit.length}</b> का पूरा नाम मिल गया — एक टैप में लग जाएगा</div>` : ""}
+    ${[...withHit, ...many, ...none].map((m) => `
+      <div class="covAcc">
+        <div class="covTop"><b>${esc(m.name || "बिना नाम" + (m.chq ? " · चेक " + m.chq : ""))}</b>
+          <small>${m.n} पंक्ति · ${INR(m.sum)}</small></div>
+        ${m.hits.length ? m.hits.slice(0, 3).map((h) => `
+          <div class="stampRow" style="cursor:pointer"
+               onclick="pickName('${esc(m.key)}', ${JSON.stringify(h.name).replace(/"/g, "&quot;")})">
+            <span style="font-size:17px">🪪</span>
+            <div style="flex:1;min-width:0"><b>${esc(h.name)}</b>
+              <div class="muted">${esc(h.src)} से</div></div>
+            <span class="mini primary">✅ यही है</span>
+          </div>`).join("")
+        : `<div class="muted" style="font-size:12.5px;line-height:1.7">
+             ऐप के पास इससे मिलता कोई पूरा नाम नहीं है${m.chq
+               ? ` — पर चेक नंबर <b>${esc(m.chq)}</b> है, चेक-बुक देखकर लिख दीजिए` : ""}।</div>`}
+        <button type="button" class="mini" style="margin-top:9px"
+          onclick="typeName('${esc(m.key)}', ${JSON.stringify(m.name || "").replace(/"/g, "&quot;")})">
+          ✍️ ख़ुद लिखिए</button>
+      </div>`).join("")}
+    ${list.length ? "" : gfx.empty("party", "सब नाम पूरे हैं",
+      "हर पंक्ति पर पता है कि पैसा किसका आया और किसे गया।")}
+    <div class="badge lo" style="display:block;line-height:1.7;margin-top:12px">
+      🛑 <b>ऐप अपने-आप कभी नहीं जोड़ता।</b> दो दावेदार हों तो दोनों दिखाए
+      जाते हैं — चुनना आपका काम है। ग़लत नाम जुड़ने से दो अलग पार्टियों का
+      हिसाब एक हो जाता, और वह न मिलने से कहीं बुरा है।</div>`;
+}
+
 /* ══════════ 🧠 पैसों की सलाह ═══════════════════════════════════════════
 
    विक्रम जी, 8 अगस्त 2026: «जो यह कोड लिखा गया है कि गूगल ड्राइव और बैंकिंग
@@ -18958,6 +19194,28 @@ function watchList(firmId) {
       dayLabel(String(loose[0].date).slice(0, 10))}` : "",
     go: loose.length ? `openBankLink('${loose[0]._id}')` : "",
     goText: "जोड़िए" });
+
+  /* 1️⃣ब 🪪 नाम अधूरा — «किस व्यक्ति का आया» का जवाब ही न हो।
+
+     विक्रम जी: «सबसे महत्वपूर्ण चीज़ — हर व्यक्ति का नाम पक्का होना
+     चाहिए।» SBI की PDF में विवरण का खाना छोटा है और बैंक नाम वहीं काट
+     देता है — «HQ 110» के आगे «Armd Bde» छपता ही नहीं। इसलिए यह
+     चौकीदार की अपनी लकीर बनने लायक़ है: पैसा किसका है, यह पता न होना
+     हिसाब का सबसे बड़ा छेद है।
+
+     🔒 फ़र्म के हिसाब से नहीं छाँटा जाता — नाम हर खाते में ज़रूरी है। */
+  const shortNm = f ? [] : shortNames();
+  add({ k: "noName", cls: "wd1", ic: "🪪",
+    title: "नाम अधूरा या ग़ायब",
+    n: shortNm.length,
+    sum: sum(shortNm.map((m) => m.sum || 0)),
+    note: shortNm.length
+      ? (shortNm.filter((m) => m.hits.length === 1).length
+          ? shortNm.filter((m) => m.hits.length === 1).length + " का पूरा नाम मिल गया है"
+          : "बैंक ने नाम काट दिया है")
+      : "",
+    go: shortNm.length ? "openShortNames()" : "",
+    goText: "नाम पूरे कीजिए" });
 
   /* 2️⃣ 🔴 पेमेंट-इन दर्ज है, पर बैंक में कहीं मिला ही नहीं। */
   const noBank = vyRows("payin", f).filter((pi) =>
