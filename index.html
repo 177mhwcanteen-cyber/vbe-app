@@ -950,7 +950,39 @@
   .flagRow .ft b { color: var(--ink); }
   .muted { color: var(--muted); font-size: 12.5px; }
 
-  /* ── 📊 कौन-सा हिसाब अंदर है ───────────────────────────────────────
+  /* ── 🧠 पैसों की सलाह ─────────────────────────────────────────────
+     जवाब कार्ड में आता है, लंबे paragraph में नहीं — फ़ोन पर लंबा पाठ
+     पढ़ा ही नहीं जाता, और सलाह पढ़ी न जाए तो सलाह नहीं है।            */
+  .adQ { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .adQ button { flex: 1 1 46%; padding: 12px 10px; border-radius: 14px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.04);
+    color: var(--text); font: inherit; font-size: 13px; line-height: 1.45;
+    text-align: left; cursor: pointer; }
+  .adQ button:active { transform: scale(.98); }
+  .adAns { border: 1px solid rgba(57,135,229,.45); border-radius: 18px;
+    padding: 15px; margin-bottom: 12px;
+    background: linear-gradient(155deg, rgba(57,135,229,.16), transparent 70%); }
+  .adAns b.big { display: block; font-size: 16px; line-height: 1.6; }
+  .adPt { display: flex; gap: 11px; padding: 12px 0; border-top: 1px solid var(--border); }
+  .adPt .ic { font-size: 20px; line-height: 1.3; }
+  .adPt b { display: block; font-size: 13.5px; margin-bottom: 3px; }
+  .adPt p { margin: 0; font-size: 13px; line-height: 1.65; color: var(--muted); }
+  .adPt.good b { color: #86e3bf; }
+  .adPt.warn b { color: #ffcf8b; }
+  .adPt.bad  b { color: #ff9c9c; }
+  .adNums { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+    margin: 12px 0 4px; }
+  .adNums::-webkit-scrollbar { display: none; }
+  .adNum { flex: 0 0 auto; min-width: 108px; padding: 11px 13px; border-radius: 14px;
+    border: 1px solid var(--border); background: rgba(255,255,255,.04); }
+  .adNum .k { font-size: 11px; color: var(--muted); }
+  .adNum .v { font-size: 17px; font-weight: 800; margin-top: 2px; }
+  .adNum .s { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .adDo { border: 1px dashed rgba(25,158,112,.55); border-radius: 15px;
+    padding: 12px 14px; margin-top: 12px; background: rgba(25,158,112,.07); }
+  .adDo li { margin: 5px 0 0 -8px; line-height: 1.65; font-size: 13.5px; }
+
+  /* ── 📊 कौन-सा हिसाब अंदर है ─────────────────────────────────────
 
      विक्रम जी: «मैंने अपना पूरा बैंक स्टेटमेंट आपको दे रखा है, फिर भी आपने
      आधी अधूरी एंट्री की है।»
@@ -1791,6 +1823,8 @@
       <div class="logo">🧾</div>
       <h1>VBE खरीद-हिसाब</h1>
     </div>
+    <button id="adBox" class="bell" hidden onclick="openAdvice()"
+            aria-label="पैसों की सलाह">🧠</button>
     <button id="bellBox" class="bell" hidden onclick="openWatch()"
             aria-label="क्या-क्या अधूरा है">🔔<span id="bellCnt" class="cnt" hidden></span></button>
     <button id="userBox" class="who" hidden onclick="renderSync();openSheet('meSheet')"
@@ -1862,6 +1896,16 @@
        बहीखाता बैंक वाले टैब से खुलता है, यानी पर्दा वहीं से बुलाया जाता है। -->
   <!-- 🔔 क्या-क्या अधूरा है -->
   <!-- 🪪 पार्टी Master -->
+  <!-- 🧠 पैसों की सलाह -->
+  <div id="adSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:560px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>🧠 पैसों की सलाह</h3>
+        <button class="x" onclick="closeSheet('adSheet')">✕</button></div>
+      <div id="adBody"></div>
+    </div>
+  </div>
+
   <!-- 📊 कौन-सा हिसाब अंदर है -->
   <div id="covSheet" class="sheet" hidden>
     <div class="sheetBox" style="max-width:560px">
@@ -3422,6 +3466,25 @@ function renderStamp() {
   const box = $("meStamp");
   if (!box) return;
   box.innerHTML = `
+    <div class="stampRow" onclick="closeSheet('meSheet');openAdvice()"
+         style="cursor:pointer">
+      <span style="font-size:17px">🧠</span>
+      <div style="flex:1;min-width:0">पैसों की सलाह
+        <div class="muted">पूरा हिसाब सामने रखकर पूछिए — अंक ऐप के, सोच AI की</div></div>
+      <span style="color:var(--muted)">›</span>
+    </div>
+    <!-- 🎚️ स्विच सामने रहेगा, छिपा हुआ नहीं। मालिक ने चालू करने को कहा
+         है, इसलिए पहले से चालू — पर बंद करना एक टैप दूर हो। -->
+    <div class="stampRow">
+      <span style="font-size:17px">${aiMoneyOn() ? "🔓" : "🔒"}</span>
+      <div style="flex:1;min-width:0">AI को हिसाब दिखाएँ
+        <div class="muted">${aiMoneyOn()
+          ? "चालू — सलाह के लिए हिसाब AI को दिखाया जाता है (पूरा खाता नंबर कभी नहीं)"
+          : "बंद — कुछ भी बाहर नहीं जाता"}</div></div>
+      <button type="button" class="mini ${aiMoneyOn() ? "" : "primary"}"
+        onclick="setAiMoney(${aiMoneyOn() ? "false" : "true"})">${
+        aiMoneyOn() ? "बंद कीजिए" : "चालू कीजिए"}</button>
+    </div>
     <div class="stampRow" onclick="closeSheet('meSheet');openCoverage()"
          style="cursor:pointer">
       <span style="font-size:17px">📊</span>
@@ -7711,7 +7774,10 @@ const AI_USES = {
   fast: { auto: true,  big: true  },   // ⚡ फास्ट एंट्री — पूरा दिमाग़
   bill: { click: true, big: false },   // 📎 बिल की फोटो — सिर्फ़ बटन से
   pay:  { click: true, big: false },   // 🧾 रसीद       — सिर्फ़ बटन से
-  card: { click: true, big: false }    // 📇 पार्टी कार्ड — सिर्फ़ बटन से
+  card: { click: true, big: false },   // 📇 पार्टी कार्ड — सिर्फ़ बटन से
+  /* 🧠 पैसों की सलाह — यही एक जगह है जहाँ बड़ा दिमाग़ सचमुच काम आता है,
+     क्योंकि यहाँ पढ़ना नहीं, **सोचना** है। और सिर्फ़ बटन दबाने पर। */
+  advise: { click: true, big: true }
 };
 
 let AI_CLICK = null;       // अभी किस बटन का दबाव चल रहा है
@@ -11393,7 +11459,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "6e05f01d2944";
+const APP_BUILD = "4627da73bca7";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -12953,7 +13019,7 @@ function refreshAll() {
   try { renderAccounts(); renderCoverage(); } catch (e) {}
   try { renderRepeat(); } catch (e) {}
   try { renderStatus(); } catch (e) {}
-  try { renderBell(); } catch (e) {}
+  try { renderBell(); renderAdBtn(); } catch (e) {}
   try {
     /* 🎯 सबसे भारी दो चेतावनियाँ पहले पन्ने पर ही — घंटी दबाने का
        इंतज़ार नहीं। बाक़ी घंटी में मिलती हैं। */
@@ -17872,6 +17938,387 @@ async function unlinkBank(btn) {
 
 
 
+
+/* ══════════ 🧠 पैसों की सलाह ═══════════════════════════════════════════
+
+   विक्रम जी, 8 अगस्त 2026: «जो यह कोड लिखा गया है कि गूगल ड्राइव और बैंकिंग
+   स्टेटमेंट कोई AI नहीं देख सकता — उसको भी चेंज कर दीजिए, क्योंकि मैं चाहता
+   हूँ कि अगर AI के पास मेरा डाटा जाएगा तो मैं और अच्छी तरीक़े से अपने पैसों
+   का प्रबंध कर सकता हूँ।»
+
+   पुरानी लकीर में **दो वजहें** एक साथ बँधी थीं, और सिर्फ़ एक उनकी थी:
+
+       🔒 निजता    — उनका फ़ैसला।  हट गई।
+       🧮 सही-ग़लत — तकनीक की बात। रहेगी।
+
+   दूसरी क्यों रहेगी: 1284 सौदों वाली statement AI ने **999 पर चुपचाप छोड़
+   दी** थी, और जो 999 लिखे वे बिल्कुल सही थे — बची रकम की जंज़ीर तक पूरी
+   मिलती थी। इसलिए **पढ़ना और मिलान हमेशा code में**, और AI को वही हिसाब
+   दिखाया जाता है जो ऐप ख़ुद जोड़ चुका है।
+
+       📖 अंक ऐप के  ·  🧠 सोच AI की
+
+   🙈 फिर भी नहीं जाता: पूरा खाता नंबर, staff के फ़ोन, GSTIN — सलाह में
+      इनका कोई काम ही नहीं, और जिस चीज़ का काम न हो उसे भेजना सिर्फ़ ख़तरा
+      है, सुविधा नहीं।                                                   */
+
+/** खाते का नाम — पर पूरा नंबर कभी नहीं। «AU 2502…0628» → «AU ****0628» */
+function safeAccLabel(id) {
+  const raw = String(accLabel(id) || id || "");
+  return raw.replace(/\d{6,}/g, (m) => "****" + m.slice(-4));
+}
+
+const briefINR = (n) => "\u20b9" + Math.round(Number(n) || 0).toLocaleString("en-IN");
+
+/**
+ * पूरा हिसाब, एक सादे पाठ में — यही AI के सामने रखा जाता है।
+ *
+ * 🛑 सबसे नीचे «क्या नहीं दिख रहा» ज़रूर लिखा जाता है। AI को यह पता होना
+ *    चाहिए कि हिसाब में कौन-सा महीना चढ़ा ही नहीं — वरना अधूरे हिसाब पर
+ *    पूरे भरोसे से सलाह दे देगा, और वही सबसे ख़तरनाक है।
+ */
+function moneyBrief() {
+  const L = [];
+  const live = BANKTXNS.filter((t) => t && !t.retired && !t.mergedInto);
+  L.push("आज: " + todayISO());
+
+  // ── 🏦 खाते ────────────────────────────────────────────────────────
+  L.push("", "== खाते और आख़िरी बची रकम ==");
+  const byAcc = {};
+  live.forEach((t) => {
+    const a = t.accountId || "";
+    const c = byAcc[a] = byAcc[a] || { n: 0, last: null, inSum: 0, outSum: 0 };
+    c.n++;
+    if (t.type === "credit") c.inSum += t.amount || 0; else c.outSum += t.amount || 0;
+    if (t.balance != null && (!c.last || String(t.date) >= String(c.last.date))) c.last = t;
+  });
+  Object.keys(byAcc).forEach((a) => {
+    const c = byAcc[a];
+    const firm = FIRM_ACC[a] ? (FIRMS.filter((f) => f.id === FIRM_ACC[a])[0] || {}).name : null;
+    L.push("- " + safeAccLabel(a) + (firm ? " (फ़र्म: " + firm + ")" : " (फ़र्म तय नहीं)") +
+      " · " + c.n + " सौदे" +
+      (c.last ? " · बची रकम " + briefINR(c.last.balance) + " (" + c.last.date + " तक)" : "") +
+      " · कुल आया " + briefINR(c.inSum) + ", कुल गया " + briefINR(c.outSum));
+  });
+
+  // ── 📅 महीना-दर-महीना ──────────────────────────────────────────────
+  L.push("", "== पिछले 6 महीने — आया / गया ==");
+  const mon = {};
+  live.forEach((t) => {
+    const m = String(t.date || "").slice(0, 7);
+    if (!m) return;
+    const c = mon[m] = mon[m] || { in: 0, out: 0, n: 0 };
+    c.n++;
+    if (t.type === "credit") c.in += t.amount || 0; else c.out += t.amount || 0;
+  });
+  Object.keys(mon).sort().slice(-6).forEach((m) => {
+    const c = mon[m];
+    L.push("- " + m + ": आया " + briefINR(c.in) + " · गया " + briefINR(c.out) +
+      " · बचा " + briefINR(c.in - c.out) + " (" + c.n + " सौदे)");
+  });
+
+  // ── 🧑 पार्टियाँ ───────────────────────────────────────────────────
+  /* 🏦 बैंक की अपनी लकीरें पार्टी नहीं हैं। «अपना चेक (SELF)» को दुकानदारों
+     की सूची में सबसे ऊपर बिठा देने से AI उसे सबसे बड़ा सप्लायर समझ लेता।
+     इन्हें अलग पंक्ति में गिना जाता है — छिपाया कुछ नहीं जाता।
+     ⚠️ «चेक जमा (…)» यहाँ नहीं आता — वह सचमुच किसी पार्टी का पैसा है,
+        बस नाम बैंक ने काट दिया है। */
+  const BANK_OWN = ["अपना चेक (SELF)", "चेक वापस आया", "बैंक शुल्क", "बैंक का ब्याज"];
+  const own = {};
+  const party = {};
+  live.forEach((t) => {
+    const p = String(t.party || "").trim();
+    if (!p) return;
+    if (BANK_OWN.indexOf(p) >= 0) {
+      const c = own[p] = own[p] || { in: 0, out: 0, n: 0 };
+      c.n++;
+      if (t.type === "credit") c.in += t.amount || 0; else c.out += t.amount || 0;
+      return;
+    }
+    const c = party[p] = party[p] || { in: 0, out: 0, n: 0 };
+    c.n++;
+    if (t.type === "credit") c.in += t.amount || 0; else c.out += t.amount || 0;
+  });
+  const names = Object.keys(party);
+  L.push("", "== सबसे बड़ी 15 — किसे पैसा गया ==");
+  names.sort((a, b) => party[b].out - party[a].out).slice(0, 15)
+    .filter((p) => party[p].out > 0)
+    .forEach((p) => L.push("- " + p + ": " + briefINR(party[p].out) +
+      " (" + party[p].n + " बार)"));
+  L.push("", "== सबसे बड़ी 15 — किससे पैसा आया ==");
+  names.sort((a, b) => party[b].in - party[a].in).slice(0, 15)
+    .filter((p) => party[p].in > 0)
+    .forEach((p) => L.push("- " + p + ": " + briefINR(party[p].in) +
+      " (" + party[p].n + " बार)"));
+
+  if (Object.keys(own).length) {
+    L.push("", "== बैंक की अपनी लकीरें (पार्टी नहीं) ==");
+    Object.keys(own).forEach((k) => L.push("- " + k + ": गया " + briefINR(own[k].out) +
+      " · आया " + briefINR(own[k].in) + " (" + own[k].n + " बार)"));
+  }
+
+  // ── 🧾 ख़रीद के बिल ────────────────────────────────────────────────
+  const bills = EXP.filter(Boolean);
+  const pend = bills.filter((e) => e.status === "pending" || e.status === "approved");
+  const sum = (a) => a.reduce((x, e) => x + (Number(e.billTotal) || 0), 0);
+  L.push("", "== ख़रीद के बिल ==");
+  L.push("- कुल " + bills.length + " बिल · " + briefINR(sum(bills)));
+  L.push("- बकाया (मंज़ूरी/पेमेंट बाक़ी): " + pend.length + " · " + briefINR(sum(pend)));
+  const noBill = live.filter((t) => t.type === "debit" && !t.expenseId && !t.reconciled);
+  L.push("- बैंक की जिन पंक्तियों पर बिल नहीं लगा: " + noBill.length + " · " +
+    briefINR(noBill.reduce((x, t) => x + (t.amount || 0), 0)));
+
+  // ── 🏛️ व्यापार ────────────────────────────────────────────────────
+  L.push("", "== व्यापार — फ़र्म-वार ==");
+  FIRMS.forEach((f) => {
+    const inv = vyRows("invoice", f.id), pay = vyRows("payin", f.id);
+    const ch = vyRows("challan", f.id);
+    if (!inv.length && !pay.length && !ch.length) return;
+    const iv = inv.reduce((a, x) => a + (x.total || 0), 0);
+    const pv = pay.reduce((a, x) => a + (x.received || x.total || 0), 0);
+    L.push("- " + f.name + ": इनवॉइस " + inv.length + " · " + briefINR(iv) +
+      " | आया " + briefINR(pv) + " | बाक़ी " + briefINR(Math.max(0, iv - pv)) +
+      " | चालान " + ch.length);
+  });
+
+  // 🕰️ उम्र — **इनवॉइस की तारीख़ से** (विक्रम जी का साफ़ आदेश)
+  const buckets = { "0-30": 0, "31-60": 0, "61-90": 0, "90+": 0 };
+  const paidBy = {};
+  vyRows("payin", "").forEach((p) => {
+    const k = vyCanon(p.party);
+    paidBy[k] = (paidBy[k] || 0) + (p.received || p.total || 0);
+  });
+  const dueBy = {};
+  vyRows("invoice", "").forEach((x) => {
+    const k = vyCanon(x.party);
+    (dueBy[k] = dueBy[k] || []).push(x);
+  });
+  Object.keys(dueBy).forEach((k) => {
+    let left = Math.max(0, dueBy[k].reduce((a, x) => a + (x.total || 0), 0) - (paidBy[k] || 0));
+    // पुराना पहले चुकता माना जाता है — बचा हुआ नए बिलों पर टिकता है
+    dueBy[k].sort((a, b) => String(b.date).localeCompare(String(a.date))).forEach((x) => {
+      if (left <= 0) return;
+      const take = Math.min(left, x.total || 0);
+      left -= take;
+      const days = Math.round((new Date(todayISO()) - new Date(x.date)) / 86400000);
+      const b = days <= 30 ? "0-30" : days <= 60 ? "31-60" : days <= 90 ? "61-90" : "90+";
+      buckets[b] += take;
+    });
+  });
+  L.push("- बकाया की उम्र (इनवॉइस की तारीख़ से): " +
+    Object.keys(buckets).map((b) => b + " दिन " + briefINR(buckets[b])).join(" · "));
+
+  // ── ⚠️ चौकीदार ────────────────────────────────────────────────────
+  try {
+    const w = watchList("");
+    if (w && w.length) {
+      L.push("", "== ⚠️ जो अधूरा पड़ा है ==");
+      w.forEach((x) => L.push("- " + x.title + ": " + x.n +
+        (x.sum ? " · " + briefINR(x.sum) : "")));
+    }
+  } catch (e) { /* चौकीदार न चले तो सलाह रुकनी नहीं चाहिए */ }
+
+  /* ── 📊 और सबसे ज़रूरी — जो हिसाब में है ही नहीं ──────────────────
+     यह आख़िर में इसलिए है कि AI इसे आख़िरी में पढ़े और याद रखे। इसके बिना
+     वह अधूरे महीनों पर भी पूरे भरोसे से सलाह दे देगा। */
+  L.push("", "== 📊 हिसाब में क्या नहीं है (ध्यान से पढ़ो) ==");
+  try {
+    const cov = accCoverage();
+    if (!cov.length) L.push("- कोई बैंक-पंक्ति नहीं चढ़ी है");
+    cov.forEach((c) => {
+      const gaps = c.list.filter((m) => !m.n).map((m) => m.key);
+      L.push("- " + safeAccLabel(c.id) + ": " + c.from + " से " + c.to + " तक चढ़ा है" +
+        (gaps.length ? " · बीच के ख़ाली महीने: " + gaps.join(", ") : " · बीच में कोई छेद नहीं"));
+      const to = new Date(c.to + "T12:00:00");
+      const gapDays = Math.round((new Date(todayISO() + "T12:00:00") - to) / 86400000);
+      if (gapDays > 1) L.push("  ⚠️ " + c.to + " के बाद से आज तक (" + gapDays +
+        " दिन) का कुछ भी नहीं चढ़ा — उस अवधि पर कोई सलाह मत देना");
+    });
+  } catch (e) { L.push("- (नक़्शा नहीं बन पाया)"); }
+  return L.join("\n");
+}
+
+/* ── 🎚️ यह सुविधा बंद भी हो सकती है ────────────────────────────────
+   मालिक ने चालू करने को कहा है, इसलिए पहले से चालू — पर स्विच सामने रहेगा,
+   छिपा हुआ नहीं। बंद होते ही कुछ भी बाहर नहीं जाता। */
+const aiMoneyOn = () => (APP_CFG || {}).aiMoney !== false;
+
+async function setAiMoney(on) {
+  APP_CFG = APP_CFG || {};
+  APP_CFG.aiMoney = !!on;
+  try {
+    await db.collection("vbe_meta").doc("app_config")
+      .set({ aiMoney: !!on }, { merge: true });
+    await auditLog("ai_money_switch", null, { on: !!on });
+  } catch (e) { /* नेट न हो तो भी स्विच इसी सत्र में चलेगा */ }
+  try { renderStamp(); } catch (e) {}
+  renderAdBtn();
+  renderAdvice();
+}
+
+let AD = null, AD_BUSY = false, AD_Q = "";
+
+const AD_ASK = [
+  ["💸", "इस महीने पैसा कहाँ गया?"],
+  ["⚠️", "कौन-सा पैसा फँसा हुआ है?"],
+  ["📈", "अगले महीने कितना आने की उम्मीद है?"],
+  ["🔍", "कहाँ बचत हो सकती है?"],
+  ["🧾", "किन पार्टियों से हिसाब साफ़ करना है?"],
+  ["🏦", "किस खाते में दिक़्क़त है?"]
+];
+
+function openAdvice() { renderAdvice(); openSheet("adSheet"); }
+
+/* ऐप की अपनी चाबी है या नहीं — Claude वाली भी गिनी जाए। aiReady() सिर्फ़
+   GEMINI_KEY देखता है, इसलिए Claude पर चलने वाले ऐप में सलाह bot के रास्ते
+   चली जाती, जबकि बेहतर दिमाग़ यहीं मौजूद है। */
+const adviceKeyHere = () => !!(GEMINI_KEY || (AI_WHO === "claude" && CLAUDE_KEY));
+
+async function askMoney(q) {
+  if (AD_BUSY || !q) return;
+  if (!aiMoneyOn()) { renderAdvice(); return; }
+  AD_Q = q; AD_BUSY = true; AD = null; renderAdvice();
+  try {
+    const brief = moneyBrief();
+    let advice = null;
+    if (adviceKeyHere()) {
+      // ऐप की अपनी चाबी — Claude हो या Gemini, दरवाज़ा एक ही है
+      advice = await aiClick("advise", null, () =>
+        askAI("advise", ADVICE_PROMPT, null, "===== पूरा हिसाब =====\n" + brief +
+          "\n\n===== मालिक का सवाल =====\n" + q));
+    } else {
+      // चाबी न हो तो bot के रास्ते — वहाँ भी वही प्रॉम्प्ट है
+      const r = await botCall("advise", { brief, question: q });
+      if (!r || !r.ok) throw new Error((r && r.error) || "जवाब नहीं आया");
+      advice = r.advice;
+    }
+    AD = advice;
+    await auditLog("ai_money_ask", null, { q, chars: brief.length });
+  } catch (e) {
+    AD = { error: e.message };
+  } finally {
+    AD_BUSY = false; renderAdvice();
+  }
+}
+
+const ADVICE_PROMPT = [
+  "तुम एक सधे हुए भारतीय मुनीम हो। नीचे बाड़मेर के एक कैंटीन-सप्लाई और",
+  "सेना-ठेके वाले व्यापारी का **पूरा जाँचा हुआ हिसाब** है, जो उनके अपने ऐप",
+  "ने बैंक statement और इनवॉइस से जोड़कर बनाया है। अंक पहले से मिलाए हुए",
+  "हैं — उन पर शक मत करो, दुबारा मत जोड़ो।",
+  "",
+  "जवाब **हिंदी में** दो, और सिर्फ़ यही JSON लौटाओ:",
+  '{ "answer": "सीधा जवाब, 1-3 छोटे वाक्य",',
+  '  "points": [{"icon":"…","title":"…","body":"…","tone":"good|warn|bad"}],',
+  '  "numbers": [{"label":"…","value":"…","note":null}],',
+  '  "actions": ["अब क्या करें — छोटा वाक्य"],',
+  '  "missing": "हिसाब में जो नहीं है और जवाब बदल सकता है" }',
+  "",
+  "पक्के नियम:",
+  "1. सिर्फ़ दिए हुए अंक। अपने मन से कोई आँकड़ा मत बनाओ, अंदाज़ा मत लगाओ।",
+  "   हिसाब से जवाब न निकले तो answer में साफ़ कह दो।",
+  "2. नीचे लिखा है कि कौन-सा महीना हिसाब में चढ़ा ही नहीं। उस अवधि पर",
+  "   भरोसे से सलाह मत देना — और missing में वह कमी ज़रूर लिखना।",
+  "3. हिंदी, छोटे वाक्य, कोई अंग्रेज़ी शब्दजाल नहीं, कोई markdown नहीं।",
+  "   रकम ₹1,23,456 की तरह।",
+  "4. सीधी और काम की बात — उन्हें पैसा सँभालना है, भाषण नहीं पढ़ना।",
+  "5. tone: good = अच्छी बात, warn = ध्यान देने लायक़, bad = नुक़सान हो रहा है।"
+].join("\n");
+
+function renderAdvice() {
+  const box = $("adBody");
+  if (!box) return;
+
+  if (!aiMoneyOn()) {
+    box.innerHTML = gfx.empty("alert", "AI को हिसाब दिखाना बंद है",
+      `आपने इसे <b>👤 मेरा खाता</b> में बंद कर रखा है, इसलिए कुछ भी बाहर
+       नहीं जाता।`,
+      `<button type="button" class="mini primary" onclick="setAiMoney(true)">
+        🧠 चालू कीजिए</button>`);
+    return;
+  }
+
+  const ask = `<div class="adQ">${AD_ASK.map(([ic, q]) =>
+    `<button type="button" onclick="askMoney('${esc(q).replace(/'/g, "&#39;")}')">
+      ${ic} ${esc(q)}</button>`).join("")}</div>
+    <div class="row" style="gap:8px;margin-bottom:12px">
+      <input id="adOwn" placeholder="…या अपनी बात लिखिए" style="flex:1"
+        onkeydown="if(event.key==='Enter')askMoney(this.value.trim())">
+      <button type="button" class="primary" onclick="askMoney($('adOwn').value.trim())">पूछें</button>
+    </div>`;
+
+  if (AD_BUSY) {
+    box.innerHTML = ask + `<div class="toonBox">
+      <div class="toonArt">${gfx.toon("think", 72)}</div>
+      <div class="toonSay"><b>पूरा हिसाब देख रहा हूँ…</b>
+        <p>${esc(AD_Q)}</p></div></div>`;
+    return;
+  }
+
+  if (AD && AD.error) {
+    box.innerHTML = ask + gfx.empty("alert", "सलाह नहीं आई", esc(AD.error),
+      `<button type="button" class="mini primary"
+        onclick="askMoney(${JSON.stringify(AD_Q)})">🔄 फिर कोशिश करें</button>`);
+    return;
+  }
+
+  if (!AD) {
+    box.innerHTML = `<div class="toonBox" style="margin-bottom:12px">
+        <div class="toonArt">${gfx.toon("book2", 66)}</div>
+        <div class="toonSay"><b>पूरा हिसाब सामने रखकर पूछिए</b>
+          <p>हर खाता, हर सौदा, हर पार्टी और हर बकाया — सब देखकर जवाब मिलेगा।
+            <b>अंक ऐप के, सोच AI की।</b></p></div></div>` + ask + briefFoot();
+    return;
+  }
+
+  const tone = (t) => (t === "good" || t === "bad" || t === "warn") ? t : "warn";
+  box.innerHTML = ask + `
+    <div class="adAns"><b class="big">${esc(AD.answer || "—")}</b></div>
+    ${(AD.numbers || []).length ? `<div class="adNums">${(AD.numbers || []).map((n) => `
+      <div class="adNum"><div class="k">${esc(n.label || "")}</div>
+        <div class="v">${esc(n.value || "")}</div>
+        ${n.note ? `<div class="s">${esc(n.note)}</div>` : ""}</div>`).join("")}</div>` : ""}
+    ${(AD.points || []).map((p) => `
+      <div class="adPt ${tone(p.tone)}"><div class="ic">${esc(p.icon || "•")}</div>
+        <div style="flex:1;min-width:0"><b>${esc(p.title || "")}</b>
+          <p>${esc(p.body || "")}</p></div></div>`).join("")}
+    ${(AD.actions || []).length ? `<div class="adDo"><b>✅ अब क्या करें</b>
+      <ul>${(AD.actions || []).map((a) => `<li>${esc(a)}</li>`).join("")}</ul></div>` : ""}
+    ${AD.missing ? `<div class="badge lo" style="display:block;line-height:1.7;margin-top:12px">
+      📊 <b>ध्यान रहे:</b> ${esc(AD.missing)}</div>` : ""}
+    ` + briefFoot();
+}
+
+/* 🧑‍💻 «अपने Claude को दिखाइए» — Gemini का मुफ़्त हिस्सा छोटा है और वह छोटा
+   मॉडल है। विक्रम जी के पास अपना Claude पहले से है और वे उसी में statement
+   डालते भी हैं। वही जाँचा हुआ हिसाब वहाँ ले जाने पर न कोई सीमा है, न छोटा
+   दिमाग़। */
+function briefFoot() {
+  return `<div class="stampRow" style="margin-top:14px;cursor:pointer"
+      onclick="copyBrief(this)">
+      <span style="font-size:17px">🧑‍💻</span>
+      <div style="flex:1;min-width:0">अपने Claude/ChatGPT को दिखाइए
+        <div class="muted">वही पूरा हिसाब कॉपी हो जाएगा — वहाँ कोई सीमा नहीं</div></div>
+      <span style="color:var(--muted)">›</span>
+    </div>
+    <div class="badge lo" style="display:block;line-height:1.7;margin-top:10px">
+      🔒 जो जाता है वह ऐप का <b>जोड़ा हुआ हिसाब</b> है — बैंक की कच्ची
+      statement नहीं। <b>पूरा खाता नंबर, फ़ोन नंबर और GSTIN कभी नहीं जाते।</b>
+      पढ़ना और मिलान अब भी पूरा code में ही होता है।
+      <br><button type="button" class="sx" onclick="setAiMoney(false)">
+        🎚️ यह सुविधा बंद कर दीजिए</button></div>`;
+}
+
+async function copyBrief(el) {
+  const txt = "मेरा पूरा हिसाब नीचे है। इसे देखकर बताइए कि मैं अपने पैसों का " +
+    "प्रबंध कैसे बेहतर कर सकता हूँ। जवाब हिंदी में दीजिए।\n\n" + moneyBrief();
+  await copyText(txt);
+  const was = el.innerHTML;
+  el.innerHTML = `<span style="font-size:17px">✅</span>
+    <div style="flex:1">कॉपी हो गया — अब Claude में चिपका दीजिए</div>`;
+  setTimeout(() => { el.innerHTML = was; }, 3000);
+}
+
 /* ══════════ 📊 मेरे पास कौन-सा हिसाब है ═══════════════════════════════
 
    विक्रम जी: «मैंने अपना पूरा बैंक स्टेटमेंट आपको दे रखा है, फिर भी आपने
@@ -18353,6 +18800,14 @@ function watchList(firmId) {
 const watchCount = (f) => watchList(f).reduce((a, w) => a + w.n, 0);
 
 /** 🔔 घंटी — हर पन्ने पर, गिनती के साथ। */
+/* 🧠 वाला बटन तभी, जब कुछ हिसाब अंदर हो — ख़ाली ऐप पर सलाह माँगना
+   बेमतलब है, और बेमतलब बटन भरोसा घटाते हैं। */
+function renderAdBtn() {
+  const b = $("adBox");
+  if (!b) return;
+  b.hidden = !(aiMoneyOn() && (BANKTXNS.length || EXP.length || VY.length));
+}
+
 function renderBell() {
   const b = $("bellBox"), c = $("bellCnt");
   if (!b || !c) return;
