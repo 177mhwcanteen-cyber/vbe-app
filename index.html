@@ -1140,6 +1140,176 @@
   .flagRow .ft b { color: var(--ink); }
   .muted { color: var(--muted); font-size: 12.5px; }
 
+  /* ══════════ 🔍 एक ही जगह से पूरी खोज ═══════════════════════════
+
+     अभी हर पन्ने का अपना खोज-डिब्बा है — पासबुक का अलग, बिलों का अलग,
+     व्यापार का अलग। यानी ढूँढने से पहले यह तय करना पड़ता है कि चीज़ किस
+     पन्ने पर होगी। और वही सबसे बड़ी अड़चन थी: «GHANU» किस पन्ने पर है?
+
+     अब सिर पर एक 🔍 — बाक़ी सब वहीं से।                                */
+  #cmdWrap { position: fixed; inset: 0; z-index: 120; display: none;
+    background: rgba(4,7,16,.62);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  #cmdWrap.on { display: block; animation: fadeIn var(--t) var(--ease); }
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+  .cmdBox { max-width: 620px; margin: 0 auto; padding: 12px 14px 24px;
+    height: 100%; display: flex; flex-direction: column; }
+  .cmdBar { display: flex; gap: 9px; align-items: center;
+    background: var(--surface-3); border: 1px solid var(--border-2);
+    border-radius: var(--r-l); padding: 4px 6px 4px 14px;
+    box-shadow: var(--e2); }
+  .cmdBar span.ic { font-size: 17px; }
+  .cmdBar input { flex: 1; min-width: 0; border: 0; background: transparent;
+    box-shadow: none; font-size: 16px; padding: 12px 0; min-height: 48px; }
+  .cmdBar input:focus { box-shadow: none; background: transparent; }
+  .cmdOut { flex: 1; overflow: auto; margin-top: 12px; }
+  .cmdGrp { font-size: 11.5px; color: var(--muted); letter-spacing: .3px;
+    margin: 14px 4px 7px; text-transform: uppercase; }
+  .cmdRow { display: flex; gap: 11px; align-items: center; cursor: pointer;
+    padding: 11px 12px; border-radius: var(--r-m); min-height: 56px;
+    border: 1px solid transparent;
+    transition: background var(--t) var(--ease), border-color var(--t) var(--ease); }
+  .cmdRow:hover, .cmdRow:focus-visible { background: rgba(255,255,255,.04);
+    border-color: var(--border); outline: none; }
+  .cmdRow:active { transform: scale(.99); }
+  .cmdRow .ic { font-size: 18px; flex: 0 0 auto; }
+  .cmdRow .mid { flex: 1; min-width: 0; }
+  .cmdRow .mid b { display: block; font-size: 14px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  .cmdRow .mid small { color: var(--muted); font-size: 11.5px; }
+  .cmdRow .amt { font-size: 14.5px; font-weight: 750; white-space: nowrap; }
+  .cmdChip { display: inline-block; margin: 0 6px 6px 0; padding: 7px 12px;
+    border-radius: var(--r-pill); border: 1px solid var(--border);
+    background: rgba(255,255,255,.03); font-size: 12.5px; cursor: pointer; }
+
+  /* ══════════ 💎 सबसे बड़ा जवाब सबसे ऊपर ═══════════════════════════
+
+     ऐप खोलते ही पहला सवाल हमेशा एक ही होता है — «कितना बचा है?»
+     वह जवाब छह डिब्बों में बँटा हुआ नहीं, एक ही जगह होना चाहिए।         */
+  .hero {
+    position: relative; overflow: hidden;
+    border-radius: var(--r-xl); padding: var(--sp5) var(--sp4) var(--sp4);
+    margin-bottom: var(--sp3);
+    background:
+      radial-gradient(120% 90% at 82% -20%, rgba(0,209,255,.16), transparent 60%),
+      radial-gradient(100% 90% at 0% 110%, rgba(108,92,231,.22), transparent 62%),
+      linear-gradient(168deg, rgba(255,255,255,.05), rgba(255,255,255,.012) 60%),
+      var(--surface-2);
+    border: 1px solid var(--border-2);
+    box-shadow: var(--e2);
+  }
+  /* ✨ किनारे पर indigo→cyan की एक बारीक लकीर */
+  .hero::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    padding: 1px; pointer-events: none;
+    background: linear-gradient(120deg, var(--brand), var(--accent) 48%, transparent 78%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    opacity: .55;
+  }
+  .heroK { font-size: 12.5px; color: var(--ink-2); letter-spacing: .2px; }
+  .heroV { font-size: clamp(32px, 9.5vw, 40px); font-weight: 800;
+    letter-spacing: -1px; line-height: 1.12; margin: 6px 0 2px; }
+  .heroS { font-size: 12.5px; color: var(--muted); }
+  .heroIO { display: flex; gap: var(--sp4); margin-top: var(--sp4); }
+  .heroIO div { flex: 1; min-width: 0; }
+  .heroIO .k { font-size: 11.5px; color: var(--muted); }
+  .heroIO .v { font-size: 16.5px; font-weight: 700; margin-top: 2px; }
+  .heroIO .v.in  { color: #6FE3B8; }
+  .heroIO .v.out { color: #FF9EA1; }
+  .heroSpark { margin-top: var(--sp3); opacity: .9; }
+  .heroTag { position: absolute; top: 14px; right: 14px; font-size: 11.5px;
+    padding: 4px 10px; border-radius: var(--r-pill);
+    border: 1px solid var(--border-2); background: rgba(255,255,255,.05);
+    color: var(--ink-2); }
+
+  /* ══════════ 🏦 खातों का carousel ════════════════════════════════
+
+     आठ खाते एक साथ नीचे-नीचे लिखने से पन्ना लंबा हो जाता था और ऊपर वाली
+     ज़रूरी बात नीचे चली जाती। बग़ल में सरकने से आठों एक ही जगह में आ जाते
+     हैं, और उँगली का वही इशारा जो बाक़ी फ़ोन में चलता है।                */
+  .accRail { display: flex; gap: var(--sp3); overflow-x: auto;
+    scroll-snap-type: x mandatory; scrollbar-width: none;
+    padding-bottom: var(--sp2); margin-bottom: var(--sp3);
+    -webkit-overflow-scrolling: touch; }
+  .accRail::-webkit-scrollbar { display: none; }
+  .accCard { flex: 0 0 auto; width: 208px; scroll-snap-align: start;
+    border-radius: var(--r-l); padding: var(--sp4); cursor: pointer;
+    border: 1px solid var(--border); box-shadow: var(--e1);
+    background: linear-gradient(160deg, rgba(255,255,255,.055),
+      rgba(255,255,255,.012) 65%), var(--surface);
+    transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease),
+                border-color var(--t) var(--ease);
+    position: relative; overflow: hidden; }
+  .accCard:active { transform: scale(.98); }
+  .accCard:hover { box-shadow: var(--e2); border-color: var(--border-2); }
+  /* हर खाते की अपनी रौशनी — फ़र्म का रंग, ताकि पहचान आँख से हो */
+  .accCard i.tint { position: absolute; inset: -40% -40% auto auto;
+    width: 150px; height: 150px; border-radius: 50%; filter: blur(30px);
+    opacity: .30; pointer-events: none; }
+  .accCard .bank { font-size: 12px; color: var(--muted); }
+  .accCard .nm { font-size: 14.5px; font-weight: 700; margin: 3px 0 10px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .accCard .bal { font-size: 21px; font-weight: 800; letter-spacing: -.5px; }
+  .accCard .till { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+  .accCard .till.old { color: #FFCF8B; }
+
+  /* ══════════ 🎬 पहली झलक ═══════════════════════════════════════════
+
+     ऐप खुलने में वैसे भी एक-दो सेकंड लगते हैं (Firebase जुड़ता है, हिसाब
+     उतरता है)। उतनी देर पहले «लोड हो रहा है…» लिखा एक सादा गोल घूमता था।
+
+     अब उसी देर में लोगो नीचे से आता है, पीछे रौशनी फैलती है, और नाम बाद
+     में उभरता है।
+
+     🛑 **ठहराव जोड़ा नहीं गया।** हिसाब पहले उतर जाए तो झलक उसी वक़्त हट
+        जाती है — सजावट के लिए विक्रम जी का एक सेकंड भी नहीं लिया जाएगा। */
+  #splash {
+    position: fixed; inset: 0; z-index: 9000;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 18px;
+    background: var(--page);
+    transition: opacity var(--t-slow) var(--ease), visibility var(--t-slow);
+  }
+  #splash.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+  #splash .halo {
+    position: absolute; width: 320px; height: 320px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,209,255,.22), transparent 66%);
+    filter: blur(28px);
+    animation: haloIn 1.1s var(--ease) both;
+  }
+  #splash .mark {
+    width: 96px; height: 96px; border-radius: 26px; display: grid;
+    place-items: center; font-size: 46px;
+    background: linear-gradient(150deg, var(--brand-2), var(--brand) 60%, #4B3FC4);
+    box-shadow: 0 18px 48px rgba(108,92,231,.45), var(--sheen);
+    animation: markIn .72s var(--ease) both;
+  }
+  #splash .nm { font-size: 21px; font-weight: 750; letter-spacing: .2px;
+    animation: fadeUp .5s var(--ease) .34s both; }
+  #splash .tag { font-size: 12.5px; color: var(--muted); margin-top: -12px;
+    animation: fadeUp .5s var(--ease) .46s both; }
+  #splash .bar { width: 132px; height: 3px; border-radius: 3px;
+    background: rgba(255,255,255,.10); overflow: hidden;
+    animation: fadeUp .5s var(--ease) .58s both; }
+  #splash .bar i { display: block; height: 100%; width: 40%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--brand), var(--accent));
+    animation: barRun 1.15s var(--ease) infinite; }
+  @keyframes markIn {
+    from { opacity: 0; transform: translate3d(0, 22px, 0) scale(.86); }
+    to   { opacity: 1; transform: none; } }
+  @keyframes haloIn { from { opacity: 0; transform: scale(.7); }
+                      to   { opacity: 1; transform: scale(1); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translate3d(0, 10px, 0); }
+                      to   { opacity: 1; transform: none; } }
+  @keyframes barRun { from { transform: translateX(-110%); }
+                      to   { transform: translateX(330%); } }
+  @media (prefers-reduced-motion: reduce) {
+    #splash .mark, #splash .nm, #splash .tag, #splash .bar, #splash .halo
+      { animation: none; }
+    #splash .bar i { animation: none; width: 100%; }
+  }
+
   /* ── 🧠 पैसों की सलाह ─────────────────────────────────────────────
      जवाब कार्ड में आता है, लंबे paragraph में नहीं — फ़ोन पर लंबा पाठ
      पढ़ा ही नहीं जाता, और सलाह पढ़ी न जाए तो सलाह नहीं है।            */
@@ -2063,6 +2233,8 @@
       <div class="logo">🧾</div>
       <h1>VBE खरीद-हिसाब</h1>
     </div>
+    <button id="cmdBtn" class="bell" onclick="openCmd()"
+            aria-label="सब कुछ ढूँढिए">🔍</button>
     <button id="adBox" class="bell" hidden onclick="openAdvice()"
             aria-label="पैसों की सलाह">🧠</button>
     <button id="bellBox" class="bell" hidden onclick="openWatch()"
@@ -2243,6 +2415,29 @@
     </div>
   </div>
 
+  <!-- 🔍 एक ही जगह से पूरी खोज -->
+  <div id="cmdWrap" onclick="if(event.target===this)closeCmd()">
+    <div class="cmdBox">
+      <div class="cmdBar">
+        <span class="ic">🔍</span>
+        <input id="cmdInput" placeholder="नाम · रकम · तारीख़ · UTR · बिल नंबर"
+               autocomplete="off" oninput="renderCmd()"
+               onkeydown="if(event.key==='Escape')closeCmd()">
+        <button type="button" onclick="closeCmd()">✕</button>
+      </div>
+      <div class="cmdOut" id="cmdOut"></div>
+    </div>
+  </div>
+
+  <!-- 🎬 पहली झलक — बाक़ी सब के ऊपर, और लोड होते ही हट जाती है -->
+  <div id="splash">
+    <div class="halo"></div>
+    <div class="mark">🧾</div>
+    <div class="nm">VBE खरीद-हिसाब</div>
+    <div class="tag">AI से चलने वाला हिसाब</div>
+    <div class="bar"><i></i></div>
+  </div>
+
   <div id="gateLoading" class="card gate"><div class="spin"></div><p style="margin-top:14px">लोड हो रहा है…</p></div>
 
   <div id="gateLogin" class="card gate" hidden>
@@ -2290,6 +2485,10 @@
       <div id="ovAlerts"></div>
       <div id="ovWatch"></div>
       <div id="ovStatus"></div>
+      <!-- 💎 सबसे बड़ा जवाब, सबसे ऊपर -->
+      <div id="heroBox"></div>
+      <!-- 🏦 आठों खाते, बग़ल में सरकते हुए -->
+      <div class="accRail" id="accRail" hidden></div>
       <div class="tiles" id="tiles"></div>
       <!-- 📎 काम करने की जगह — 10 सबसे बड़े बिना-बिल पेमेंट, एक-एक करके -->
       <div id="ovTodo"></div>
@@ -3328,6 +3527,9 @@ const charts = {};
 /* ── Auth gate ── */
 function show(id) {
   ["gateLoading", "gateLogin", "gateDenied", "app"].forEach(x => $(x).hidden = (x !== id));
+  /* 🎬 जैसे ही कुछ भी दिखाने लायक़ हो, झलक हट जाती है। «लोड हो रहा है»
+     वाले पर्दे पर रुकी रहती है, ताकि दो-दो घूमते गोले न दिखें। */
+  if (id !== "gateLoading") hideSplash();
 }
 function signIn() {
   auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message));
@@ -3715,6 +3917,28 @@ function renderSync(err) {
  * यही वह पंक्ति है जिसकी कमी दो दिन खली। अब विक्रम जी इसे पढ़कर बता सकते
  * हैं, और मैं मिलाकर देख सकता हूँ — अंदाज़ा किसी को नहीं लगाना पड़ेगा।
  */
+/**
+ * 🎬 झलक हटाओ — पर इतनी जल्दी नहीं कि झिलमिला जाए।
+ *
+ * ऐप कभी-कभी 200ms में तैयार हो जाती है (सब कुछ फ़ोन में सँभला हुआ हो तो)।
+ * तब झलक आधी बनकर ही ग़ायब हो जाती, और वह टिमटिमाहट सजावट से भी बुरी
+ * लगती। इसलिए कम-से-कम 900ms — पर उससे ज़्यादा एक पल भी नहीं।
+ */
+let SPLASH_AT = Date.now(), SPLASH_DONE = false;
+function hideSplash() {
+  if (SPLASH_DONE) return;
+  SPLASH_DONE = true;
+  const el = $("splash");
+  if (!el) return;
+  const left = Math.max(0, 900 - (Date.now() - SPLASH_AT));
+  setTimeout(() => {
+    el.classList.add("gone");
+    setTimeout(() => { el.remove(); }, 400);
+  }, left);
+}
+// 🛟 कुछ भी गड़बड़ हो जाए तो भी झलक अटकी न रह जाए — 6 सेकंड में हट ही जाए
+setTimeout(hideSplash, 6000);
+
 function renderStamp() {
   const box = $("meStamp");
   if (!box) return;
@@ -3901,6 +4125,8 @@ function renderAll() {
   if (VY_LOADED) { try { renderVyapar(); } catch (e) {} }
   rebuildAccountPickers();   // हर select एक ही सूची से बने
   renderDateBars();          // तारीख़ की पट्टी हर tab पर
+  renderHero();              // 💎 सबसे बड़ा जवाब सबसे ऊपर
+  renderAccRail();           // 🏦 आठों खाते, बग़ल में
   renderTiles();
   renderCharts();
   renderBillFilters();
@@ -3927,6 +4153,229 @@ function renderAll() {
 }
 
 function monthKey(d) { return d ? d.toISOString().slice(0, 7) : ""; }
+
+/* ══════════ 🔍 एक ही जगह से पूरी खोज ═══════════════════════════════
+
+   विक्रम जी को «GHANU» ढूँढने के लिए पहले यह तय करना पड़ता था कि वह बैंक
+   की पंक्ति है, बिल है, या व्यापार का काग़ज़ — और फिर उसी पन्ने पर जाकर
+   उसी पन्ने के डिब्बे में लिखना पड़ता था।
+
+   अब एक ही डिब्बा तीनों जगह एक साथ देखता है, और गिनकर बताता है कि कहाँ
+   कितने मिले।
+
+   🔑 और v48 वाला नियम यहाँ भी: **ऊपर चुनी हुई अवधि आड़े नहीं आती।** खोज
+      का मतलब ही यह है कि «जहाँ भी हो, ढूँढो»।                          */
+
+let CMD_RECENT = [];
+
+function openCmd() {
+  $("cmdWrap").classList.add("on");
+  const i = $("cmdInput");
+  i.value = ""; renderCmd();
+  setTimeout(() => i.focus(), 60);
+}
+function closeCmd() { $("cmdWrap").classList.remove("on"); }
+
+/** एक ही कसौटी, तीनों जगह — नाम, रकम, तारीख़, नंबर। */
+function cmdHit(text, amount, q) {
+  const s = String(text || "").toLowerCase();
+  if (s.indexOf(q.t) >= 0) return true;
+  // 🔢 रकम — टुकड़ा-मिलान नहीं। «11000» लिखने पर ₹1,10,000 नहीं आएगा।
+  if (q.n != null && amount != null && Math.abs(Number(amount) - q.n) <= 1) return true;
+  return false;
+}
+
+function renderCmd() {
+  const box = $("cmdOut");
+  const raw = String(($("cmdInput") || {}).value || "").trim();
+  if (!box) return;
+
+  if (raw.length < 2) {
+    box.innerHTML = `
+      ${CMD_RECENT.length ? `<div class="cmdGrp">हाल की खोज</div>
+        <div style="padding:0 4px">${CMD_RECENT.slice(0, 6).map((r) =>
+          `<span class="cmdChip" onclick="$('cmdInput').value=${
+            JSON.stringify(r).replace(/"/g, "&quot;")};renderCmd()">${esc(r)}</span>`
+        ).join("")}</div>` : ""}
+      <div class="cmdGrp">क्या-क्या ढूँढ सकते हैं</div>
+      <div style="padding:0 4px">
+        <span class="cmdChip">🧑 पार्टी का नाम</span>
+        <span class="cmdChip">💰 रकम — 5000</span>
+        <span class="cmdChip">📅 तारीख़ — 09/07</span>
+        <span class="cmdChip">🔑 UTR</span>
+        <span class="cmdChip">🧾 बिल नंबर</span>
+      </div>
+      <div class="badge lo" style="display:block;line-height:1.7;margin-top:14px">
+        🔎 यहाँ <b>ऊपर चुनी हुई अवधि आड़े नहीं आती</b> — पूरा हिसाब देखा जाता है।
+      </div>`;
+    return;
+  }
+
+  const q = { t: raw.toLowerCase(), n: /^[\d,]+(\.\d+)?$/.test(raw)
+    ? Number(raw.replace(/,/g, "")) : null };
+  const day = parseDay(raw);
+
+  const bank = BANKTXNS.filter((t) => t && !t.retired && (
+    cmdHit(t.party, t.amount, q) || cmdHit(t.narration, null, q) ||
+    cmdHit(t.utr, null, q) || cmdHit(t.chequeNo, null, q) ||
+    (day && String(t.date).slice(0, 10) === day)))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 40);
+
+  const bills = EXP.filter((e) => e && (
+    cmdHit(e.vendor && e.vendor.name, expenseAmount(e), q) ||
+    cmdHit(e.receiptId, null, q) ||
+    cmdHit(e.vendor && e.vendor.invoiceNo, null, q) ||
+    (day && expenseDay(e) === day))).slice(0, 20);
+
+  let vy = [];
+  try {
+    vy = vyAll().filter((x) => x && (
+      cmdHit(x.party, x.total || x.received, q) || cmdHit(x.ref, null, q) ||
+      (day && String(x.date).slice(0, 10) === day))).slice(0, 20);
+  } catch (e) { /* व्यापार न चढ़ा हो तो बाक़ी खोज रुके नहीं */ }
+
+  if (raw.length >= 3 && (bank.length || bills.length || vy.length)) {
+    CMD_RECENT = [raw].concat(CMD_RECENT.filter((r) => r !== raw)).slice(0, 8);
+  }
+
+  const grp = (ic, name, n, rows) => !rows.length ? "" : `
+    <div class="cmdGrp">${ic} ${name} · ${n}</div>${rows.join("")}`;
+
+  const html =
+    grp("🏦", "बैंक की पंक्तियाँ", bank.length, bank.map((t) => `
+      <div class="cmdRow" onclick="closeCmd();goTab('ledger');cmdJump('${esc(t._id)}')">
+        <span class="ic">${t.type === "credit" ? "📥" : "📤"}</span>
+        <div class="mid"><b>${esc(t.party || t.narration || "—")}</b>
+          <small>${esc(dayLabel(String(t.date).slice(0, 10)) || t.date)} · ${
+            esc(safeAccLabel(t.accountId))}</small></div>
+        <div class="amt" style="color:${t.type === "credit" ? "#6FE3B8" : "#FF9EA1"}">${
+          t.type === "credit" ? "+" : "−"}${INR(t.amount)}</div>
+      </div>`)) +
+    grp("🧾", "बिल", bills.length, bills.map((e) => `
+      <div class="cmdRow" onclick="closeCmd();goTab('bills')">
+        <span class="ic">🧾</span>
+        <div class="mid"><b>${esc((e.vendor && e.vendor.name) || e.receiptId)}</b>
+          <small>${esc(dayLabel(expenseDay(e)) || "")} · ${esc(e.status || "")}</small></div>
+        <div class="amt">${INR(expenseAmount(e) || 0)}</div>
+      </div>`)) +
+    grp("🏛️", "व्यापार", vy.length, vy.map((x) => `
+      <div class="cmdRow" onclick="closeCmd();goTab('vyapar')">
+        <span class="ic">${(VY_PARTS.filter((p) => p.k === x.kind)[0] || {}).ic || "📄"}</span>
+        <div class="mid"><b>${esc(x.party || "—")}</b>
+          <small>${esc(x.ref || "")} · ${esc(dayLabel(String(x.date).slice(0, 10)) || "")}</small></div>
+        <div class="amt">${INR(x.total || x.received || 0)}</div>
+      </div>`));
+
+  box.innerHTML = html || gfx.empty("seek", "कहीं कुछ नहीं मिला",
+    `<b>${esc(raw)}</b> न बैंक की पंक्तियों में है, न बिलों में, न व्यापार में।`,
+    `<button type="button" class="mini" onclick="closeCmd();openCoverage()">
+      📊 मेरे पास कौन-सा हिसाब है?</button>`);
+}
+
+/** पासबुक/पंक्ति तक ले जाओ — और उसे एक पल के लिए चमका दो। */
+function cmdJump(id) {
+  setTimeout(() => {
+    const el = document.querySelector(`[data-txn="${id}"]`) || $(id);
+    if (el && el.scrollIntoView) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      el.style.transition = "box-shadow .5s";
+      el.style.boxShadow = "0 0 0 2px var(--brand)";
+      setTimeout(() => { el.style.boxShadow = ""; }, 1600);
+    }
+  }, 260);
+}
+
+/* ══════════ 💎 Hero — «कितना बचा है» ═══════════════════════════════
+
+   हर खाते की **आख़िरी छपी हुई बची रकम** जोड़कर। यह अंदाज़ा नहीं है — बैंक ने
+   हर पंक्ति के आगे जो लिखा है, वही। इसलिए यह ऐप का सबसे भरोसेमंद अंक है।
+
+   ⚠️ और साथ में यह भी लिखा जाता है कि वह **किस तारीख़ तक** का है। ₹3,69,595
+      कह देना आधा सच है अगर वह 27 जुलाई तक का हो और आज 8 अगस्त हो।       */
+function accBalances() {
+  const by = {};
+  BANKTXNS.forEach((t) => {
+    if (!t || t.retired || t.mergedInto || t.balance == null) return;
+    const a = t.accountId || "";
+    const d = String(t.date || "").slice(0, 10);
+    const seq = t.srcSeq == null ? 0 : t.srcSeq;
+    const cur = by[a];
+    if (!cur || d > cur.date || (d === cur.date && seq >= cur.seq)) {
+      by[a] = { id: a, date: d, seq, balance: Number(t.balance) };
+    }
+  });
+  return by;
+}
+
+function renderHero() {
+  const box = $("heroBox");
+  if (!box) return;
+  const bal = accBalances();
+  const ids = Object.keys(bal);
+  const total = ids.reduce((x, a) => x + (bal[a].balance || 0), 0);
+  const till = ids.map((a) => bal[a].date).sort().slice(-1)[0] || "";
+
+  const rows = BANKTXNS.filter((t) => t && inRange(t.date));
+  const sum = (ty) => rows.filter((t) => t.type === ty)
+    .reduce((x, t) => x + (t.amount || 0), 0);
+  const inSum = sum("credit"), outSum = sum("debit");
+
+  if (!ids.length && !rows.length) { box.innerHTML = ""; return; }
+
+  const net = inSum - outSum;
+  box.innerHTML = `
+    <div class="hero">
+      <span class="heroTag">${net >= 0 ? "▲" : "▼"} इस अवधि में ${
+        net >= 0 ? "+" : "−"}${INRshort(Math.abs(net)).replace("₹", "₹")}</span>
+      <div class="heroK">🏦 कुल बची रकम</div>
+      <div class="heroV" data-count="${Math.round(total)}">${INR(total)}</div>
+      <div class="heroS">${ids.length} खाते${
+        till ? " · " + esc(dayLabel(till) || till) + " तक" : ""}</div>
+      <div class="heroIO">
+        <div><div class="k">↓ आया</div>
+          <div class="v in">${INRshort(inSum)}</div></div>
+        <div><div class="k">↑ गया</div>
+          <div class="v out">${INRshort(outSum)}</div></div>
+      </div>
+      <div class="heroSpark">${gfx.spark(dailySeries(30, "debit"), gfx.C.out)}</div>
+    </div>`;
+  gfx.countUp(box);
+}
+
+/* ══════════ 🏦 खातों का carousel ═══════════════════════════════════ */
+function renderAccRail() {
+  const rail = $("accRail");
+  if (!rail) return;
+  const bal = accBalances();
+  const ids = Object.keys(ACCOUNTS || {}).filter((a) => bal[a]);
+  if (ids.length < 2) { rail.hidden = true; rail.innerHTML = ""; return; }
+  rail.hidden = false;
+  const today = todayISO();
+  rail.innerHTML = ids
+    .sort((a, b) => (bal[b].balance || 0) - (bal[a].balance || 0))
+    .map((a) => {
+      const acc = ACCOUNTS[a] || {};
+      const fid = (typeof FIRM_ACC === "object" && FIRM_ACC[a]) || "";
+      const col = (FIRMS.filter((f) => f.id === fid)[0] || {}).color || "#6C5CE7";
+      const days = Math.round((new Date(today + "T12:00:00") -
+        new Date(bal[a].date + "T12:00:00")) / 86400000);
+      return `
+      <div class="accCard" onclick="goTab('pass');setPassAccount('${esc(a)}')">
+        <i class="tint" style="background:${esc(col)}"></i>
+        <div class="bank">${esc(acc.bank || "बैंक")}</div>
+        <div class="nm">${esc(safeAccLabel(a))}</div>
+        <div class="bal">${INR(bal[a].balance)}</div>
+        <div class="till ${days > 3 ? "old" : ""}">${
+          days > 3 ? "⚠️ " : "▲ "}${esc(dayLabel(bal[a].date) || bal[a].date)} तक</div>
+      </div>`;
+    }).join("");
+}
+
+/** पासबुक उसी खाते पर खुले जिस कार्ड को छुआ गया। */
+function setPassAccount(id) {
+  const sel = $("pbAccount");
+  if (sel) { sel.value = id; try { renderPass(); } catch (e) {} }
+}
 
 function renderTiles() {
   // The bank statement IS the money truth — Overview must count it, not just
@@ -12029,7 +12478,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "e8024ca3d85d";
+const APP_BUILD = "36e5ebe108ae";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
