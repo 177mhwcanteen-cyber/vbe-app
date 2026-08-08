@@ -2849,7 +2849,7 @@ placeholder="917568 माजीसा डिस्पोजल
             <label>रकम ₹<input id="pyAmt" type="number" inputmode="decimal"></label>
           </div>
           <label>UPI ID या मोबाइल नंबर
-            <input id="pyVpa" placeholder="जैसे: 9828822300@ybl या dukan@paytm"></label>
+            <input id="pyVpa" placeholder="जैसे: 5327914685@ybl या dukan@paytm"></label>
           <div class="frow" style="margin-top:10px">
             <label>किस बात का<input id="pyNote" placeholder="जैसे: सब्ज़ी का बिल 12081"></label>
             <label>किस खाते से<select id="pyAccount"></select></label>
@@ -4598,11 +4598,11 @@ const toISO = (v) => parseDay(v);
 
    पर बैंक की narration में 12+ अंकों के नंबर **खाता नंबर** भी होते हैं:
 
-       "DIRECT DR INT TRF FRM 42033283908 TO 44396283308
-        0044396283308 OF SHREE HINGLAJ INFRATEC"
+       "DIRECT DR INT TRF FRM 97531975114 TO 84435588186
+        0096181714384 OF SHREE HINGLAJ INFRATEC"
 
-   यहाँ 0044396283308 सामने वाले का **खाता नंबर** है, UTR नहीं। और चूँकि
-   हर पंक्ति का दस्तावेज़-नंबर UTR से बनता है («utr-0044396283308»), उस
+   यहाँ 0096181714384 सामने वाले का **खाता नंबर** है, UTR नहीं। और चूँकि
+   हर पंक्ति का दस्तावेज़-नंबर UTR से बनता है («utr-0096181714384»), उस
    खाते के साथ हुए **आठों सौदे एक ही दस्तावेज़ में जा गिरते** — यानी सात
    चुपचाप मिट जाते।
 
@@ -4611,8 +4611,8 @@ const toISO = (v) => parseDay(v);
 
    अब बिना निशानी वाला नंबर UTR माना ही नहीं जाता। असली UTR के साथ हमेशा
    कोई न कोई निशानी होती है:
-       UPI/DR/657085241092/…      NEFT UTR NO: SBIN426092856383
-       UPI Ref No: 311420032638   RRN: 032771344249
+       UPI/DR/514852743115/…      NEFT UTR NO: SBIN754537731437
+       UPI Ref No: 538445453966   RRN: 082361543171
 
    और अगर किसी statement में सचमुच बिना निशानी का UTR हो, तो वह न मिलने से
    सिर्फ़ इतना होगा कि जुड़ाव अपने-आप नहीं होगा — कुछ मिटेगा नहीं। ग़लत UTR
@@ -4630,7 +4630,7 @@ function utrOf(text) {
   /* 2. NEFT/RTGS की अपनी पर्ची — बैंक इसे बिना किसी शब्द के, सीधे
         डैश के बाद छापता है:
 
-            NEFT CR-SBINN52026062981402318 -PUB FUND ACCT 17 MECH INF -…
+            NEFT CR-SBINN95733255365616213 -PUB FUND ACCT 17 MECH INF -…
                     └──────────┬─────────┘
                           यही उसका UTR है
 
@@ -4670,7 +4670,7 @@ function utrOf(text) {
 
    नाम narration के बीच में पड़ा है:
 
-       UPI/DR/619002962426/PAINTER GHANU/UBIN/520191039316463/UPI AU JAGATPURA
+       UPI/DR/435797797514/PAINTER GHANU/UBIN/685948437351737/UPI AU JAGATPURA
                            └────┬─────┘
 
    इसलिए 999 में से **999 पंक्तियाँ बिना नाम** के अंदर जातीं, और नाम से की
@@ -4685,7 +4685,15 @@ const BANK_LINES = [
   [/^CHQ\s*PAID\s*-\s*SELF/i,                    "अपना चेक (SELF)"],
   [/^CHQ\s*DEP\s*RET|^CHQDEP\s*RET|CHEQUE\s*RETURN/i, "चेक वापस आया"],
   [/^AMB\b|NON\s*MAINTENANCE|MIN(IMUM)?\s*BAL/i,   "बैंक शुल्क"],
-  [/^INT\.?\s*(CR|CREDIT|PD|PAID)\b|^CREDIT\s*INTEREST/i, "बैंक का ब्याज"]
+  [/^INT\.?\s*(CR|CREDIT|PD|PAID)\b|^CREDIT\s*INTEREST/i, "बैंक का ब्याज"],
+  /* 🏦 SBI की अपनी लकीरें — इनमें कोई पार्टी होती ही नहीं। «DIRECT DR INT
+     TRF FRM <खाता> TO <खाता>» अपने ही दो खातों के बीच का तबादला है, और
+     «TR TO PABL» / «SI FAIL» बैंक की अपनी व्यवस्था। */
+  [/\bINT\s*TRF\s*FRM\s+\d+\s*TO\b/i,        "अपने खाते में तबादला"],
+  [/\bTR(FR)?\s*TO\s*PABL\b|\bTR\s*PABL\b/i, "PABL में तबादला"],
+  [/^SI\s*FAIL\b/i,                            "SI नाकाम (बैंक)"],
+  [/IOI\s*PAYMENT\s*CHARGES|ATM\s*PENDING\s*AMC/i, "बैंक शुल्क"],
+  [/\bITDTAX\s*REFUND\b|INCOME\s*TAX\s*REFUND/i, "आयकर वापसी"]
 ];
 
 /**
@@ -4709,8 +4717,8 @@ function dedupName(x) {
  *    से नाम लिया जाता है — पर तभी जब शक्ल सचमुच पहचानी हुई हो। बिना इस
  *    पहरे के बैंक की अपनी लकीरें भी «नाम» बन जाती थीं:
  *
- *        CHQ TRFR FROM 0051011957898 OF   → यह नाम नहीं, खाता नंबर है
- *        DEBIT CMP 3Q523287210SBILife     → यह बीमे की क़िस्त है
+ *        CHQ TRFR FROM 0011454176136 OF   → यह नाम नहीं, खाता नंबर है
+ *        DEBIT CMP 3Q574219651SBILife     → यह बीमे की क़िस्त है
  *
  *    ऐसा «नाम» संपर्क की सूची में जाकर हमेशा के लिए कूड़ा बन जाता।
  *    काग़ज़ी (PDF) रास्ते पर narration ही सब कुछ है, इसलिए वहाँ ढीला
@@ -4734,7 +4742,7 @@ function partyOf(text, strict) {
 
   /* 2️⃣ NEFT/RTGS का बैंकी ढाँचा — टुकड़े « -» से बँटे होते हैं:
 
-         NEFT CR-SBINN52026062981402318 -PUB FUND ACCT 17 MECH INF -SBIN0018049 -/URGENT/…
+         NEFT CR-SBINN95733255365616213 -PUB FUND ACCT 17 MECH INF -SBIN0018049 -/URGENT/…
          └───────── UTR ──────────────┘  └──────── नाम ─────────┘  └─ IFSC ─┘  └ टिप्पणी ┘
 
      🔑 नाम में **अंक रहने दिए जाते हैं**। पुराना नियम अंक पर रुक जाता था
@@ -4753,7 +4761,24 @@ function partyOf(text, strict) {
     }
   }
 
-  /* 3️⃣ चेक जमा — «BY CLG SBI 31/03/2026 BARMER GE»।
+  /* 3️⃣ SBI की अपनी शक्लें — खाता नंबर के बाद «OF» और फिर नाम।
+
+         CHQ TRFR FROM 0012523545173 OF STN HQ      → STN HQ
+         CHEQUE TRANSFER TO 0017651243677 OF SHIVANI → SHIVANI
+         CAS CASH CHEQUE / MANOJ DAN                → MANOJ DAN
+
+     नाम अक्सर वहीं कट जाता है जहाँ पंक्ति ख़त्म होती है («STN HQ» —
+     आगे «JALIPA» छपा ही नहीं) — इसलिए ये कटे हुए माने जाते हैं। */
+  m = s.match(/\b(?:CHQ|CHEQUE)\s*(?:TRFR|TRANSFER)\s*(?:FROM|TO)\s+\d+\s+OF\s+(.+)$/i);
+  if (m) return clean(m[1]);
+  m = s.match(/\bCAS\s+CASH\s+CHEQUE\s*[\/-]\s*(.+)$/i);
+  if (m) return clean(m[1]);
+  /* «DIRECT DR 0096181714384 OF SHREE» — खाता नंबर के बाद «OF» और नाम।
+     यह ऊपर वाले से ज़्यादा चौड़ा है, इसलिए बाद में आता है। */
+  m = s.match(/\b\d{9,}\s+OF\s+([A-Za-z][^\/]*)$/);
+  if (m) return clean(m[1]);
+
+  /* 4️⃣ चेक जमा — «BY CLG SBI 31/03/2026 BARMER GE»।
      ढाँचा: BY CLG <बैंक> <तारीख़> <शाखा> <नाम>। नाम clearing वाले यहाँ
      काट देते हैं («OCONESEVENSEVEN» = «0177…»), इसलिए यह हमेशा अधूरा
      माना जाता है — पर «BY CLG SBI 31» लिखने से तो यही भला। */
@@ -4766,7 +4791,7 @@ function partyOf(text, strict) {
     return frag ? "चेक जमा (" + frag + ")" : "चेक जमा";
   }
 
-  // 4️⃣ बैंक की अपनी पंक्ति — शुल्क, ब्याज, चेक वापसी, अपना निकाला हुआ
+  // 5️⃣ बैंक की अपनी पंक्ति — शुल्क, ब्याज, चेक वापसी, अपना निकाला हुआ
   for (const [re, label] of BANK_LINES) if (re.test(s)) return label;
 
   if (strict) return null;           // पहचानी शक्ल नहीं मिली — अंदाज़ा मत लगाओ
@@ -4895,7 +4920,196 @@ function parsePage(items, cols) {
   return out;
 }
 
+
+/* ══════════ 📄 SBI की अपनी PDF — बिना AI के ═══════════════════════════
+
+   विक्रम जी की SBI statement (श्री हिंगलाज, 3 पन्ने, 31 सौदे) ऐप के पुराने
+   पढ़ने वाले हिस्से में डालकर देखी तो **31 में से सिर्फ़ 3 पंक्तियाँ** आईं,
+   और वे भी ग़लत — चेक नंबर को रकम मान लिया गया था।
+
+   वजह: पुराना तरीक़ा खानों की जगह **अंदाज़े से** ढूँढता है (सबसे भरे हुए दो
+   खाने)। SBI में «Cheque No/Reference» का खाना विवरण और रकम के बीच में
+   पड़ता है, इसलिए वही «रकम» समझ लिया गया।
+
+   इस शक्ल में अंदाज़े की ज़रूरत ही नहीं — SBI **खानों के नाम छापता है**:
+
+       Post Date | Value Date | Description | Cheque No/Reference
+                 | Debit | Credit | Balance
+
+   और तीन बातें इसे पक्का बना देती हैं:
+
+   1️⃣ **रकम की पहचान दशमलव से।** SBI हर रकम «19,201.00» की तरह छापता है —
+      दो दशमलव हमेशा। चेक नंबर «746535» में दशमलव नहीं होता। इसलिए चेक
+      नंबर कभी रकम नहीं बन सकता।
+
+   2️⃣ **दिशा बची रकम से, आँख से नहीं।** Debit और Credit के खाने पास-पास
+      छपते हैं और अंदाज़ा ग़लत हो सकता है — पर बची रकम झूठ नहीं बोलती:
+
+          बची रकम बढ़ी  →  आया (credit)
+          बची रकम घटी   →  गया (debit)
+
+      और शुरुआत «BROUGHT FORWARD» वाली पंक्ति से मिलती है। यही नियम
+      प्रॉम्प्ट में भी लिखा है — दोनों तरफ़ एक ही समझ।
+
+   3️⃣ **विवरण रकम वाली पंक्ति के ऊपर और नीचे, दोनों तरफ़** होता है:
+
+          DIRECT DR                                    ← ऊपर
+          01-04-2026  01-04-2026  19,201.00  17,298.31CR
+          INT TRF FRM ... TO                           ← नीचे
+
+      ऊपर वाला टुकड़ा पिछले सौदे का नहीं है। यही सबसे आम ग़लती है।       */
+
+/** क्या यह पन्ना SBI वाली शक्ल का है? — खानों के नाम से, अंदाज़े से नहीं। */
+function sbiHeader(items) {
+  const lines = {};
+  items.forEach((i) => {
+    if (!i.str.trim()) return;
+    const y = Math.round(i.transform[5]);
+    (lines[y] = lines[y] || []).push({ x: i.transform[4], s: i.str.trim() });
+  });
+  for (const y of Object.keys(lines)) {
+    const row = lines[y].sort((a, b) => a.x - b.x);
+    const txt = row.map((c) => c.s).join(" ").toLowerCase();
+    if (/post\s*date/.test(txt) && /description/.test(txt) &&
+        /debit/.test(txt) && /credit/.test(txt) && /balance/.test(txt)) {
+      const at = (re) => { const c = row.filter((z) => re.test(z.s.toLowerCase()))[0];
+        return c ? c.x : null; };
+      return { y: Number(y), desc: at(/^description$/), debit: at(/^debit$/),
+        credit: at(/^credit$/), bal: at(/^balance$/) };
+    }
+  }
+  return null;
+}
+
+const SBI_MONEY = /^-?[\d,]+\.\d{2}\s*(CR|DR)?$/i;
+const sbiAmt = (t) => {
+  const n = parseFloat(String(t).replace(/[,\s]/g, "").replace(/(CR|DR)$/i, ""));
+  return isNaN(n) ? null : n;
+};
+
+/**
+ * SBI की statement → पंक्तियाँ। पूरी फ़ाइल एक साथ, क्योंकि बची रकम की
+ * जंज़ीर पन्नों के आर-पार चलती है।
+ */
+function parseSbiStatement(pages) {
+  const rows = [];
+  let open = null;
+
+  const all = [];
+  pages.forEach((items, pi) => {
+    const h = sbiHeader(items);
+    const lines = {};
+    items.forEach((i) => {
+      if (!i.str.trim()) return;
+      const y = Math.round(i.transform[5]);
+      (lines[y] = lines[y] || []).push({
+        x: i.transform[4], r: i.transform[4] + (i.width || 0), s: i.str.trim() });
+    });
+    Object.keys(lines).map(Number).sort((a, b) => b - a).forEach((y) => {
+      if (h && y >= h.y) return;                 // सिरे वाला हिस्सा छोड़ो
+      all.push({ page: pi, y, cells: lines[y].sort((a, b) => a.x - b.x) });
+    });
+  });
+
+  // 🟢 शुरुआत — «BROUGHT FORWARD» वाली पंक्ति की बची रकम
+  all.forEach((ln) => {
+    if (open != null) return;
+    const t = ln.cells.map((c) => c.s).join(" ");
+    if (/BROUGHT\s*FORWARD/i.test(t)) {
+      const m = ln.cells.filter((c) => SBI_MONEY.test(c.s));
+      if (m.length) open = sbiAmt(m[m.length - 1].s);
+    }
+  });
+
+  // ⚓ जिन पंक्तियों पर तारीख़ है, वही असली सौदा
+  const anchors = [];
+  all.forEach((ln, idx) => {
+    const d = parseDay(ln.cells[0] && ln.cells[0].s);
+    if (!d) return;
+    const money = ln.cells.filter((c) => SBI_MONEY.test(c.s));
+    if (money.length < 2) return;              // रकम और बची रकम, दोनों चाहिए
+    anchors.push({ idx, date: d, ln, money });
+  });
+
+  /* 📝 विवरण — ऊपर और नीचे, दोनों तरफ़ का पाठ, पर अगले/पिछले सौदे तक ही।
+     बीच का बँटवारा तारीख़ वाली पंक्तियों के ठीक बीच से होता है। */
+  /* 🧹 सिरे और पैर का पाठ विवरण में कभी न घुसे। आख़िरी सौदे के नीचे SBI
+     अपनी क़ानूनी चेतावनी और «Statement Summary» छापता है — बिना इस छन्नी
+     के वह पूरा पैराग्राफ़ आख़िरी सौदे के नाम में जा बैठता था। */
+  const HEAD = new RegExp([
+    /* ⚠️ «cheque» अकेला मत लिखना — «CHEQUE TRANSFER TO …» असली विवरण
+       है, सिरा नहीं। अकेले «cheque» से वह पूरी पंक्ति उड़ जाती थी और
+       सामने वाले का नाम ग़ायब हो जाता। सिरे का खाना «Cheque No/Reference»
+       है, इसलिए वही पूरा लिखो। */
+    "post date", "value date", "^description$", "cheque\\s*no", "no/reference",
+    "^debit$", "^credit$", "^balance$", "page no", "brought forward",
+    "statement of account", "statement summary", "statement from",
+    "closing balance", "opening balance",
+    "in case your account", "end of statement",
+    "dr count", "cr count", "total debits", "total credits",
+    "last transaction date", "letter of authority"
+  ].join("|"), "i");
+  const textOf = (from, to) => {
+    const parts = [];
+    for (let i = from; i <= to; i++) {
+      const ln = all[i];
+      if (!ln) continue;
+      const t = ln.cells.filter((c) => !SBI_MONEY.test(c.s) &&
+        !parseDay(c.s) && !/^\d{4,}$/.test(c.s)).map((c) => c.s).join(" ").trim();
+      if (t && !HEAD.test(t)) parts.push(t);
+    }
+    return parts.join(" ").replace(/\s+/g, " ").trim();
+  };
+
+  let prev = open;
+  anchors.forEach((a, k) => {
+    const before = k === 0 ? 0 : Math.floor((anchors[k - 1].idx + a.idx) / 2) + 1;
+    const after = k === anchors.length - 1 ? all.length - 1
+      : Math.floor((a.idx + anchors[k + 1].idx) / 2);
+    const narration = textOf(before, after);
+
+    const bal = sbiAmt(a.money[a.money.length - 1].s);
+    const amt = Math.abs(sbiAmt(a.money[a.money.length - 2].s));
+
+    /* 🔑 दिशा बची रकम से — यही इस पूरे तरीक़े की जान है। खानों की जगह
+       नापकर अंदाज़ा लगाने से कहीं ज़्यादा पक्का, क्योंकि बैंक की अपनी
+       जंज़ीर से मिलान होता है। */
+    let type = null;
+    if (prev != null && bal != null) {
+      const d = Math.round((bal - prev) * 100) / 100;
+      if (Math.abs(Math.abs(d) - amt) <= 0.02) type = d > 0 ? "credit" : "debit";
+    }
+    if (!type) {
+      // जंज़ीर टूटी हो तो खाने की जगह से — पर यह सहारा है, नियम नहीं
+      const x = a.money[a.money.length - 2].x;
+      const h = a.ln.cells.length ? null : null;
+      type = x > 420 ? "credit" : "debit";
+    }
+    prev = bal;
+
+    // 🧾 चेक नंबर — विवरण और रकम के बीच पड़ा सादा अंकों वाला टुकड़ा
+    const chq = a.ln.cells.filter((c) => /^\d{5,10}$/.test(c.s) &&
+      c.x > 200 && c.x < a.money[0].x)[0];
+
+    rows.push({
+      date: a.date, amount: amt, type: type, balance: bal,
+      narration: narration.slice(0, 300),
+      party: partyOf(narration, true),
+      utr: utrOf(narration),
+      chequeNo: chq ? chq.s : null,
+      source: "pdf_sbi"
+    });
+  });
+  return { rows: rows, opening: open };
+}
+
 function parsePdfStatement(pages) {
+  /* 🏦 SBI अपनी खानों के नाम छापता है — तब अंदाज़े की ज़रूरत ही नहीं।
+     बाक़ी बैंकों के लिए पुराना तरीक़ा जस का तस रहता है। */
+  if ((pages || []).some((p) => sbiHeader(p))) {
+    const r = parseSbiStatement(pages);
+    if (r.rows.length) return r.rows;
+  }
   const all = [];
   let cols = {};
   pages.forEach((items) => {
@@ -5097,7 +5311,7 @@ function parseStatement(text) {
        UPI की हर पंक्ति पर बैंक का अपना संदर्भ छपा था —
        «AXIc91ed07ef55f4b9caba5c87c81c7559a»। पहले यहाँ से सारे **अंक**
        छानकर उसे चेक नंबर मान लिया जाता था, यानी 118 में से 110 पंक्तियों
-       पर एक नक़ली «चेक नंबर» बन जाता था: पासबुक में «🧾 चेक 9155479781759»
+       पर एक नक़ली «चेक नंबर» बन जाता था: पासबुक में «🧾 चेक 3684277976364»
        जैसा कूड़ा छपता, और मिलान में वह «पक्की पहचान» मानी जाती।
 
        अब नियम सीधा है — खाने में सिर्फ़ अंक (और -/space) हों तभी वह चेक
@@ -5125,8 +5339,8 @@ function parseStatement(text) {
       /* 🗺️ «Account» का खाना — «SBI 0499» / «State Bank Of India - 89»।
          बैंक का नाम और अंक अलग करके रखो, ताकि नक़्शे वाली स्क्रीन उन्हें
          वैसे ही पहचाने जैसे PDF से आई पंक्तियों को।                    */
-      /* आख़िर में जितने भी अंक हों, सब लो — «SBI 42033283908» में पूरा
-         नंबर 42033283908 है, सिर्फ़ आख़िरी छह 283908 नहीं। पूरा नंबर मिलने
+      /* आख़िर में जितने भी अंक हों, सब लो — «SBI 97531975114» में पूरा
+         नंबर 97531975114 है, सिर्फ़ आख़िरी छह 283908 नहीं। पूरा नंबर मिलने
          पर पहचान हूबहू होती है, अंदाज़े से नहीं।                        */
       bank: accCell ? accCell.replace(/[-\s]*\d+\s*$/, "").trim() || null : null,
       accountTail: accCell ? ((accCell.match(/(\d{2,})\s*$/) || [])[1] || null) : null,
@@ -5525,7 +5739,7 @@ function findTwins(acc) {
 /**
  * 🚨 एक ही file में वही «UTR» कई पंक्तियों पर — तो वह UTR है ही नहीं।
  *
- * विक्रम जी की एक असली CSV में «0044396283308» आठ पंक्तियों पर था। वह
+ * विक्रम जी की एक असली CSV में «0096181714384» आठ पंक्तियों पर था। वह
  * सामने वाले का **खाता नंबर** था, और उसी खाते में हर महीने पैसा जाता है।
  * चूँकि दस्तावेज़-नंबर UTR से बनता है, आठों एक ही दस्तावेज़ में जा गिरतीं —
  * सात सौदे चुपचाप मिट जाते।
@@ -5548,11 +5762,11 @@ function dropFakeUtrs(rows) {
     if (g.length < 2) return;
     /* ↩️ वापसी (reversal) — विक्रम जी ने ख़ुद पकड़ा:
        «13-07 का ₹1,000 वाला सौदा और उसका reversal, दोनों का नंबर एक ही है
-        (619448440318) — UTR से dedupe करोगे तो इनमें से एक हमेशा मिट
+        (833226641523) — UTR से dedupe करोगे तो इनमें से एक हमेशा मिट
         जाएगा।» बात बिल्कुल सही है। पैसा गया और फिर वापस आया — ये दो अलग
        सौदे हैं, नक़ली UTR नहीं। इसलिए इनका UTR रहने दिया जाता है और
-       दस्तावेज़ का नंबर दिशा के साथ बनता है: «utr-619448440318-D» और
-       «utr-619448440318-C»।                                             */
+       दस्तावेज़ का नंबर दिशा के साथ बनता है: «utr-833226641523-D» और
+       «utr-833226641523-C»।                                             */
     const dirs = {};
     g.forEach((t) => { dirs[t.type] = (dirs[t.type] || 0) + 1; });
     const twoWay = Object.keys(dirs).length === 2 &&
@@ -6030,7 +6244,7 @@ function parsePaytm(pages) {
 
      DEP TFR                                        ← किस तरह का सौदा
      02-04-2026  02-04-2026     250.00   311.93CR   ← तारीख़, रकम, बचत
-     UPI/CR/032771344249/MANISH                     ← किसका, किस UTR से
+     UPI/CR/082361543171/MANISH                     ← किसका, किस UTR से
 
    डेबिट और क्रेडिट अलग-अलग खानों में छपते हैं — इसलिए यह जगह से तय होता है,
    किसी शब्द से नहीं। खानों की जगह header से नापी जाती है ताकि दूसरी शाखा की
@@ -6143,9 +6357,9 @@ function parseSBI(pages) {
       if (debit == null && credit == null) return;
 
       const desc = descOf(y);
-      // UPI/CR/032771344249/MANISH — बीच का लंबा अंक ही UTR है
+      // UPI/CR/082361543171/MANISH — बीच का लंबा अंक ही UTR है
       let utr = (desc.match(/\b(?:UPI|IMPS|NEFT|RTGS)\/(?:CR|DR)\/(\d{9,22})/i) || [])[1] || null;
-      // "NEFT UTR NO: SBIN426092856383" — बैंक का अपना UTR भी यही है
+      // "NEFT UTR NO: SBIN754537731437" — बैंक का अपना UTR भी यही है
       if (!utr) utr = (desc.match(/\b([A-Z]{4}[A-Z0-9]{8,20})\b/) || [])[1] || null;
       if (!utr) utr = (desc.match(/\b(?:UTR|RRN|REF)[:\s#-]*([A-Za-z0-9]{9,22})\b/i) || [])[1] || null;
       // सादा लंबा अंक तभी UTR माना जाए जब पंक्ति सचमुच किसी transfer की हो —
@@ -6209,8 +6423,8 @@ function parseSBI(pages) {
    एक सौदे को चार-पाँच पंक्तियों में तोड़ता है:
 
      Jul 28, 2026    Paid to GANPAT SINGH              DEBIT    ₹5,000
-     09:14 pm        Transaction ID T2607282114316327134670
-                     UTR No. 001527714203
+     09:14 pm        Transaction ID T2952414562593556642557
+                     UTR No. 005659436661
                      Paid by (AU) XXXXXXXXXXXX0481
 
    बदले में वह वो सब देता है जो बैंक नहीं देता — पार्टी का साफ़ नाम, समय,
@@ -6464,7 +6678,7 @@ let ACCMAP = [];
 
    3 अगस्त 2026 को यह सचमुच हुआ, और यही सबसे बड़ी ख़राबी थी:
 
-     statement : SBI · 51110490499        (विक्रम जी का अपना खाता)
+     statement : SBI · 67961477115        (विक्रम जी का अपना खाता)
      चुना गया  : Ujjwal Bharat AU-0628     ← बिल्कुल दूसरा खाता!
 
    हुआ यूँ कि उस वक़्त ऐप में **सिर्फ़ एक ही खाता दर्ज था**। नक़्शे वाली
@@ -6985,8 +7199,8 @@ function txnDoc(t, accountId, receiptId, confidence, existing) {
  * लंबाई **7 अक्षर पर दीवार की तरह रुक जाती है** (94 नाम ठीक 7 के, आगे
  * लगभग कुछ नहीं), और narration ख़ुद कटा हुआ छपता है:
  *
- *     DEP TFR UPI/CR/646169537222/ABHISHE     ← ABHISHEK
- *     DEP TFR UPI/CR/175057993914/MANJIND     ← MANJINDER
+ *     DEP TFR UPI/CR/331473222151/ABHISHE     ← ABHISHEK
+ *     DEP TFR UPI/CR/373521822756/MANJIND     ← MANJINDER
  *
  * पर ऐप उनमें से सिर्फ़ 12 को «कटा हुआ» मानता था। वजह: CSV वाले रास्ते
  * में लिखा था «खाने में नाम लिखा है तो वह पूरा नाम है» — और वह मान्यता
@@ -9993,7 +10207,7 @@ function parseQuery(raw) {
       label: "💰 " + INR(n) + (min ? " या उससे ऊपर" : "") };
   }
 
-  // अक्षर-अंक मिला हुआ लंबा टुकड़ा = reference (SBIN426092856383 जैसा)
+  // अक्षर-अंक मिला हुआ लंबा टुकड़ा = reference (SBIN754537731437 जैसा)
   if (/^[A-Z0-9]{8,}$/i.test(q) && /\d/.test(q) && /[A-Z]/i.test(q))
     return { kind: "ref", text: q.toUpperCase(), label: "🔗 " + q.toUpperCase() };
 
@@ -10142,7 +10356,7 @@ function reSearch(id, v) {
 
    मदनलाल धनाराम की एक ही ₹5,001 की entry दो बार दिख रही थी — एक बार बिल
    से (WEB/26-27/999861), एक बार बैंक की statement से। दोनों का UTR एक ही
-   था: 657085241092।
+   था: 514852743115।
 
    हुआ यह था: buildParties() जोड़ का हिसाब तो एक बार करता था, पर **पंक्ति
    दोनों बार दिखा देता था**। और जोड़ने की कुंजी «बिल नंबर» थी — यानी जब तक
@@ -10165,7 +10379,7 @@ function utrKey(v) {
 
 /**
  * इस बैंक-पंक्ति का UTR — अपने ख़ाने में न हो तो narration के अंदर से।
- * `UPI/DR/657085241092/MADAN LAL SO DHANA RAM/...` → `657085241092`
+ * `UPI/DR/514852743115/MADAN LAL SO DHANA RAM/...` → `514852743115`
  */
 function txnUtr(t) {
   if (!t) return "";
@@ -10267,7 +10481,7 @@ function billKeys(e) {
     if (x.length >= 8 && !/^0+$/.test(x) && !/^N+A+$/.test(x)) out.push(x);
   };
   const chq = (v) => {
-    /* आगे लगे शून्य हटा दो — बैंक «000345678» छापता है और बिल पर
+    /* आगे लगे शून्य हटा दो — बैंक «000928549» छापता है और बिल पर
        «345678» लिखा होता है। न हटाएँ तो वही चेक दो अलग कुंजियाँ बन
        जाता और दोहरी entry चुपचाप निकल जाती। */
     const x = String(v || "").replace(/\D/g, "").replace(/^0+/, "");
@@ -10594,7 +10808,7 @@ function bankMeaning(text) {
  */
 /* ══════════ 📇 VPA से असली नाम ═══════════════════════════════════════
 
-   बैंक कई बार नाम की जगह **VPA** छाप देता है — «9680332612@PTYES» या
+   बैंक कई बार नाम की जगह **VPA** छाप देता है — «3382136711@PTYES» या
    «SBIPMOPAD.02EZ010000215111-20807814@SBIPAY»। पहला असल में एक मोबाइल
    नंबर है, और वह नंबर हमारे 📇 संपर्कों में पहले से हो सकता है।
 
@@ -10602,7 +10816,7 @@ function bankMeaning(text) {
    से 10 अंकों का नंबर निकालकर संपर्कों में देखा जाता है। मिल गया तो असली
    नाम ऊपर, और VPA नीचे छोटे अक्षरों में बना रहता है।                   */
 
-/** VPA में छिपा मोबाइल नंबर — «9680332612@PTYES» → «9680332612»। */
+/** VPA में छिपा मोबाइल नंबर — «3382136711@PTYES» → «3382136711»। */
 function vpaPhone(v) {
   const m = String(v || "").match(/(?:^|[^\d])([6-9]\d{9})(?:@|$|[^\d])/);
   return m ? m[1] : null;
@@ -11459,7 +11673,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "4627da73bca7";
+const APP_BUILD = "0c3478d5ce23";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -13334,7 +13548,7 @@ function openAccount(id) {
    विक्रम जी: «एक ही अकाउंट था, लेकिन उसमें डबल बार एंट्री हो गई है। इसको
    मर्ज कैसे किया जा सकता है? बड़ी दिक्कत हो गई है।»
 
-   एक ही असली खाता — AU 2114229231850481 — ऐप में दो बार बना हुआ था:
+   एक ही असली खाता — AU 3626967861696597 — ऐप में दो बार बना हुआ था:
 
      सुशीला कंवर AU-0481    228 सौदे · गया ₹13,25,966
      sushila kanwar         137 सौदे · गया ₹5,62,604
@@ -13410,7 +13624,7 @@ function findAccTwins() {
  *
  * यही वह जगह है जहाँ दस्तावेज़-नंबर की बारीक़ी सँभाली जाती है:
  *
- *   UTR वाली पंक्ति   → नंबर `utr-658120673715`, खाते से कोई मतलब नहीं।
+ *   UTR वाली पंक्ति   → नंबर `utr-676845344125`, खाते से कोई मतलब नहीं।
  *                       बस `accountId` बदल दो, नंबर वही रहेगा।
  *   UTR के बिना       → नंबर `<खाता>-तारीख़-रकम-हैश`, यानी नंबर में **पुराना
  *                       खाता जड़ा हुआ है**। वैसे ही छोड़ दें तो अगली बार वही
@@ -15241,7 +15455,7 @@ const FAST_PROMPT =
   'under the code as "UPI ID". Copy it exactly, lowercase.\n' +
   '- chequeNo: ONLY for a cheque. Read it from the printed MICR strip at the ' +
   'BOTTOM of the leaf — the first group of 6 digits, e.g. "917598" in ' +
-  '"917598 344002003 000013 29". That strip is machine-printed and always ' +
+  '"917598 526325211 000013 29". That strip is machine-printed and always ' +
   'legible; never take the number from anywhere else.\n' +
   '- For a cheque: payeeName = the name written after "PAY"; amount = the ' +
   'figure written in the ₹ box (cross-check it against the words on the ' +
@@ -15258,14 +15472,14 @@ const FAST_PROMPT =
   'who the person is. null if there is no picture or it is the default grey ' +
   'silhouette.\n' +
   '- fromAccountNo: the account the money LEAVES. On a cheque it is the ' +
-  '"A/c No." printed on the leaf (e.g. "43362997445"). On a bank remittance ' +
+  '"A/c No." printed on the leaf (e.g. "53631424153"). On a bank remittance ' +
   'slip it is the handwritten number after "By debiting my/our account No.". ' +
   'Digits only. This is how the app knows which of the owner\'s own accounts ' +
   'was used — never leave it null if a number is visible.\n' +
   '- toAccountNo: the account the money GOES TO. On a remittance slip it is ' +
   'the "Beneficiary Account Number" (also re-written in boxes below it — use ' +
   'both to check each other). In a chat it is the account number someone ' +
-  'sent, e.g. "A/c no. - 0326104000157940". Digits only.\n' +
+  'sent, e.g. "A/c no. - 0547167414774222". Digits only.\n' +
   '- ifsc: the 11-character IFSC code if written (e.g. "IBKL0000326", ' +
   '"SBIN0004678"). Uppercase.\n' +
   '- For a "slip": amount = the "Remittance Amount (in figures)", NOT the ' +
@@ -16093,10 +16307,10 @@ const CLAUDE_PROJECT = [
   '  "date": "2026-08-03",',
   '  "time": "17:21",',
   '  "mode": "bank",',
-  '  "utr": "658120673715",',
+  '  "utr": "676845344125",',
   '  "appTxnId": "बैंक/ऐप का अपना नंबर, हो तो",',
   '  "app": "GPay" | "PhonePe" | "Paytm" | null,',
-  '  "vpa": "8003011493@ibl",',
+  '  "vpa": "4715452515@ibl",',
   '  "chequeNo": null,',
   '  "fromAccountNo": "जिस खाते से गया, पूरा नंबर हो तो",',
   '  "toAccountNo": null,',
@@ -19717,7 +19931,7 @@ function utrCandidate(t) {
 
   /* 🔑 सबसे पहले UTR — narration के अंदर छिपा हुआ भी।
      यही वह जगह है जहाँ मदनलाल धनाराम वाली दोहरी entry बनी थी: बिल पर UTR
-     657085241092 पड़ा था और बैंक की पंक्ति के narration में भी वही, पर
+     514852743115 पड़ा था और बैंक की पंक्ति के narration में भी वही, पर
      मिलान सिर्फ़ रकम-और-तारीख़ से हो रहा था। अब UTR पहले देखा जाता है और
      मिलते ही बात ख़त्म — कोई अंदाज़ा नहीं।                               */
   const u = txnUtr(t);
@@ -21644,7 +21858,24 @@ const CSV_PROMPT = [
   "सकता कि पूरा statement आया या आधा। छपी हुई opening/closing कहीं न दिखे",
   "तो जो दिखे उतना लिखो — पर पंक्ति मत छोड़ो।",
   "",
-  "# VBE | Account: AU ****0628 | Period: 2026-04-01 to 2026-08-03 | Opening: 3487029.27 | Closing: 532755.51 | Rows: 1284",
+  "📌 SBI की statement में यह सब **आख़िरी पन्ने पर «Statement Summary»** में",
+  "   छपा होता है। वहीं से उठाओ, अंदाज़े से मत लिखो (नीचे के सारे अंक और",
+  "   नंबर सिर्फ़ **नमूना** हैं — शक्ल समझने के लिए, copy करने के लिए नहीं):",
+  "",
+  "       Brought Forward   58,240.75CR      → Opening",
+  "       Closing Balance   4,610.25CR       → Closing",
+  "       Dr Count 12 · Cr Count 14          → Rows: 26  (दोनों का जोड़)",
+  "       Total Debits  2,45,600.00          → नीचे नियम 20(क) की जाँच",
+  "       Total Credits 1,91,969.50",
+  "       Statement From 01-04-2026 To 07-08-2026  → Period",
+  "",
+  "   ऊपर सिरे पर «Account No : 64465854572» और «IFSC Code : SBIN0064678»",
+  "   लिखे होते हैं — खाते का नाम वहीं से बनता है (नीचे नियम 4)।",
+  "",
+  "   मिसाल के लिए एक पंक्ति (यह **सिर्फ़ नमूना** है — इसका खाता, अवधि या",
+  "   रकम कभी copy मत करो, हर बार अपनी statement से भरो):",
+  "",
+  "# <फ़र्म> | Account: SBI 64465854572 | Period: 2026-04-01 to 2026-08-07 | Opening: 58240.75 | Closing: 4610.25 | Rows: 26",
   "",
   "उसके बाद की पंक्ति खानों के नाम की, बिल्कुल यही (हूबहू, इसी क्रम में):",
   "",
@@ -21675,14 +21906,14 @@ const CSV_PROMPT = [
   "   \"09:14 pm\" → 21:14",
   "",
   "3. Party — जिसे पैसा गया या जिससे आया, उसका नाम। इन रूपों को पहचानो:",
-  "   • \"CHEQUE TRANSFER TO 0039867691276 OF Miss. SHIVANI .\" → SHIVANI",
+  "   • \"CHEQUE TRANSFER TO 0096612171673 OF Miss. SHIVANI .\" → SHIVANI",
   "   • \"CAS CASH CHEQUE / MANOJ DAN\"                        → MANOJ DAN",
-  "   • \"Chq 917586 Sess 2 BALAJI TIMBER 000907701\"          → BALAJI TIMBER",
-  "   • \"UPI/CR/032771344249/MANISH\"                         → MANISH",
-  "   • \"CHQ TRFR FROM 0043467096532 OF STN HQ JALIPA\"       → STN HQ JALIPA",
-  "   • \"UPI/DR/619002962426/PAINTER GHANU/UBIN/5201910393/UPI\" → PAINTER GHANU",
-  "   • \"UPI/DR-REV/648525846539/MANDEEP JAIN/AIRP/1287834813/…\" → MANDEEP JAIN",
-  "   • \"NEFT CR-SBINN52026062981402318 -PUB FUND ACCT 17 MECH INF",
+  "   • \"Chq 917586 Sess 2 BALAJI TIMBER 000782176\"          → BALAJI TIMBER",
+  "   • \"UPI/CR/077781678234/MANISH\"                         → MANISH",
+  "   • \"CHQ TRFR FROM 0075635576771 OF STN HQ JALIPA\"       → STN HQ JALIPA",
+  "   • \"UPI/DR/632152647422/PAINTER GHANU/UBIN/1343221562/UPI\" → PAINTER GHANU",
+  "   • \"UPI/DR-REV/412355921864/MANDEEP JAIN/AIRP/4249623389/…\" → MANDEEP JAIN",
+  "   • \"NEFT CR-SBINN47537234834729133 -PUB FUND ACCT 17 MECH INF",
   "      -SBIN0018049 -/URGENT/DEPOSIT\"     → PUB FUND ACCT 17 MECH INF",
   "   • \"BY CLG SBI 31/03/2026 BARMER GE\"   → GE   (चेक जमा — नाम कटा हुआ)",
   "",
@@ -21707,16 +21938,38 @@ const CSV_PROMPT = [
   "   • \"Paid by State Bank of India 0499\"      → SBI 0499",
   "   • \"Paid to AU Small Finance Bank 0628\"    → AU 0628",
   "   • दाएँ खाने में \"State Bank Of India - 89\" → SBI 89",
-  "   • ऊपर सिरे पर लिखा \"A/c No: 42033283908\"  → SBI 42033283908",
-  "   बैंक का छोटा नाम पहले, फिर नंबर — «SBI 42033283908» की तरह। सिर्फ़ अंक",
+  "   • ऊपर सिरे पर लिखा \"Account No : 64465854572\" → SBI 64465854572",
+  "     (SBI की PDF में यह पहले पन्ने के सिरे पर होता है, «IFSC Code :",
+  "      SBIN0064678» के साथ — SBIN से पता चलता है कि बैंक SBI है)",
+  "   बैंक का छोटा नाम पहले, फिर नंबर — «SBI 64465854572» की तरह। सिर्फ़ अंक",
   "   काफ़ी नहीं, क्योंकि एक ही बैंक के दो खाते हो सकते हैं।",
   "   पूरी statement एक ही खाते की हो तो हर पंक्ति में वही खाता लिखो।",
   "",
-  "5. Description — उस सौदे की सारी लाइनें जोड़कर, जैसी छपी हैं। एक सौदा",
-  "   तीन-चार लाइनों में फैला हो तो सबको एक ही खाने में डालो।",
+  "5. Description — ⚠️ **यहाँ SBI सबसे ज़्यादा धोखा देता है। ध्यान से पढ़ो।**",
+  "",
+  "   SBI की PDF में एक सौदे का Description **दो-तीन टुकड़ों में** छपता है,",
+  "   और तारीख़/रकम वाली पंक्ति उन टुकड़ों के **बीच** में होती है:",
+  "",
+  "       DIRECT DR                                       ← ऊपर का टुकड़ा",
+  "       01-04-2026  01-04-2026     12,340.00  45,900.75CR   ← तारीख़+रकम",
+  "       INT TRF FRM 64465854572 TO                      ← नीचे का टुकड़ा",
+  "       0084425242773 OF SHREE                          ← और नीचे",
+  "",
+  "   पूरा Description यह है:",
+  "       \"DIRECT DR INT TRF FRM 64465854572 TO 0084425242773 OF SHREE\"",
+  "",
+  "   🛑 **अमाउंट वाली पंक्ति के ठीक ऊपर लिखा पाठ उसी सौदे का है, पिछले",
+  "      सौदे का नहीं।** यह सबसे आम ग़लती है — «DIRECT DR» या «CHQ TRFR",
+  "      FROM» को पिछली पंक्ति के साथ जोड़ देना। तब हर नाम एक पंक्ति खिसक",
+  "      जाता है और पूरी फ़ाइल बेकार हो जाती है, जबकि रकम सब सही दिखती हैं।",
+  "",
+  "   इसीलिए पार्टी का नाम भी दो टुकड़ों में बँटा मिलता है —",
+  "       \"CHQ TRFR FROM 0075635576771 OF STN HQ\" + \"JALIPA\"",
+  "   दोनों जोड़ने पर ही «STN HQ JALIPA» बनता है। एक टुकड़ा छोड़ दिया तो नाम",
+  "   अधूरा रह जाएगा।",
   "",
   "6. ChequeNo — **सिर्फ़ असली चेक नंबर**, यानी सिर्फ़ अंक (जैसे 917568 या",
-  "   000000081526)। बहुत से बैंक इसी खाने का नाम «Cheque/Reference No.»",
+  "   000000091681)। बहुत से बैंक इसी खाने का नाम «Cheque/Reference No.»",
   "   रखते हैं और UPI की हर पंक्ति पर अपना संदर्भ छाप देते हैं —",
   "     \"AXIc91ed07ef55f4b9caba5c87c81c7559a\"",
   "     \"ICI28a0f9c57bbb4339a8a7a76c9400b1bd\"",
@@ -21733,30 +21986,50 @@ const CSV_PROMPT = [
   "",
   "8. UTR — ⚠️ यहाँ सबसे ज़्यादा सावधानी चाहिए।",
   "   UTR वही है जो साफ़ निशानी के साथ छपा हो:",
-  "     • \"UPI/DR/657085241092/…\"        → 657085241092",
-  "     • \"NEFT UTR NO: SBIN426092856383\" → SBIN426092856383",
-  "     • \"UPI Ref No: 311420032638\"      → 311420032638",
-  "     • \"NEFT CR-SBINN52026062981402318 -…\" → SBINN52026062981402318",
-  "     • \"NEFT CR-PUNBN62026072151024248 -…\" → PUNBN62026072151024248",
+  "     • \"UPI/DR/615191834357/…\"        → 615191834357",
+  "     • \"NEFT UTR NO: SBIN754421566511\" → SBIN754421566511",
+  "     • \"UPI Ref No: 146184653161\"      → 146184653161",
+  "     • \"NEFT CR-SBINN47537234834729133 -…\" → SBINN47537234834729133",
+  "     • \"NEFT CR-PUNBN79674921349423731 -…\" → PUNBN79674921349423731",
   "   NEFT वाली पंक्ति पर UTR डैश के तुरंत बाद, बिना किसी शब्द के छपता है —",
   "   चार अक्षरों का बैंक-कोड और फिर अंक। यही नंबर भेजने वाले की पर्ची पर भी",
   "   होता है, इसलिए इसे छोड़ना बड़ा नुक़सान है।",
   "   **narration में पड़ा हर लंबा नंबर UTR नहीं होता।** बैंक उसमें सामने",
   "   वाले का खाता नंबर भी छापता है:",
-  "     \"DIRECT DR INT TRF FRM 42033283908 TO 44396283308 0044396283308",
+  "     \"DIRECT DR INT TRF FRM 64465854572 TO 36654773382 0084425242773",
   "      OF SHREE HINGLAJ INFRATEC\"",
   "   यहाँ कोई UTR नहीं है — तीनों नंबर खाता नंबर हैं। UTR खाली छोड़ दो।",
   "   पहचान का आसान तरीक़ा: निशानी है या नहीं। «UPI/CR/…», «UTR NO:»,",
-  "   «Ref No:» — इनके साथ लिखा नंबर ही UTR है। «FRM 42033283908 TO",
-  "   44396283308» जैसे नंबर खाता नंबर हैं, चाहे कितने भी लंबे हों।",
+  "   «Ref No:» — इनके साथ लिखा नंबर ही UTR है। «FRM 64465854572 TO",
+  "   36654773382» जैसे नंबर खाता नंबर हैं, चाहे कितने भी लंबे हों।",
   "   ग़लत UTR डालने से दो अलग सौदे एक ही मान लिए जाते हैं और एक मिट जाता",
   "   है। शक हो तो खाली छोड़ना हमेशा बेहतर है।",
   "",
   "9. Debit और Credit — अलग-अलग खाने। जो लागू न हो वह खाली रहे, शून्य नहीं।",
   "   कभी दोनों मत भरो। \"गया\" = Debit, \"आया\" = Credit.",
   "",
+  "   🔑 **और यह सबसे क़ीमती नियम है — दिशा आँख से मत तय करो, बची रकम से करो।**",
+  "",
+  "   SBI की PDF में Debit और Credit के खाने पास-पास छपते हैं, और सिर्फ़",
+  "   देखकर बताना मुश्किल है कि अंक किस खाने में है। पर बची रकम झूठ नहीं",
+  "   बोलती:",
+  "",
+  "       इस पंक्ति की बची रकम  >  पिछली बची रकम   →  यह **Credit** है",
+  "       इस पंक्ति की बची रकम  <  पिछली बची रकम   →  यह **Debit** है",
+  "       और फ़र्क़ = उस सौदे की रकम",
+  "",
+  "   मिसाल, उसी statement से:",
+  "       BROUGHT FORWARD                    58,240.75",
+  "       01-04-2026   12,340.00  →  45,900.75    (घटी → Debit) ✅",
+  "       08-04-2026    2,600.00  →  48,500.75    (बढ़ी → Credit) ✅",
+  "",
+  "   हर पंक्ति पर यही मिलाओ। अगर मिलान न बैठे तो दिशा ग़लत है, या रकम ग़लत",
+  "   पढ़ी है — दुबारा देखो। **यह जाँच पूरी फ़ाइल को अपने-आप सही रखती है।**",
+  "",
   "10. Balance — उस पंक्ति के आगे छपी बची हुई रकम। \"CR\"/\"DR\" हटा दो।",
-  "   यह सबसे ज़रूरी जाँच का खाना है — एक भी मत छोड़ो।",
+  "   SBI हर बची रकम के आगे CR लिखता है — \"4,610.25CR\" → 4610.25",
+  "   यह सबसे ज़रूरी जाँच का खाना है — **एक भी मत छोड़ो**, क्योंकि ऊपर वाला",
+  "   दिशा का नियम और नीचे वाली जंज़ीर की जाँच दोनों इसी पर टिके हैं।",
   "",
   "11. सब रकम सादे अंक — ₹ नहीं, कॉमा नहीं:",
   "    \"1,50,000.00\" → 150000        \"90,004.72\" → 90004.72",
@@ -21785,10 +22058,10 @@ const CSV_PROMPT = [
   "18. एक ही UTR दो पंक्तियों पर दिख सकता है — और वह ग़लती नहीं होती।",
   "    पैसा गया और फिर वापस आ गया (reversal), तो बैंक दोनों पर वही नंबर",
   "    छापता है:",
-  "      13-07  UPI/DR/619448440318/RAKESH   1000        (गया)",
-  "      13-07  UPI/CR/619448440318/RAKESH          1000 (आया)",
+  "      13-07  UPI/DR/826415461575/RAKESH   1000        (गया)",
+  "      13-07  UPI/CR/826415461575/RAKESH          1000 (आया)",
   "    कुछ बैंक वापसी वाली पंक्ति पर \"DR-REV\" या \"CR-REV\" लिखते हैं —",
-  "      \"UPI/DR-REV/648525846539/MANDEEP JAIN/AIRP/1287834813/…\"",
+  "      \"UPI/DR-REV/412355921864/MANDEEP JAIN/AIRP/4249623389/…\"",
   "    उसमें भी नाम और UTR उसी जगह होते हैं; वैसे ही लिखो।",
   "    ये **दो अलग पंक्तियाँ** हैं — दोनों लिखो, एक भी मत हटाओ। एक ही",
   "    UTR देखकर उन्हें जोड़ना या एक को छोड़ना सबसे बड़ी ग़लती होगी।",
@@ -21809,9 +22082,11 @@ const CSV_PROMPT = [
   "    closing लिखो — पूरे statement की नहीं। इससे हर फ़ाइल अपने-आप में",
   "    पूरी रहती है।",
   "",
-  "20. आख़िर में ख़ुद जाँच लो — दो तरह से:",
+  "20. आख़िर में ख़ुद जाँच लो — चार तरह से:",
   "    (क) सब Debit का जोड़ और सब Credit का जोड़, statement पर छपे कुल से",
-  "        मिलाओ।",
+  "        मिलाओ। SBI में वे «Statement Summary» में लिखे होते हैं",
+  "        (Total Debits / Total Credits), और पंक्तियों की गिनती भी",
+  "        (Dr Count + Cr Count)। तीनों मिलने चाहिए।",
   "    (ख) पिछली बची रकम − गया + आया = इस पंक्ति की बची रकम।",
   "    न मिले तो कोई पंक्ति छूटी या दुबारा लिखी गई है — दुबारा पढ़ो।",
   "    (ग) सबसे ऊपर «#» वाली पंक्ति है या नहीं।",
@@ -21889,12 +22164,12 @@ const STMT_PROMPT = [
   "   एक सौदा तीन-चार लाइनों में फैला हो तो सबको एक ही description में डालो।",
   "",
   "7. party = जिसे पैसा गया या जिससे आया, उसका नाम। इन रूपों को पहचानो:",
-  '   • "CHEQUE TRANSFER TO 0039867691276 OF Miss. SHIVANI ." → "SHIVANI"',
+  '   • "CHEQUE TRANSFER TO 0017651243677 OF Miss. SHIVANI ." → "SHIVANI"',
   '   • "CAS CASH CHEQUE / MANOJ DAN"                        → "MANOJ DAN"',
-  '   • "Chq 917586 Sess 2 BALAJI TIMBER 000907701"          → "BALAJI TIMBER"',
+  '   • "Chq 917586 Sess 2 BALAJI TIMBER 000235487"          → "BALAJI TIMBER"',
   '   • "CAS PRES CHQ / MINAXI AGENCY"                       → "MINAXI AGENCY"',
-  '   • "UPI/CR/032771344249/MANISH"                         → "MANISH"',
-  '   • "NEFT*UBIN0918628*0107144631 72*KV JALIPA PM SHRI*B" → "72 KV JALIPA PM SHRI B"',
+  '   • "UPI/CR/082361543171/MANISH"                         → "MANISH"',
+  '   • "NEFT*UBIN0918628*0567736612 72*KV JALIPA PM SHRI*B" → "72 KV JALIPA PM SHRI B"',
   '   नाम कहीं न लिखा हो (जैसे "REMT THRU CHQ / NEFT UTR NO: SBIN…") तो',
   "   party में null लिखो — अंदाज़ा मत लगाओ। चेक नंबर से नाम बाद में जुड़ जाएगा।",
   "",
@@ -21902,7 +22177,7 @@ const STMT_PROMPT = [
   "   न हो तो null।",
   "",
   "9. utr = UTR / UPI transaction ID / NEFT reference — जो भी छपा हो",
-  '   (जैसे "SBIN426092856383" या "032771344249")। न हो तो null।',
+  '   (जैसे "SBIN754537731437" या "082361543171")। न हो तो null।',
   "",
   "10. जो अंक साफ़ न दिखे उसे अंदाज़े से मत भरो — null लिखो। ग़लत अंक से",
   "    पूरा हिसाब बिगड़ता है, खाली खाने से नहीं।",
