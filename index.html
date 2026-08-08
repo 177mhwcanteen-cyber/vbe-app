@@ -3004,7 +3004,8 @@
           <div class="frow" style="max-width:420px;margin:14px auto 0">
             <label>किस खाते की?<select id="rAccount"></select></label>
             <label style="align-self:end">
-              <input type="file" id="rFile" accept=".csv,.txt,.pdf" hidden>
+              <input type="file" id="rFile"
+                     accept=".csv,.txt,.pdf,.xlsx,.xls" hidden>
               <button class="primary" style="width:100%" onclick="document.getElementById('rFile').click()">📄 File चुनें</button>
             </label>
           </div>
@@ -6837,6 +6838,130 @@ const p2 = (n) => String(n).padStart(2, "0");
  * statement को Claude/ChatGPT से इसी रूप में बनवाकर सीधा यहीं डाला जा सकता
  * है: खाने के नाम लिखे होते हैं, इसलिए ग़लत पढ़ने की गुंजाइश ही नहीं।
  */
+/* ══════════ 📗 बैंक की अपनी Excel — सीधे, बिना किसी बीच वाले ═══════
+
+   विक्रम जी: «उज्ज्वल भारत का आज दिन तक का यह Excel मिल गया है — इसके
+   लिए ChatGPT में क्या प्रॉम्प्ट डालना होगा… या ऐसा तरीक़ा कर दीजिए कि
+   इसी को डालने से ही काम बढ़िया बन जाए।»
+
+   दूसरा वाला ही सही जवाब है। **यह बैंक की अपनी फ़ाइल है** — उसमें सब कुछ
+   पहले से सही और पूरा है:
+
+       Name / Account Number / IFSC
+       Statement Period · Opening Balance · Closing Balance
+       Transaction Date | Value Date | Description | Cheque/Ref | Debit | Credit | Balance
+       …और आख़िर में Total वाली पंक्ति
+
+   जब बैंक ने ख़ुद इतना साफ़ लिखकर दिया है, तो उसे किसी AI से दुबारा
+   लिखवाना सिर्फ़ ख़तरा है — वहीं से आधी फ़ाइल, बदले हुए खाने और अंदाज़े
+   वाले नाम आते हैं। **यह रास्ता उन तीनों को हटा देता है।**
+
+   🔑 और सबसे क़ीमती बात: सिरे वाले हिस्से में **छपी हुई opening, closing
+      और अवधि** होती है। यानी `fileComplete()` अपने-आप बता देगा कि फ़ाइल
+      पूरी है या बीच में रह गई — बिना किसी «#» वाली पंक्ति के।           */
+
+/** AU/SBI की Excel का सिरा — नाम, खाता, अवधि, opening, closing। */
+function xlsxStatementMeta(grid) {
+  const cell = (r, c) => String((grid[r] || [])[c] == null ? "" : (grid[r] || [])[c]).trim();
+  const num = (v) => {
+    const n = parseFloat(String(v).replace(/[₹,\s]/g, ""));
+    return isNaN(n) ? null : n;
+  };
+  const out = { account: null, from: null, to: null, opening: null,
+                closing: null, rows: null, name: null };
+  // सिरा पंद्रह पंक्तियों से ज़्यादा लंबा नहीं होता; हर खाने में लेबल ढूँढो
+  for (let r = 0; r < Math.min(grid.length, 15); r++) {
+    for (let c = 0; c < (grid[r] || []).length; c++) {
+      const k = cell(r, c).toLowerCase().replace(/[^a-z ]/g, "").trim();
+      const v = cell(r, c + 1);
+      if (!v) continue;
+      if (/^name$/.test(k)) out.name = v;
+      else if (/account number|ac no|account no/.test(k)) out.account = v.replace(/\s/g, "");
+      else if (/opening balance/.test(k)) out.opening = num(v);
+      else if (/closing balance/.test(k)) out.closing = num(v);
+      else if (/statement period/.test(k)) {
+        const m = v.match(/(.+?)\s+to\s+(.+)/i);
+        if (m) { out.from = parseDay(m[1]); out.to = parseDay(m[2]); }
+      }
+    }
+  }
+  return (out.opening != null || out.closing != null || out.from) ? out : null;
+}
+
+/**
+ * बैंक की Excel → वही पंक्तियाँ जो CSV वाले रास्ते से आती हैं।
+ * @returns {{rows:Array, meta:Object|null}|null}
+ */
+function parseXlsxStatement(buf) {
+  if (!window.XLSX) throw new Error("Excel reader लोड नहीं हुआ — internet देखिए");
+  const wb = XLSX.read(new Uint8Array(buf), { type: "array", cellDates: false });
+  for (const nm of wb.SheetNames) {
+    const grid = XLSX.utils.sheet_to_json(wb.Sheets[nm],
+      { header: 1, raw: false, defval: "" });
+    if (!grid.length) continue;
+
+    /* 🔎 खानों की पंक्ति नाम से ढूँढो, जगह से नहीं — सिरे की ऊँचाई हर बैंक
+       में अलग होती है, और एक पंक्ति ऊपर-नीचे होते ही सब बिगड़ जाता। */
+    let head = -1, c = {};
+    for (let r = 0; r < Math.min(grid.length, 25); r++) {
+      const low = (grid[r] || []).map((x) =>
+        String(x).toLowerCase().replace(/\s+/g, " ").trim());
+      const f = { date: -1, vdate: -1, narr: -1, ref: -1, debit: -1,
+                  credit: -1, bal: -1 };
+      low.forEach((v, j) => {
+        if (f.date < 0 && /^(transaction |txn |post )?date$/.test(v)) f.date = j;
+        if (f.vdate < 0 && /value date/.test(v)) f.vdate = j;
+        if (f.narr < 0 && /description|narration|particular/.test(v)) f.narr = j;
+        if (f.ref < 0 && /cheque|reference|ref no/.test(v)) f.ref = j;
+        if (f.debit < 0 && /^debit/.test(v)) f.debit = j;
+        if (f.credit < 0 && /^credit/.test(v)) f.credit = j;
+        if (f.bal < 0 && /^balance/.test(v)) f.bal = j;
+      });
+      if (f.date >= 0 && f.narr >= 0 && (f.debit >= 0 || f.credit >= 0)) {
+        head = r; c = f; break;
+      }
+    }
+    if (head < 0) continue;
+
+    const money = (v) => {
+      const t = String(v == null ? "" : v).trim();
+      if (!t || t === "-" || t === "—") return null;      // बैंक ख़ाली खाने में «-» लिखता है
+      const n = parseFloat(t.replace(/[₹,\s]/g, ""));
+      return isNaN(n) ? null : n;
+    };
+    const cell = (row, i) => (i >= 0 ? String((row || [])[i] == null ? "" : row[i]).trim() : "");
+
+    const rows = [];
+    for (let r = head + 1; r < grid.length; r++) {
+      const row = grid[r];
+      const date = parseDay(cell(row, c.date));
+      if (!date) continue;                    // «Total» और पैर वाली पंक्तियाँ यहीं छँट जाती हैं
+      const d = money(cell(row, c.debit)), cr = money(cell(row, c.credit));
+      const amount = d || cr;
+      if (!amount) continue;
+      const narration = cell(row, c.narr);
+      const refRaw = cell(row, c.ref);
+      /* 🧾 चेक नंबर सिर्फ़ वही जो सचमुच अंकों का हो — «ICIa1907…» बैंक का
+         अपना संदर्भ है, चेक नंबर नहीं (वही पुरानी सीख)। */
+      const isCheque = /^[\d\s-]{4,20}$/.test(refRaw);
+      rows.push({
+        date, amount, type: d ? "debit" : "credit",
+        narration,
+        party: partyOf(narration, true),
+        utr: utrOf(narration),
+        chequeNo: isCheque ? (refRaw.replace(/\D/g, "") || null) : null,
+        txnId: isCheque ? null : (refRaw.replace(/\s/g, "") || null),
+        vpa: vpaOf(narration),
+        balance: money(cell(row, c.bal)),
+        partyTruncated: !partyOf(narration, true),
+        source: "xlsx_statement"
+      });
+    }
+    if (rows.length) return { rows, meta: xlsxStatementMeta(grid) };
+  }
+  return null;
+}
+
 function parseStatement(text) {
   const rows = csvRows(text);
   let head = -1, c = {};
@@ -8484,34 +8609,53 @@ async function handleStatementFile(file, password) {
   status.className = "muted"; status.textContent = "पढ़ रहा हूँ…";
   try {
     const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
+    /* 📗 बैंक की अपनी Excel — सबसे भरोसेमंद रास्ता, क्योंकि उसमें कोई
+       बीच वाला है ही नहीं। न AI, न प्रॉम्प्ट, न हाथ का काम। */
+    const isXlsx = /\.xlsx?$/i.test(file.name) ||
+      /spreadsheet|ms-excel/i.test(file.type || "");
+    let xlMeta = null;
     const txns = isPdf
       ? await readPdfStatement(file, (i, n) => {
           status.textContent = `पन्ना ${i} / ${n} पढ़ा…`;
         }, password)
-      : (RAW_TEXT = await file.text(), parseStatement(RAW_TEXT));
-    if (!txns || !txns.length) {
+      : isXlsx
+        ? (() => {
+            status.textContent = "Excel पढ़ रहा हूँ…";
+            return null;   // नीचे await वाला रास्ता
+          })()
+        : (RAW_TEXT = await file.text(), parseStatement(RAW_TEXT));
+    let rows = txns;
+    if (isXlsx) {
+      const r = parseXlsxStatement(await file.arrayBuffer());
+      if (!r) throw new Error("इस Excel में तारीख़, रकम और बची रकम वाले खाने नहीं मिले");
+      rows = r.rows; xlMeta = r.meta;
+    }
+    if (!rows || !rows.length) {
       status.className = "bad";
       status.textContent = "यह file समझ नहीं आई — उसमें तारीख़ और रकम वाले column होने चाहिए।";
       return;
     }
     // 🚨 पहले नक़ली UTR हटाओ — वरना कई सौदे एक ही दस्तावेज़ में जा गिरेंगे
-    const fake = dropFakeUtrs(txns);
+    const fake = dropFakeUtrs(rows);
     // 🔢 हर पंक्ति अपना क्रम-नंबर लेकर आगे जाए — पासबुक का सही क्रम इसी पर
     //    टिकेगा (देखें stampSeq / pbOrder)
-    stampSeq(txns);
+    stampSeq(rows);
     // 🚨 «# …» वाली पंक्ति से मिलाओ कि फ़ाइल पूरी है या अधूरी
-    FILE_META = isPdf ? null : statementMeta(RAW_TEXT);
-    const res = matchStatement(txns, accountId);
-    RECON = Object.assign({ account: accountId, txns, fakeUtrs: fake.dropped }, res);
+    /* 📗 Excel में «#» वाली पंक्ति की ज़रूरत ही नहीं — बैंक ख़ुद सिरे पर
+       अवधि, opening और closing छापता है। यानी «फ़ाइल पूरी है या नहीं»
+       वाली जाँच अपने-आप चलती है, कुछ जोड़े बिना। */
+    FILE_META = isXlsx ? xlMeta : (isPdf ? null : statementMeta(RAW_TEXT));
+    const res = matchStatement(rows, accountId);
+    RECON = Object.assign({ account: accountId, txns: rows, fakeUtrs: fake.dropped }, res);
     // 🗺️ हर पंक्ति का अपना खाता — पहले नक़्शा, फिर बाक़ी सब
-    ACCMAP = accountMap(txns);
-    renderRecon(txns.length, txns);
+    ACCMAP = accountMap(rows);
+    renderRecon(rows.length, rows);
     renderAccMap();
     $("rPassBox").hidden = true;
     $("rPass").value = "";
     status.className = "ok";
     const nBad = Object.keys(fake.dropped).length;
-    status.innerHTML = `✅ ${txns.length} entries पढ़ीं — नीचे नतीजा देखें` +
+    status.innerHTML = `✅ ${rows.length} entries पढ़ीं — नीचे नतीजा देखें` +
       (nBad ? gfx.insight({ icon: "🛡️", tone: "warn",
         title: `${nBad} नक़ली UTR पकड़े और हटाए`,
         body: Object.keys(fake.dropped).slice(0, 3).map((u) =>
@@ -13269,7 +13413,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "75d083645364";
+const APP_BUILD = "0e7ca8ca70df";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
