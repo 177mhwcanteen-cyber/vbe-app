@@ -33,7 +33,10 @@
     --surface-3:   #1D2740;   /* सबसे ऊपर उठा हुआ — पर्दे का सिर */
     --ink:         #F3F5FB;
     --ink-2:       #AFB7CE;
-    --muted:       #7C88A6;
+    /* 🔬 पहले #7C88A6 था — सतह पर 4.98:1, यानी नियम से पास। पर यह रंग
+       11.5px वाले अक्षरों पर लगता है (tile का ब्योरा, तारीख़, «entries»),
+       और उतने छोटे अक्षरों पर इतना काफ़ी नहीं होता। अब 6.73:1। */
+    --muted:       #93A0BE;
     --grid:        rgba(255,255,255,0.06);
     --border:      rgba(255,255,255,0.08);
     --border-2:    rgba(255,255,255,0.14);
@@ -105,7 +108,15 @@
     /* 🔢 रकम के अंक ऊपर-नीचे सीध में — हिसाब वाली ऐप में यह सजावट नहीं,
        पढ़ने की ज़रूरत है। ₹1,11,111 और ₹9,99,999 की चौड़ाई एक रहे। */
     font-variant-numeric: tabular-nums;
-    -webkit-font-smoothing: antialiased;
+
+    /* 🩸 यहाँ «-webkit-font-smoothing: antialiased» लिखा था, और विक्रम जी
+       की «धुँधली नज़र आती हैं» वाली शिकायत की सबसे बड़ी वजह वही थी।
+
+       वह लकीर अक्षरों को **पतला** कर देती है। बड़ी चमकीली स्क्रीन पर वह
+       «साफ़» लगता है, पर Android के गाढ़े काले पन्ने पर वही पतलापन फीकेपन
+       की तरह दिखता है — ख़ासकर छोटे अक्षरों और अंकों पर।
+
+       हटा दी। अब browser अपना सामान्य, गाढ़ा तरीक़ा इस्तेमाल करता है। */
   }
 
   /* ══════════ 🌌 पृष्ठभूमि — बहुत धीमी, बिल्कुल पीछे ═══════════════
@@ -131,8 +142,10 @@
     will-change: transform;
   }
   body::after {
-    /* 1.5% शोर — बहुत हल्का, पर पट्टियाँ इसी से मिटती हैं */
-    opacity: .035; z-index: -1;
+    /* 🔬 पहले .035 था — पूरे पन्ने पर एक बारीक जाली, जो पास से देखने पर
+       मैलेपन की तरह दिखती है। अब आधे से भी कम: पट्टियाँ फिर भी नहीं
+       बनतीं, और सतह साफ़ रहती है। */
+    opacity: .018; z-index: -1;
     background-image: url("data:image/svg+xml;utf8,\
 <svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'>\
 <filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/>\
@@ -226,8 +239,8 @@
   /* ऊपर की पट्टी — 44px, एक ही लाइन, और ऊपर खींचने पर चिपकी रहे */
   /* 🪟 सिर की पट्टी भी काँच की — नीचे की सूची उसके पीछे से सरकती दिखे,
      इसलिए हमेशा पता रहता है कि पन्ना चल रहा है। */
-  header.top { backdrop-filter: blur(18px) saturate(140%);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
+  header.top { backdrop-filter: blur(12px) saturate(125%);
+    -webkit-backdrop-filter: blur(12px) saturate(125%);
     background: color-mix(in srgb, var(--page) 72%, transparent);
     border-bottom: 1px solid transparent;
     transition: border-color var(--t) var(--ease); }
@@ -1140,6 +1153,185 @@
   .flagRow .ft b { color: var(--ink); }
   .muted { color: var(--muted); font-size: 12.5px; }
 
+  /* ══════════ 🌌 बैंक-आकाशगंगा ═══════════════════════════════════
+
+     आठ खातों को एक-एक करके पढ़कर तौलना मुश्किल है — «कौन-सा भारी है, कौन
+     सूख रहा है, कौन चल रहा है» तीन अलग सवाल हैं और तीनों के लिए तीन बार
+     सूची पढ़नी पड़ती है।
+
+     ग्रहों की तरह रखने पर तीनों **एक साथ, एक नज़र में** दिख जाते हैं:
+
+         आकार   = बची रकम
+         रफ़्तार  = कितने सौदे (हलचल)
+         चमक     = कितना पैसा आ रहा है
+
+     🪶 सब CSS से — कोई canvas, कोई library। चलती हुई चीज़ सिर्फ़ transform
+        है, इसलिए 60 FPS पर रहती है।                                   */
+  .galaxy { position: relative; height: 340px; margin: 0 auto;
+    max-width: 340px; }
+  .galaxy .core { position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%); width: 92px; height: 92px;
+    border-radius: 50%; display: grid; place-items: center; text-align: center;
+    background: radial-gradient(circle at 34% 30%, #A78BFA, #7B61FF 58%, #4B37C4);
+    box-shadow: 0 0 44px rgba(123,97,255,.5), var(--sheen); z-index: 2; }
+  .galaxy .core b { display: block; font-size: 15px; letter-spacing: -.3px; }
+  .galaxy .core small { font-size: 9.5px; opacity: .85; }
+  .orbit { position: absolute; left: 50%; top: 50%; border-radius: 50%;
+    border: 1px dashed rgba(255,255,255,.09);
+    transform: translate(-50%, -50%);
+    animation: spin var(--dur, 26s) linear infinite; }
+  .orbit > .planet { position: absolute; left: 50%; top: 0;
+    transform: translate(-50%, -50%); }
+  .planet { width: var(--sz, 34px); height: var(--sz, 34px); border-radius: 50%;
+    display: grid; place-items: center; font-size: 13px; cursor: pointer;
+    background: radial-gradient(circle at 34% 30%,
+      color-mix(in srgb, var(--pc, #6C5CE7) 82%, white), var(--pc, #6C5CE7));
+    box-shadow: 0 0 var(--glow, 14px) var(--pc, #6C5CE7), var(--sheen);
+    animation: spinBack var(--dur, 26s) linear infinite;
+    transition: transform var(--t) var(--ease); }
+  .planet:active { transform: translate(-50%, -50%) scale(.9); }
+  @keyframes spin     { to { transform: translate(-50%, -50%) rotate(360deg) } }
+  @keyframes spinBack { to { transform: translate(-50%, -50%) rotate(-360deg) } }
+  @media (prefers-reduced-motion: reduce) {
+    .orbit, .planet { animation: none !important; }
+  }
+  html[data-crisp="1"] .planet { box-shadow: none; border: 1px solid var(--border-2); }
+  .galLegend { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+
+  /* ══════════ 🧊 3D इमोजी — चपटे नहीं ═════════════════════════════
+
+     चपटा इमोजी अपने-आप में बुरा नहीं है, पर वह «सिस्टम का हिस्सा» नहीं
+     लगता — हर फ़ोन पर अलग दिखता है और कहीं से भी उठाया हुआ लगता है।
+
+     इसलिए हर ज़रूरी इमोजी अब अपने काँच के गोले में बैठता है: नरम छाया,
+     ऊपर की तरफ़ चमक, और मिज़ाज के हिसाब से आभा।
+
+     🪶 सब CSS से — कोई तस्वीर नहीं, कोई library नहीं। इसलिए ऐप का वज़न
+        एक बाइट नहीं बढ़ता और रफ़्तार वैसी की वैसी।                      */
+  .e3 { display: inline-grid; place-items: center; flex: 0 0 auto;
+    width: 44px; height: 44px; border-radius: 15px; font-size: 22px;
+    line-height: 1; position: relative; isolation: isolate;
+    background: linear-gradient(155deg, rgba(255,255,255,.14),
+      rgba(255,255,255,.03) 58%), var(--surface-2);
+    border: 1px solid var(--border-2);
+    box-shadow: var(--sheen), 0 4px 12px rgba(0,0,0,.34);
+    transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease); }
+  .e3::after {            /* ऊपर की चमक — काँच जैसा एहसास इसी से आता है */
+    content: ""; position: absolute; inset: 2px 2px auto; height: 42%;
+    border-radius: 13px 13px 40% 40%; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.20), transparent); }
+  .e3.sm { width: 32px; height: 32px; border-radius: 11px; font-size: 16px; }
+  .e3.lg { width: 58px; height: 58px; border-radius: 19px; font-size: 29px; }
+  .e3.xl { width: 76px; height: 76px; border-radius: 24px; font-size: 38px; }
+  .e3:active { transform: scale(.94); }
+  .e3.pop { animation: e3Pop .42s var(--ease); }
+  @keyframes e3Pop { 0% { transform: scale(1) } 45% { transform: scale(1.16) }
+                     100% { transform: scale(1) } }
+  /* मिज़ाज — रंग सिर्फ़ आभा में, अक्षर/इमोजी पर कभी नहीं */
+  .e3.good { box-shadow: var(--sheen), 0 4px 14px rgba(0,214,143,.30),
+    0 0 0 1px rgba(0,214,143,.24) inset; }
+  .e3.warn { box-shadow: var(--sheen), 0 4px 14px rgba(255,184,77,.30),
+    0 0 0 1px rgba(255,184,77,.24) inset; }
+  .e3.bad  { box-shadow: var(--sheen), 0 4px 14px rgba(255,95,109,.32),
+    0 0 0 1px rgba(255,95,109,.26) inset; }
+  .e3.ai   { box-shadow: var(--sheen), 0 4px 14px rgba(168,85,247,.32),
+    0 0 0 1px rgba(0,229,255,.22) inset; }
+  .e3.beat { animation: e3Beat 2.2s var(--ease) infinite; }
+  @keyframes e3Beat { 0%,100% { transform: scale(1) } 50% { transform: scale(1.06) } }
+
+  /* ══════════ 🤖 CashPilot — ऐप का अपना साथी ══════════════════════
+
+     एक तैरता हुआ छोटा साथी जो हिसाब देखकर बदलता है। यह सजावट नहीं है —
+     यह ऐप का «मिज़ाज» एक नज़र में बता देता है: पैसा बढ़ रहा है या घट रहा
+     है, कुछ अटका हुआ है या सब ठीक है।
+
+     छूने पर हिलता है और 🧠 सलाह खोल देता है।                          */
+  #pilot { position: fixed; right: 16px; bottom: 20px; z-index: 60;
+    width: 60px; height: 60px; border: 0; padding: 0; cursor: pointer;
+    border-radius: 50%; background: transparent;
+    animation: pilotFloat 4.2s var(--ease) infinite; }
+  #pilot .body { position: absolute; inset: 0; border-radius: 46% 46% 50% 50%;
+    background: linear-gradient(160deg, #A78BFA, #7B61FF 55%, #5B46D6);
+    box-shadow: 0 10px 26px rgba(123,97,255,.46), var(--sheen); }
+  #pilot .eyes { position: absolute; inset: 0; display: flex; gap: 9px;
+    align-items: center; justify-content: center; }
+  #pilot .eyes i { width: 8px; height: 8px; border-radius: 50%;
+    background: #00E5FF; box-shadow: 0 0 10px #00E5FF;
+    animation: pilotBlink 5.5s steps(1) infinite; }
+  #pilot .aura { position: absolute; inset: -14px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(168,85,247,.34), transparent 66%);
+    filter: blur(9px); z-index: -1;
+    animation: pilotBreathe 3.4s var(--ease) infinite; }
+  #pilot .mood { position: absolute; right: -4px; top: -6px; font-size: 17px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+  #pilot.good .body { background: linear-gradient(160deg, #4BE3B4, #00D68F 58%, #039C6C); }
+  #pilot.good .aura { background: radial-gradient(circle, rgba(0,214,143,.36), transparent 66%); }
+  #pilot.warn .body { background: linear-gradient(160deg, #FFD08A, #FFB84D 58%, #DB8F1E); }
+  #pilot.warn .aura { background: radial-gradient(circle, rgba(255,184,77,.36), transparent 66%); }
+  #pilot.bad  .body { background: linear-gradient(160deg, #FF9298, #FF5F6D 58%, #D63A48); }
+  #pilot.bad  .aura { background: radial-gradient(circle, rgba(255,95,109,.40), transparent 66%);
+    animation-duration: 1.5s; }
+  #pilot:active { transform: scale(.92); }
+  /* 🤖 पर्दा खुला हो तो साथी रास्ते से हट जाए — वरना वह नीचे वाली पंक्ति
+     पर बैठ जाता है और उसे छूने ही नहीं देता। */
+  body.sheetOpen #pilot { opacity: 0; pointer-events: none;
+    transform: translateY(14px) scale(.9); }
+  #pilot .ring { position: absolute; inset: -5px; border-radius: 50%;
+    border: 2px solid transparent; border-top-color: #00E5FF;
+    opacity: 0; }
+  #pilot.think .ring { opacity: 1; animation: pilotSpin 1.05s linear infinite; }
+  @keyframes pilotFloat { 0%,100% { transform: translateY(0) }
+                          50% { transform: translateY(-7px) } }
+  @keyframes pilotBreathe { 0%,100% { transform: scale(1); opacity: .8 }
+                            50% { transform: scale(1.14); opacity: 1 } }
+  @keyframes pilotBlink { 0%,92%,100% { transform: scaleY(1) } 95% { transform: scaleY(.12) } }
+  @keyframes pilotSpin { to { transform: rotate(360deg) } }
+  @media (prefers-reduced-motion: reduce) {
+    #pilot, #pilot .aura, #pilot .eyes i, #pilot .ring { animation: none !important; }
+    .e3.beat { animation: none; }
+  }
+  html[data-crisp="1"] #pilot .aura { display: none; }
+
+  /* ══════════ 🔬 «एकदम साफ़ दिखाओ» ════════════════════════════════
+
+     विक्रम जी: «अक्सर धुँधली नज़र आते हैं।»
+
+     ऊपर वाली चारों वजहें ठीक कर दी गईं। पर आँख हर आदमी की अलग होती है,
+     और फ़ोन भी — इसलिए फ़ैसला उन्हीं के हाथ में रहना चाहिए, मेरे अंदाज़े
+     पर नहीं।
+
+     यह स्विच दबाते ही: सारा काँच बंद, शोर बंद, पीछे की रौशनी बंद, सतहें
+     ठोस, लकीरें गाढ़ी। कुछ भी अक्षर के आस-पास नहीं रहता।               */
+  html[data-crisp="1"] body::before,
+  html[data-crisp="1"] body::after { display: none !important; }
+  html[data-crisp="1"] .sheetBox,
+  html[data-crisp="1"] header.top,
+  html[data-crisp="1"] #cmdWrap {
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+    background: var(--surface) !important; }
+  html[data-crisp="1"] #cmdWrap { background: rgba(7,11,22,.94) !important; }
+  html[data-crisp="1"] .card, html[data-crisp="1"] .tile,
+  html[data-crisp="1"] .hero, html[data-crisp="1"] .accCard {
+    background: var(--surface-2) !important; }
+  html[data-crisp="1"] .card::before, html[data-crisp="1"] .tile::before,
+  html[data-crisp="1"] .hero::after { display: none !important; }
+  /* 🩸 यह लकीर पहले `html[data-crisp="1"]` थी और **दिन की रौशनी में चलती
+     ही नहीं थी** — क्योंकि ऊपर वाला `:root:not([data-theme="dark"])` उससे
+     ज़्यादा ख़ास (specific) है और उसे हरा देता था। यानी जिस आदमी का फ़ोन
+     light mode पर है, उसके लिए «एकदम साफ़» आधा ही चलता।
+
+     इसलिए अब दोनों रौशनियों के लिए अलग-अलग, और उतनी ही ख़ास लकीरें। */
+  html[data-crisp="1"]:not([data-theme="light"]) {
+    --border: rgba(255,255,255,.16); --border-2: rgba(255,255,255,.26);
+    --muted: #A8B4CE; --ink-2: #C7CFE2; }
+  @media (prefers-color-scheme: light) {
+    html[data-crisp="1"]:not([data-theme="dark"]) {
+      --border: rgba(14,20,36,.22); --border-2: rgba(14,20,36,.34);
+      --muted: #4C5771; --ink-2: #232C42; }
+  }
+  html[data-crisp="1"] .accCard i.tint { display: none; }
+
   /* ══════════ 🔍 एक ही जगह से पूरी खोज ═══════════════════════════
 
      अभी हर पन्ने का अपना खोज-डिब्बा है — पासबुक का अलग, बिलों का अलग,
@@ -1946,8 +2138,11 @@
     border: 1px solid var(--border-2);
     border-radius: var(--r-xl) var(--r-xl) 0 0; padding: var(--sp4) var(--sp4) var(--sp5);
     box-shadow: var(--e3);
-    backdrop-filter: blur(22px) saturate(140%);
-    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    /* 🔬 पहले 22px था। Android पर इतना blur पूरी परत को कम resolution
+       पर बनवाता है — और तब **पर्दे के अपने अक्षर भी** नरम पड़ जाते हैं।
+       14px पर वही «काँच» वाला एहसास रहता है, पर लिखाई गाढ़ी। */
+    backdrop-filter: blur(14px) saturate(130%);
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
     animation: slideUp var(--t-slow) var(--ease); }
   @media (min-width: 620px) {
     .sheet { align-items: center; }
@@ -1956,7 +2151,7 @@
   /* 📱 छोटे/कमज़ोर फ़ोन पर भारी blur हकलाता है — वहाँ ठोस सतह बेहतर है।
      चमक से ज़्यादा ज़रूरी यह है कि पन्ना अटके नहीं। */
   @media (max-width: 420px) {
-    .sheetBox { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    .sheetBox { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
       background: var(--surface); }
   }
   @keyframes slideUp {
@@ -2414,6 +2609,24 @@
       <button class="wide danger" onclick="closeSheet('meSheet');signOut()">🚪 Logout</button>
     </div>
   </div>
+
+  <!-- 🌌 बैंक-आकाशगंगा -->
+  <div id="galSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:560px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>🌌 मेरे खातों की दुनिया</h3>
+        <button class="x" onclick="closeSheet('galSheet')">✕</button></div>
+      <div id="galBody"></div>
+    </div>
+  </div>
+
+  <!-- 🤖 CashPilot — ऐप का अपना साथी -->
+  <button id="pilot" hidden onclick="pilotTap()" aria-label="CashPilot — पैसों की सलाह">
+    <span class="aura"></span><span class="ring"></span>
+    <span class="body"></span>
+    <span class="eyes"><i></i><i></i></span>
+    <span class="mood" id="pilotMood"></span>
+  </button>
 
   <!-- 🔍 एक ही जगह से पूरी खोज -->
   <div id="cmdWrap" onclick="if(event.target===this)closeCmd()">
@@ -3943,6 +4156,17 @@ function renderStamp() {
   const box = $("meStamp");
   if (!box) return;
   box.innerHTML = `
+    <!-- 🔬 «धुँधला» का इलाज विक्रम जी के अपने हाथ में -->
+    <div class="stampRow">
+      <span style="font-size:17px">${crispOn() ? "🔬" : "🎨"}</span>
+      <div style="flex:1;min-width:0">एकदम साफ़ दिखाओ
+        <div class="muted">${crispOn()
+          ? "चालू — काँच, शोर और पीछे की रौशनी बंद, अक्षर गाढ़े"
+          : "धुँधला लगे तो यह चालू कीजिए — सारी चमक हट जाएगी"}</div></div>
+      <button type="button" class="mini ${crispOn() ? "" : "primary"}"
+        onclick="setCrisp(${crispOn() ? "false" : "true"})">${
+        crispOn() ? "बंद कीजिए" : "चालू कीजिए"}</button>
+    </div>
     <div class="stampRow" onclick="closeSheet('meSheet');openAdvice()"
          style="cursor:pointer">
       <span style="font-size:17px">🧠</span>
@@ -4125,6 +4349,7 @@ function renderAll() {
   if (VY_LOADED) { try { renderVyapar(); } catch (e) {} }
   rebuildAccountPickers();   // हर select एक ही सूची से बने
   renderDateBars();          // तारीख़ की पट्टी हर tab पर
+  renderPilot();             // 🤖 CashPilot का मिज़ाज
   renderHero();              // 💎 सबसे बड़ा जवाब सबसे ऊपर
   renderAccRail();           // 🏦 आठों खाते, बग़ल में
   renderTiles();
@@ -4153,6 +4378,174 @@ function renderAll() {
 }
 
 function monthKey(d) { return d ? d.toISOString().slice(0, 7) : ""; }
+
+/* ══════════ 🌌 बैंक-आकाशगंगा ═══════════════════════════════════════ */
+function openGalaxy() { renderGalaxy(); openSheet("galSheet"); }
+
+function renderGalaxy() {
+  const box = $("galBody");
+  if (!box) return;
+  const bal = accBalances();
+  const ids = Object.keys(ACCOUNTS || {}).filter((a) => bal[a]);
+  if (!ids.length) {
+    box.innerHTML = gfx.empty("seek", "अभी कोई खाता नहीं चढ़ा",
+      "🏦 मिलान वाले पन्ने से statement डालिए, फिर यहाँ आपके खाते दिखेंगे।");
+    return;
+  }
+
+  const live = BANKTXNS.filter((t) => t && !t.retired);
+  const stat = {};
+  ids.forEach((a) => {
+    const mine = live.filter((t) => t.accountId === a);
+    stat[a] = { n: mine.length,
+      inSum: mine.filter((t) => t.type === "credit")
+        .reduce((x, t) => x + (t.amount || 0), 0) };
+  });
+  const maxBal = Math.max(...ids.map((a) => Math.abs(bal[a].balance || 0)), 1);
+  const maxN   = Math.max(...ids.map((a) => stat[a].n), 1);
+  const maxIn  = Math.max(...ids.map((a) => stat[a].inSum), 1);
+  const total  = ids.reduce((x, a) => x + (bal[a].balance || 0), 0);
+
+  /* 🪐 हर ग्रह अपने घेरे पर। घेरे बारी-बारी बड़े होते हैं ताकि दो ग्रह एक
+     दूसरे के ऊपर न चढ़ें — आठ खातों तक यह साफ़ रहता है। */
+  const R = [64, 92, 120, 148];
+  const html = ids
+    .sort((a, b) => (bal[b].balance || 0) - (bal[a].balance || 0))
+    .map((a, i) => {
+      const fid = (typeof FIRM_ACC === "object" && FIRM_ACC[a]) || "";
+      const col = (FIRMS.filter((f) => f.id === fid)[0] || {}).color || "#6C5CE7";
+      const sz = 22 + Math.round(26 * Math.sqrt(Math.abs(bal[a].balance || 0) / maxBal));
+      const dur = 42 - Math.round(24 * (stat[a].n / maxN));      // ज़्यादा हलचल = तेज़
+      const glow = 8 + Math.round(24 * (stat[a].inSum / maxIn));
+      const r = R[i % R.length] + Math.floor(i / R.length) * 14;
+      /* 🪐 हर ग्रह अपने घेरे पर **अलग जगह** से शुरू हो, वरना पहले पल में
+         सब एक ही कोने पर इकट्ठे दिखते हैं (और यही पहली बार हुआ था)।
+         उल्टा delay देने से चक्कर बीच से शुरू होता है — यानी हर ग्रह
+         अपनी अलग जगह पर। */
+      const off = -Math.round(dur * (i / ids.length) * 100) / 100;
+      return `
+      <div class="orbit" style="width:${r * 2}px;height:${r * 2}px;--dur:${dur}s;
+           animation-delay:${off}s">
+        <span class="planet" style="--sz:${sz}px;--pc:${col};--glow:${glow}px;
+           --dur:${dur}s;animation-delay:${off}s"
+          onclick="closeSheet('galSheet');goTab('pass');setPassAccount('${esc(a)}')"
+          title="${esc(safeAccLabel(a))} · ${INR(bal[a].balance)}"></span>
+      </div>`;
+    }).join("");
+
+  box.innerHTML = `
+    <div class="galaxy">
+      ${html}
+      <div class="core"><div><b>${INRshort(total)}</b>
+        <small>${ids.length} खाते</small></div></div>
+    </div>
+    <div class="galLegend">
+      <span>⬤ बड़ा = ज़्यादा रकम</span>
+      <span>🌀 तेज़ = ज़्यादा हलचल</span>
+      <span>✨ चमक = पैसा आ रहा है</span>
+    </div>
+    <div style="margin-top:14px">${ids
+      .sort((a, b) => (bal[b].balance || 0) - (bal[a].balance || 0))
+      .map((a) => {
+        const fid = (typeof FIRM_ACC === "object" && FIRM_ACC[a]) || "";
+        const col = (FIRMS.filter((f) => f.id === fid)[0] || {}).color || "#6C5CE7";
+        return `
+        <div class="cmdRow" onclick="closeSheet('galSheet');goTab('pass');setPassAccount('${esc(a)}')">
+          <span class="planet" style="--sz:16px;--pc:${col};--glow:8px;animation:none;
+            position:relative;transform:none"></span>
+          <div class="mid"><b>${esc(safeAccLabel(a))}</b>
+            <small>${stat[a].n} सौदे · ${esc(dayLabel(bal[a].date) || bal[a].date)} तक</small></div>
+          <div class="amt">${INR(bal[a].balance)}</div>
+        </div>`;
+      }).join("")}</div>`;
+}
+
+/* ══════════ 🧊 3D इमोजी ═══════════════════════════════════════════
+   चपटे इमोजी की जगह — काँच का गोला, नरम छाया, ऊपर चमक।
+   @param {string} ch    इमोजी
+   @param {string} [mood] "good" | "warn" | "bad" | "ai"
+   @param {string} [size] "sm" | "" | "lg" | "xl"                      */
+function e3(ch, mood, size) {
+  return `<span class="e3 ${size || ""} ${mood || ""}" aria-hidden="true"
+    onclick="this.classList.remove('pop');void this.offsetWidth;this.classList.add('pop')"
+    >${ch}</span>`;
+}
+
+/* ══════════ 🤖 CashPilot ═══════════════════════════════════════════
+
+   विक्रम जी को एक नज़र में यह पता चलना चाहिए कि «आज हालत कैसी है» — बिना
+   कोई अंक पढ़े। यही इसका पूरा काम है।
+
+   🛑 मिज़ाज **हिसाब से** तय होता है, मन से नहीं:
+        बची रकम कम या चौकीदार लाल   → चौकन्ना (लाल)
+        ख़र्च आमदनी से ज़्यादा         → सोचता हुआ (अंबर)
+        बचत बढ़ रही है               → ख़ुश (हरा)
+        कुछ ख़ास नहीं                → सामान्य (बैंगनी)                */
+let PILOT_BUSY = false;
+
+function pilotMood() {
+  if (PILOT_BUSY) return { k: "think", ic: "🌀", say: "हिसाब पढ़ रहा हूँ…" };
+  const rows = BANKTXNS.filter((t) => t && !t.retired && inRange(t.date));
+  if (!rows.length && !EXP.length) return { k: "", ic: "👋", say: "नमस्ते!" };
+  const sum = (ty) => rows.filter((t) => t.type === ty)
+    .reduce((x, t) => x + (t.amount || 0), 0);
+  const net = sum("credit") - sum("debit");
+
+  let alerts = 0;
+  try { alerts = watchList("").length; } catch (e) {}
+  const bal = accBalances();
+  const total = Object.keys(bal).reduce((x, a) => x + (bal[a].balance || 0), 0);
+
+  if (Object.keys(bal).length && total < 10000)
+    return { k: "bad", ic: "⚠️", say: "बची रकम कम है — देख लीजिए।" };
+  if (alerts >= 3)
+    return { k: "warn", ic: "🤔", say: alerts + " बातें अधूरी पड़ी हैं।" };
+  if (net > 0) return { k: "good", ic: "😊", say: "इस अवधि में बचत हुई है।" };
+  if (net < 0) return { k: "warn", ic: "🤔", say: "ख़र्च आमदनी से ज़्यादा है।" };
+  return { k: "", ic: "🙂", say: "सब ठीक चल रहा है।" };
+}
+
+function renderPilot() {
+  const el = $("pilot");
+  if (!el) return;
+  const on = aiMoneyOn() && (BANKTXNS.length || EXP.length);
+  el.hidden = !on;
+  if (!on) return;
+  const m = pilotMood();
+  el.className = m.k;
+  $("pilotMood").textContent = m.ic;
+  el.title = "CashPilot — " + m.say;
+}
+
+/** 🤖 «सोच रहा हूँ» — कोई भी लंबा काम इसे पहनकर चले। */
+function pilotThinking(on) { PILOT_BUSY = !!on; renderPilot(); }
+
+function pilotTap() {
+  const m = pilotMood();
+  toast("🤖 " + m.say);
+  if (typeof openAdvice === "function") setTimeout(openAdvice, 420);
+}
+
+/* ══════════ 🔬 «एकदम साफ़ दिखाओ» ════════════════════════════════════
+
+   «अक्सर धुँधली नज़र आते हैं» — चारों वजहें ठीक कर दी गईं, पर आँख हर आदमी
+   की अलग होती है और फ़ोन भी। इसलिए फ़ैसला विक्रम जी के हाथ में।
+
+   💾 फ़ोन में ही सँभाला जाता है — यह दिखने की बात है, हिसाब की नहीं,
+      इसलिए Firestore की एक भी लिखाई इस पर ख़र्च नहीं होती।            */
+function crispOn() {
+  try { return localStorage.getItem("vbeCrisp") === "1"; } catch (e) { return false; }
+}
+function setCrisp(on) {
+  try { localStorage.setItem("vbeCrisp", on ? "1" : "0"); } catch (e) {}
+  applyCrisp();
+  try { renderStamp(); } catch (e) {}
+  toast(on ? "🔬 एकदम साफ़ — काँच और रौशनी बंद" : "🎨 चमक वापस चालू");
+}
+function applyCrisp() {
+  document.documentElement.setAttribute("data-crisp", crispOn() ? "1" : "0");
+}
+applyCrisp();
 
 /* ══════════ 🔍 एक ही जगह से पूरी खोज ═══════════════════════════════
 
@@ -4329,8 +4722,9 @@ function renderHero() {
         net >= 0 ? "+" : "−"}${INRshort(Math.abs(net)).replace("₹", "₹")}</span>
       <div class="heroK">🏦 कुल बची रकम</div>
       <div class="heroV" data-count="${Math.round(total)}">${INR(total)}</div>
-      <div class="heroS">${ids.length} खाते${
-        till ? " · " + esc(dayLabel(till) || till) + " तक" : ""}</div>
+      <div class="heroS" onclick="openGalaxy()" style="cursor:pointer">
+        🌌 ${ids.length} खाते${
+        till ? " · " + esc(dayLabel(till) || till) + " तक" : ""} ›</div>
       <div class="heroIO">
         <div><div class="k">↓ आया</div>
           <div class="v in">${INRshort(inSum)}</div></div>
@@ -12478,7 +12872,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "36e5ebe108ae";
+const APP_BUILD = "68562741a6cd";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -13903,8 +14297,18 @@ function pinCancel() { PIN_AFTER = null; closeSheet("pinSheet"); }
 $("pinBox").addEventListener("keydown", (e) => { if (e.key === "Enter") pinSubmit(); });
 
 /* ── sheets ─────────────────────────────────────────────────────── */
-function openSheet(id) { $(id).hidden = false; document.body.style.overflow = "hidden"; }
-function closeSheet(id) { $(id).hidden = true; document.body.style.overflow = ""; }
+function openSheet(id) {
+  $(id).hidden = false;
+  document.body.style.overflow = "hidden";
+  document.body.classList.add("sheetOpen");   // 🤖 साथी रास्ते से हट जाए
+}
+function closeSheet(id) {
+  $(id).hidden = true;
+  document.body.style.overflow = "";
+  // कोई और पर्दा खुला न हो तभी साथी वापस
+  if (!document.querySelector(".sheet:not([hidden])"))
+    document.body.classList.remove("sheetOpen");
+}
 // बाहर टैप करने पर बंद — पर अंदर टैप करने पर नहीं
 document.querySelectorAll(".sheet").forEach((s) =>
   s.addEventListener("click", (e) => { if (e.target === s) closeSheet(s.id); }));
