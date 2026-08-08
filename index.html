@@ -1247,24 +1247,44 @@
      है, कुछ अटका हुआ है या सब ठीक है।
 
      छूने पर हिलता है और 🧠 सलाह खोल देता है।                          */
-  #pilot { position: fixed; right: 16px; bottom: 20px; z-index: 60;
-    width: 60px; height: 60px; border: 0; padding: 0; cursor: pointer;
-    border-radius: 50%; background: transparent;
-    animation: pilotFloat 4.2s var(--ease) infinite; }
+  /* 🩸 पहले यह नीचे दाएँ तैरता था — ठीक `right:16px; bottom:20px` पर।
+     और वहीं ⚡ फास्ट एंट्री वाला बटन पहले से बैठा है। यानी मैंने अपने साथी
+     को उनके सबसे ज़्यादा दबाए जाने वाले बटन के ऊपर बिठा दिया था, और वह
+     खातों के कार्ड भी ढँक रहा था।
+
+     विक्रम जी: «यह आपने AI का कहाँ राइट साइड में लगा दिया, इसकी जगह तो
+     फास्ट एंट्री वाली व्यवस्था थी — उसको रखिए, इसको ऊपर की तरफ़ डाल दीजिए,
+     जब ज़रूरत होगी तब इस्तेमाल कर लूँगा।»
+
+     बिल्कुल सही। नीचे की जगह काम की है, सजावट की नहीं। साथी अब सिर की
+     पट्टी में बाक़ी बटनों के साथ बैठता है — उतना ही बड़ा, उसी क़तार में।  */
+  /* 🎯 «bell» वाली class इसलिए कि नाप, गोलाई और क़तार में बैठना बाक़ी
+     बटनों से **हूबहू** एक रहे — अलग से नापने पर वह एक-दो पिक्सल ऊपर-नीचे
+     रह जाता था और क़तार टेढ़ी दिखती थी। */
+  /* 🩸 यहाँ width/height लिखना भूल गया था और `#pilot` (id) `.bell` (class)
+     को हरा देता है — नतीजा: साथी पूरी पट्टी जितना चौड़ा होकर फैल गया।
+     id वाली लकीर में **वह सब** लिखना पड़ता है जो class में था। */
+  /* 🩸 और `position: relative` भी ज़रूरी है। इसके बिना अंदर वाला
+     `.body` (जो `position:absolute; inset:0` है) सबसे पास वाले «टिके हुए»
+     पुरखे से नापता है — यानी **पूरी सिर की पट्टी** — और साथी पट्टी जितना
+     चौड़ा होकर फैल जाता है। यही दो बार हुआ। */
+  #pilot { position: relative; flex: 0 0 auto; width: 40px; height: 40px;
+    border: 0; padding: 0; background: transparent; overflow: visible; }
   #pilot .body { position: absolute; inset: 0; border-radius: 46% 46% 50% 50%;
     background: linear-gradient(160deg, #A78BFA, #7B61FF 55%, #5B46D6);
-    box-shadow: 0 10px 26px rgba(123,97,255,.46), var(--sheen); }
-  #pilot .eyes { position: absolute; inset: 0; display: flex; gap: 9px;
+    box-shadow: 0 4px 12px rgba(123,97,255,.42), var(--sheen); }
+  #pilot .eyes { position: absolute; inset: 0; display: flex; gap: 7px;
     align-items: center; justify-content: center; }
-  #pilot .eyes i { width: 8px; height: 8px; border-radius: 50%;
+  #pilot .eyes i { width: 6px; height: 6px; border-radius: 50%;
     background: #00E5FF; box-shadow: 0 0 10px #00E5FF;
     animation: pilotBlink 5.5s steps(1) infinite; }
-  #pilot .aura { position: absolute; inset: -14px; border-radius: 50%;
+  #pilot .aura { position: absolute; inset: -7px; border-radius: 50%;
     background: radial-gradient(circle, rgba(168,85,247,.34), transparent 66%);
-    filter: blur(9px); z-index: -1;
+    filter: blur(6px); z-index: -1;
     animation: pilotBreathe 3.4s var(--ease) infinite; }
-  #pilot .mood { position: absolute; right: -4px; top: -6px; font-size: 17px;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+  /* 🙂 मिज़ाज का चिह्न — कंधे पर, ताकि आँखें ढँके नहीं */
+  #pilot .mood { position: absolute; right: -3px; top: -5px; font-size: 13px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.55)); }
   #pilot.good .body { background: linear-gradient(160deg, #4BE3B4, #00D68F 58%, #039C6C); }
   #pilot.good .aura { background: radial-gradient(circle, rgba(0,214,143,.36), transparent 66%); }
   #pilot.warn .body { background: linear-gradient(160deg, #FFD08A, #FFB84D 58%, #DB8F1E); }
@@ -1273,22 +1293,18 @@
   #pilot.bad  .aura { background: radial-gradient(circle, rgba(255,95,109,.40), transparent 66%);
     animation-duration: 1.5s; }
   #pilot:active { transform: scale(.92); }
-  /* 🤖 पर्दा खुला हो तो साथी रास्ते से हट जाए — वरना वह नीचे वाली पंक्ति
-     पर बैठ जाता है और उसे छूने ही नहीं देता। */
-  body.sheetOpen #pilot { opacity: 0; pointer-events: none;
-    transform: translateY(14px) scale(.9); }
+  /* 🛟 अब वह सिर की पट्टी में है, इसलिए न किसी बटन के ऊपर बैठता है, न
+     पर्दा खुलने पर छिपाना पड़ता है — पट्टी वैसे भी पीछे चली जाती है। */
   #pilot .ring { position: absolute; inset: -5px; border-radius: 50%;
     border: 2px solid transparent; border-top-color: #00E5FF;
     opacity: 0; }
   #pilot.think .ring { opacity: 1; animation: pilotSpin 1.05s linear infinite; }
-  @keyframes pilotFloat { 0%,100% { transform: translateY(0) }
-                          50% { transform: translateY(-7px) } }
   @keyframes pilotBreathe { 0%,100% { transform: scale(1); opacity: .8 }
                             50% { transform: scale(1.14); opacity: 1 } }
   @keyframes pilotBlink { 0%,92%,100% { transform: scaleY(1) } 95% { transform: scaleY(.12) } }
   @keyframes pilotSpin { to { transform: rotate(360deg) } }
   @media (prefers-reduced-motion: reduce) {
-    #pilot, #pilot .aura, #pilot .eyes i, #pilot .ring { animation: none !important; }
+    #pilot .aura, #pilot .eyes i, #pilot .ring { animation: none !important; }
     .e3.beat { animation: none; }
   }
   html[data-crisp="1"] #pilot .aura { display: none; }
@@ -2428,6 +2444,15 @@
       <div class="logo">🧾</div>
       <h1>VBE खरीद-हिसाब</h1>
     </div>
+    <!-- 🤖 CashPilot — बाक़ी बटनों के साथ, ऊपर। नीचे की जगह ⚡ फास्ट
+         एंट्री की है, और वह जगह काम की है — सजावट की नहीं। -->
+    <button id="pilot" class="bell" hidden onclick="pilotTap()"
+            aria-label="CashPilot — पैसों की सलाह">
+      <span class="aura"></span><span class="ring"></span>
+      <span class="body"></span>
+      <span class="eyes"><i></i><i></i></span>
+      <span class="mood" id="pilotMood"></span>
+    </button>
     <button id="cmdBtn" class="bell" onclick="openCmd()"
             aria-label="सब कुछ ढूँढिए">🔍</button>
     <button id="adBox" class="bell" hidden onclick="openAdvice()"
@@ -2619,14 +2644,6 @@
       <div id="galBody"></div>
     </div>
   </div>
-
-  <!-- 🤖 CashPilot — ऐप का अपना साथी -->
-  <button id="pilot" hidden onclick="pilotTap()" aria-label="CashPilot — पैसों की सलाह">
-    <span class="aura"></span><span class="ring"></span>
-    <span class="body"></span>
-    <span class="eyes"><i></i><i></i></span>
-    <span class="mood" id="pilotMood"></span>
-  </button>
 
   <!-- 🔍 एक ही जगह से पूरी खोज -->
   <div id="cmdWrap" onclick="if(event.target===this)closeCmd()">
@@ -12872,7 +12889,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "68562741a6cd";
+const APP_BUILD = "3bdb27d82364";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
