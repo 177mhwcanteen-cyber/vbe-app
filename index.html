@@ -10292,7 +10292,8 @@ const driveUpload = (dataUrl, name) => botCall("upload", { dataUrl, name });
       जोड़ देता है। यहाँ का नाम पढ़ने के लिए है, टकराव रोकने के लिए नहीं।  */
 const DRIVE_KIND_HI = { bill: "बिल", payment: "पेमेंट", receipt: "रसीद",
                         delivery: "डिलीवरी", extra: "और फोटो", other: "काग़ज़",
-                        card: "कार्ड" };
+                        card: "कार्ड", request: "माँग", cheque: "चेक",
+                        slip: "पर्ची", qr: "QR" };
 
 /**
  * Drive के लिए पढ़ने लायक़ नाम — «2026-08-07 ₹4500 RANA RAM EXP-26-27-0001 बिल»
@@ -13471,7 +13472,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "1df1620ce722";
+const APP_BUILD = "c28cc3fd6365";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
