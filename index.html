@@ -3877,6 +3877,25 @@ function readsToday() {
   } catch (e) { return 0; }
 }
 
+/* ══════════ 📊 पढ़ाई की सच्ची गिनती ═══════════════════════════════
+
+   🩸 विक्रम जी की Firebase स्क्रीन: **46K पढ़ाई**, मुफ़्त सीमा 50,000 की।
+      और उसी वक़्त यह पट्टी कह रही थी «17,003 / 50,000» — यानी आराम है।
+
+   दोनों आँकड़े सही थे। यह पट्टी सिर्फ़ **इस फ़ोन की** पढ़ाई गिनती है। बॉट
+   जो पढ़ता है — हफ़्तेवार बैकअप, /pdf की रिपोर्ट, रोज़ की summary — वह
+   इसमें कहीं था ही नहीं।
+
+   पर जेब एक ही है। और सीमा पार होते ही **पूरा हिसाब दिखना बंद** हो जाता
+   है। पट्टी का «आराम है» कहना, जब आराम न हो, ऐप का झूठ है — और वही झूठ
+   सबसे महँगा पड़ता है, क्योंकि उस पर भरोसा करके काम किया जाता है।
+
+   अब बॉट अपनी पढ़ाई `vbe_meta/usage` में लिख देता है और यहाँ जुड़ जाती है। */
+let BOT_READS = { day: "", n: 0 };
+
+const readsAll = () => readsToday() +
+  (BOT_READS.day === todayISO() ? BOT_READS.n : 0);
+
 /**
  * Firestore की Timestamp सीधे सहेजी नहीं जा सकती — JSON में वह
  * {seconds, nanoseconds} बन जाती है और वापस पढ़ने पर तारीख़ ही ग़लत हो
@@ -4097,6 +4116,14 @@ async function fetchAll() {
   RETIRED = bankAll.filter(out);
   BANKTXNS = bankAll.filter((t) => !out(t));
   let n = expDocs.length + accSnap.size + pbDocs.length + bankDocs.length;
+  // 📊 बॉट ने आज कितना पढ़ा — एक पढ़ाई की क़ीमत पर पूरी सच्चाई
+  try {
+    const u = await db.collection("vbe_meta").doc("usage").get();
+    n += 1;
+    const d = u.exists ? u.data() : null;
+    BOT_READS = d ? { day: String(d.day || ""), n: Number(d.reads) || 0 }
+                  : { day: "", n: 0 };
+  } catch (e) { /* न मिले तो पुराना ही चले — गिनती के लिए काम न रुके */ }
   try {
     const vs = markCapped("पार्टी के कार्ड", await pageAll("vbe_parties", 10000));
     VCARDS = {};
@@ -4154,7 +4181,8 @@ async function loadData(force) {
 function renderSync(err) {
   const box = $("syncBar");
   if (!box) return;
-  const used = readsToday(), ai = aiToday();
+  const mine = readsToday(), bot = readsAll() - readsToday(), ai = aiToday();
+  const used = mine + bot;
   const pct = Math.min(100, (used / 50000) * 100);
   const when = LAST_SYNC
     ? new Date(LAST_SYNC).toLocaleString("hi-IN",
@@ -4174,7 +4202,10 @@ function renderSync(err) {
         ' · 🏦 ' + BANKTXNS.length.toLocaleString("en-IN") +
         ' पंक्तियाँ · 🧾 ' + EXP.length.toLocaleString("en-IN") + ' बिल<br>' +
         '<small>आज ' + used.toLocaleString("en-IN") + ' / 50,000 पढ़ाई' +
-        (hot ? ' — अब सँभालकर' : '') +
+        (bot ? ' (ऐप ' + mine.toLocaleString("en-IN") + ' · बॉट ' +
+               bot.toLocaleString("en-IN") + ')' : '') +
+        (pct > 90 ? ' — 🛑 सीमा पास है, आज और ताज़ा मत कीजिए'
+                  : hot ? ' — अब सँभालकर' : '') +
         ' · 🧠 ' + ai.n + ' AI' +
         (AI_WHO === "claude"
           ? ' · 🤖 ' + String(CLAUDE_MODEL).replace(/^claude-/, "").replace(/-\d{8}$/, "")
@@ -13933,7 +13964,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "20d1409ce5b2";
+const APP_BUILD = "4f0b87b8bce9";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
