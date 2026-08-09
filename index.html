@@ -10927,14 +10927,80 @@ const VY_PARTS = [
 ];
 const partOf = (k) => VY_PARTS.filter((p) => p.k === k)[0] || VY_PARTS[1];
 
-/** व्यापार जो लिखता है ↔ ऐप जो समझता है। बाक़ी सब छोड़ दिया जाता है। */
-function vyKindOf(t) {
-  const x = String(t || "").toLowerCase().replace(/[^a-z]/g, "");
-  if (/estimate|quotation/.test(x)) return "quote";
-  if (/deliverychallan|challan/.test(x)) return "challan";
-  if (/^sale$|saleinvoice|taxinvoice|^invoice$/.test(x)) return "invoice";
-  if (/paymentin/.test(x)) return "payin";
-  return null;
+/* ══════════ 🩸 v68 — जो समझ न आए, वह अब गिरता नहीं ═══════════════════
+
+   पहले यहाँ यही लिखा था:
+
+       function vyKindOf(t) { … return null; }          ← «बाक़ी सब छोड़ दो»
+
+   और पढ़ने वाले में:
+
+       if (!date || !kind) { skipped++; continue; }      ← पंक्ति फेंक दी गई
+
+   यानी ऐप सिर्फ़ **चार** क़िस्में जानता था — कोटेशन, चालान, इनवॉइस,
+   पेमेंट-इन। व्यापार इनके अलावा भी लिखता है: Purchase, Payment-out, Sale
+   Order, Purchase Order, Proforma, Credit Note, Debit Note, Expense।
+   वे आठों **ऐप तक पहुँचती ही नहीं थीं।** बचती सिर्फ़ एक गिनती थी —
+   `skipped` — और वह भी कहीं दिखती नहीं थी। *कौन-सी* पंक्ति गिरी, यह कभी
+   पता नहीं चलता।
+
+   विक्रम जी का अपना नियम: «टाइप पक्का न हो → UNCLASSIFIED में डालकर मुझसे
+   पूछो। अंदाज़ा कभी मत लगाना।» — चुपचाप फेंक देना अंदाज़ा लगाने से भी बुरा
+   है: अंदाज़े में कम-से-कम पंक्ति बची तो रहती है।
+
+   🧱 और सबसे ज़रूरी लकीर: नई क़िस्मों का `kind` **नया** है, इसलिए वे पुराने
+      किसी जोड़ में अपने-आप नहीं घुसतीं। बिक्री/टर्नओवर आज भी सिर्फ़
+      `kind === "invoice"` से बनता है। नई पंक्ति दिखेगी, गिनी नहीं जाएगी —
+      जब तक विक्रम जी ख़ुद न कहें।                                       */
+
+const VY_DOCTYPES = [
+  // docType            kind          व्यापार जो लिखता है              दिखने वाला नाम
+  { t: "TAX_INVOICE",      k: "invoice",   m: ["sale", "saleinvoice", "taxinvoice", "invoice"], ic: "🧾", nm: "टैक्स इनवॉइस" },
+  { t: "QUOTATION",        k: "quote",     m: ["estimatequotation", "estimate", "quotation"],   ic: "📐", nm: "कोटेशन" },
+  { t: "DELIVERY_CHALLAN", k: "challan",   m: ["deliverychallan", "challan"],                   ic: "🚚", nm: "डिलीवरी चालान" },
+  { t: "PAYMENT_IN",       k: "payin",     m: ["paymentin"],                                    ic: "📥", nm: "पेमेंट-इन" },
+  { t: "PAYMENT_OUT",      k: "payout",    m: ["paymentout"],                                   ic: "📤", nm: "पेमेंट-आउट" },
+  { t: "PURCHASE_BILL",    k: "purchase",  m: ["purchase", "purchaseinvoice", "purchasebill"],  ic: "🛒", nm: "ख़रीद बिल" },
+  { t: "PURCHASE_ORDER",   k: "po",        m: ["purchaseorder"],                                ic: "📋", nm: "ख़रीद ऑर्डर" },
+  { t: "SALE_ORDER",       k: "saleorder", m: ["saleorder", "order"],                           ic: "📑", nm: "सेल ऑर्डर" },
+  { t: "PROFORMA",         k: "proforma",  m: ["proformainvoice", "proforma"],                  ic: "📄", nm: "प्रोफ़ॉर्मा" },
+  { t: "CREDIT_NOTE",      k: "creditnote", m: ["creditnote", "salereturn"],                    ic: "↩️", nm: "क्रेडिट नोट" },
+  { t: "DEBIT_NOTE",       k: "debitnote", m: ["debitnote", "purchasereturn"],                  ic: "↪️", nm: "डेबिट नोट" },
+  { t: "EXPENSE",          k: "expense",   m: ["expense"],                                      ic: "💸", nm: "ख़र्चा" },
+  { t: "UNCLASSIFIED",     k: "unknown",   m: [],                                               ic: "❓", nm: "समझ नहीं आया" }
+];
+
+const vyType = (t) => VY_DOCTYPES.filter((x) => x.t === t)[0] ||
+  VY_DOCTYPES[VY_DOCTYPES.length - 1];
+/** पुराने `kind` से docType — जो पंक्तियाँ v68 से पहले सहेजी गई थीं। */
+const vyTypeOfKind = (k) => (VY_DOCTYPES.filter((x) => x.k === k)[0] || {}).t || "UNCLASSIFIED";
+
+/**
+ * व्यापार जो लिखता है ↔ ऐप जो समझता है।
+ * @returns {{t:string, k:string}}  कभी null नहीं — न पहचाने तो UNCLASSIFIED
+ */
+function vyTypeOf(raw) {
+  const x = String(raw || "").toLowerCase().replace(/[^a-z]/g, "");
+  if (!x) return { t: "UNCLASSIFIED", k: "unknown" };
+  /* पूरा मिलान पहले, फिर टुकड़ा — वरना «purchaseorder» को «purchase» खा
+     जाता, और ऑर्डर बिल बनकर ख़रीद में गिन लिया जाता। */
+  for (const y of VY_DOCTYPES) if (y.m.indexOf(x) >= 0) return { t: y.t, k: y.k };
+  for (const y of VY_DOCTYPES) {
+    for (const m of y.m) if (m.length > 4 && x.indexOf(m) >= 0) return { t: y.t, k: y.k };
+  }
+  return { t: "UNCLASSIFIED", k: "unknown" };
+}
+
+/** पुराना नाम — बाक़ी कोड इसी को बुलाता है। अब null की जगह "unknown"। */
+function vyKindOf(t) { return vyTypeOf(t).k; }
+
+/** तारीख़ से वित्त-वर्ष — prefix से कभी नहीं (उसमें 25-26 लिखा रह गया है)। */
+function vyFY(date) {
+  const m = String(date || "").match(/^(\d{4})-(\d{2})/);
+  if (!m) return null;
+  const y = Number(m[1]), mo = Number(m[2]);
+  const s = mo >= 4 ? y : y - 1;
+  return s + "-" + String((s + 1) % 100).padStart(2, "0");
 }
 
 /* ── 📊 «All Transactions Report» पढ़ना ──────────────────────────────
@@ -10990,8 +11056,27 @@ function parseVyXlsx(buf) {
   const C = vyColMap(main[hi]);
   const at = (r, k) => (C[k] === undefined ? "" : String(r[C[k]] == null ? "" : r[C[k]]).trim());
 
-  // 📦 दूसरी शीट «Item Details» — बिल नंबर से जोड़ी जाती है
-  const items = {};
+  /* 📦 दूसरी शीट «Item Details» — काग़ज़ से जोड़ी जाती है।
+
+     🩸 v68 — पहले जोड़ सिर्फ़ Ref No. से होता था:
+
+         const ref = refKey(iat(r, "invoiceno") || iat(r, "refno"));
+         (items[ref] = items[ref] || []).push(…)
+
+     कोटेशन का नंबर व्यापार में **नंगा** होता है — बस `37`, `52`, `55`।
+     उसी फ़ाइल में किसी और नंगे-नंबर वाले काग़ज़ का `52` हो तो दोनों के
+     आइटम एक ही टोकरी में गिर जाते, और फिर दोनों काग़ज़ों पर **दोनों के**
+     आइटम दिखते। ग़लत आइटम ग़लत बिल पर = ग़लत मार्जिन, ग़लत भाव-इतिहास।
+
+     और उस शीट के खाने का नाम `Invoice No.` है — पर उसमें कोटेशन के नंबर
+     भी पड़े हैं। नाम धोखा देता है; उसमें काग़ज़ की क़िस्म है ही नहीं।
+
+     इसलिए अब पहचान **तीन चीज़ों** से बनती है — तारीख़ + पार्टी + नंबर।
+     अकेला नंबर सिर्फ़ सहारा है, और वह भी तभी जब उस नंबर पर सिर्फ़ **एक**
+     काग़ज़ हो।                                                          */
+  const iKey = (d, p, ref) => (d || "") + "|" + (pKey(p) || "") + "|" + refKey(ref);
+  const items = {}, itemsByRef = {}, refCount = {};
+  let itemRows = 0;
   wb.SheetNames.slice(1).forEach((nm) => {
     const g = grid(nm);
     const j = vyHeaderAt(g, ["itemname"]);
@@ -11000,40 +11085,95 @@ function parseVyXlsx(buf) {
     const iat = (r, k) => (D[k] === undefined ? "" : String(r[D[k]] == null ? "" : r[D[k]]).trim());
     for (let i = j + 1; i < g.length; i++) {
       const r = g[i] || [];
-      const ref = refKey(iat(r, "invoiceno") || iat(r, "refno"));
+      const rawRef = iat(r, "invoiceno") || iat(r, "refno");
+      const ref = refKey(rawRef);
       const name = iat(r, "itemname");
       if (!ref || !name) continue;
-      (items[ref] = items[ref] || []).push({
+      itemRows++;
+      const it = {
         name, qty: vyNum(iat(r, "quantity")), unit: iat(r, "unit") || null,
-        rate: vyNum(iat(r, "priceunit")), amount: vyNum(iat(r, "amount"))
-      });
+        rate: vyNum(iat(r, "priceunit")), amount: vyNum(iat(r, "amount")),
+        hsn: iat(r, "hsnsac") || null, code: iat(r, "itemcode") || null,
+        gst: iat(r, "gst") || null
+      };
+      const k = iKey(vyDay(iat(r, "date")), iat(r, "partyname"), rawRef);
+      (items[k] = items[k] || []).push(it);
+      (itemsByRef[ref] = itemsByRef[ref] || []).push(it);
     }
   });
 
   const rows = [];
-  let skipped = 0, lo = "", hiD = "";
+  let unknown = 0, lo = "", hiD = "";
+  const usedKey = {}, usedRef = {};
   for (let i = hi + 1; i < main.length; i++) {
     const r = main[i] || [];
     const date = vyDay(at(r, "date"));
-    const kind = vyKindOf(at(r, "transactiontype"));
-    if (!date || !kind) { if (at(r, "partyname")) skipped++; continue; }
+    const party = at(r, "partyname");
+    const rawType = at(r, "transactiontype");
     const ref = at(r, "refno");
     const total = vyNum(at(r, "amount"));
-    const got = vyNum(at(r, "receivedamount"));
-    const bal = vyNum(at(r, "balanceamount"));
-    if (!lo || date < lo) lo = date;
-    if (date > hiD) hiD = date;
+    /* 🛑 पंक्ति सिर्फ़ तभी छोड़ी जाती है जब उसमें **कुछ भी** न हो — न
+       तारीख़, न पार्टी, न नंबर, न रकम। वह ख़ाली लकीर है, सौदा नहीं। */
+    if (!date && !party && !ref && total == null) continue;
+    const ty = vyTypeOf(rawType);
+    if (ty.t === "UNCLASSIFIED") unknown++;
+    if (date) {
+      if (!lo || date < lo) lo = date;
+      if (date > hiD) hiD = date;
+    }
+    // नंबर पर एक ही काग़ज़ हो तभी अकेले नंबर का सहारा लिया जा सकता है
+    refCount[refKey(ref)] = (refCount[refKey(ref)] || 0) + 1;
     rows.push({
-      kind, date, party: at(r, "partyname") || null, ref: ref || null,
+      docType: ty.t, kind: ty.k, rawType: rawType || null,
+      fy: vyFY(date),
+      date, party: party || null, ref: ref || null,
       status: at(r, "paymentstatus") || null,
       payType: at(r, "paymenttype") || null,
       note: at(r, "description") || null,
-      total: total, received: got == null ? (kind === "payin" ? total : 0) : got,
-      balance: bal, items: items[refKey(ref)] || []
+      total: total,
+      received: vyNum(at(r, "receivedamount")),
+      balance: vyNum(at(r, "balanceamount")),
+      _k: iKey(date, party, ref), _ref: refKey(ref)
     });
   }
   if (!rows.length) throw new Error("कोई सौदा नहीं मिला — दूसरी अवधि देखिए");
-  return { src: "xlsx", rows, skipped, period: { from: lo, to: hiD } };
+
+  // 🔗 अब आइटम बाँटो — पक्की पहचान पहले, अकेला नंबर सिर्फ़ सहारे के तौर पर
+  let byThree = 0, byRef = 0, mismatch = 0;
+  rows.forEach((x) => {
+    let got = null;
+    if (items[x._k]) { got = items[x._k]; usedKey[x._k] = 1; byThree++; }
+    else if (itemsByRef[x._ref] && refCount[x._ref] === 1) {
+      got = itemsByRef[x._ref]; usedRef[x._ref] = 1; byRef++;
+    }
+    x.items = got || [];
+    if (x.received == null) x.received = (x.kind === "payin" ? x.total : 0);
+    /* 🧮 आइटमों का जोड़ काग़ज़ की रकम से मिलता है या नहीं — यह जाँच पहले
+       थी ही नहीं। न मिले तो पंक्ति फिर भी रहती है, बस निशान लग जाता है:
+       «जाँच नहीं हो सकी» को «ग़लत है» कहना सबसे बुरा झूठ है, और «ग़लत है»
+       को चुपचाप «ठीक है» दिखाना उससे भी बुरा। */
+    const isum = x.items.reduce((a, it) => a + (Number(it.amount) || 0), 0);
+    x.itemSum = x.items.length ? Math.round(isum * 100) / 100 : null;
+    x.amountOk = (!x.items.length || x.total == null) ? null
+      : Math.abs(isum - x.total) <= Math.max(1, Math.abs(x.total) * 0.01);
+    if (x.amountOk === false) mismatch++;
+    delete x._k; delete x._ref;
+  });
+
+  // 🕳️ जिन आइटमों का काग़ज़ ही नहीं मिला — ये अब तक कहीं दिखते ही नहीं थे
+  const orphans = [];
+  Object.keys(items).forEach((k) => {
+    if (usedKey[k]) return;
+    const ref = k.split("|")[2];
+    if (usedRef[ref]) return;
+    items[k].forEach((it) => {
+      if (orphans.length < 200) orphans.push({ key: k, name: it.name, amount: it.amount });
+    });
+  });
+
+  return { src: "xlsx", rows, period: { from: lo, to: hiD },
+           skipped: 0, unknown, itemRows, byThree, byRef,
+           mismatch, orphans };
 }
 
 /* ── 🗄️ व्यापार का संग्रह ───────────────────────────────────────────
@@ -11046,6 +11186,23 @@ let VY = [], VY_FIRM = "", VY_PARSED = null, VY_ASKFIRM = "";
 
 const vyId = (firmId, ref) => (firmId || "x") + "-" + (refKey(ref) || hash36(String(ref)));
 
+/* 🩸 v68 — और जिस काग़ज़ पर नंबर है ही नहीं?
+
+   ऊपर वाला रास्ता `refKey(null)` पर ख़ाली देता है और `hash36("null")` पर
+   चला जाता है — यानी **बिना नंबर वाली हर पंक्ति की पहचान एक ही बनती है।**
+   पहले यह छिपा हुआ था क्योंकि बिना क़िस्म वाली पंक्तियाँ पढ़ने से पहले ही
+   गिर जाती थीं। अब वे बचती हैं, इसलिए यह छेद ज़िंदा हो जाता।
+
+   दस बिना-नंबर वाली पंक्तियाँ एक ही id पर लिखतीं — नौ चुपचाप मिट जातीं,
+   और गिनती «10 जुड़े» ही दिखाती। इसलिए नंबर न हो तो पहचान तारीख़ + पार्टी
+   + क़िस्म + रकम से बनती है।                                            */
+function vyDocId(firmId, x) {
+  if (refKey(x && x.ref)) return vyId(firmId, x.ref);
+  const seed = [x && x.date, pKey(x && x.party), x && (x.docType || x.kind),
+                x && x.total].join("|");
+  return (firmId || "x") + "-n" + hash36(seed);
+}
+
 /**
  * पूरी व्यापार-सूची — नया `vbe_vy` **और** पुराने `vbe_sales`/`vbe_payins`।
  * पुराना कुछ भी छोड़ा नहीं जाता; जो नए संग्रह में आ चुका है वही हटता है।
@@ -11056,7 +11213,7 @@ function vyAll() {
   out.forEach((x) => { seen[x._id] = 1; });
   const fold = (arr, kind) => arr.forEach((x) => {
     const fid = x.firmId || firmFromRef(x.ref) || firmFromName(x.firm) || "";
-    const id = vyId(fid, x.ref);
+    const id = vyDocId(fid, x);
     if (seen[id]) return;
     seen[id] = 1;
     out.push(Object.assign({}, x, { _id: id, kind, firmId: fid, legacy: true }));
@@ -11338,7 +11495,15 @@ async function loadVyapar(force) {
     FIRM_ACC = (fa.exists && fa.data().map) || {};
     const vpd = (vp.exists && vp.data()) || {};
     VYP = { map: vpd.map || {}, canon: vpd.canon || {}, no: vpd.no || {} };
-    VY = markCapped("व्यापार", vy).map((d) => Object.assign({ _id: d.id }, d.data()));
+    /* 🏷️ v68 से पहले सहेजी गई पंक्तियों पर `docType` नहीं है — पर उनका
+       `kind` है, और वही चारों जानी-पहचानी क़िस्में हैं। इसलिए यहीं भर दिया
+       जाता है, Firestore में कुछ लिखे बिना। पुरानी पंक्ति छुई नहीं जाती। */
+    VY = markCapped("व्यापार", vy).map((d) => {
+      const o = Object.assign({ _id: d.id }, d.data());
+      if (!o.docType) o.docType = vyTypeOfKind(o.kind);
+      if (!o.fy) o.fy = vyFY(o.date);
+      return o;
+    });
     // पुराने दोनों संग्रह अब भी पढ़े जाते हैं — जो पहले डाला जा चुका है वह
     // कभी ग़ायब न हो। `vyAll()` दोनों को एक ही सूची में जोड़ता है।
     SALES = markCapped("बिक्री", sa).map((d) => Object.assign({ _id: d.id }, d.data()));
@@ -11439,11 +11604,21 @@ function renderVyPreview() {
   const known = {};
   vyAll().forEach((x) => { known[x._id] = 1; });
   const fresh = VY_ASKFIRM
-    ? r.rows.filter((x) => !known[vyId(VY_ASKFIRM, x.ref)]).length : 0;
+    ? r.rows.filter((x) => !known[vyDocId(VY_ASKFIRM, x)]).length : 0;
+
+  /* 🩸 v68 — पहले यहाँ लिखा आता था «12 और क़िस्म की लकीरें छोड़ दीं», और
+     वे बारह सचमुच फेंक दी जाती थीं। अब कुछ नहीं छूटता: जो क़िस्में ऐप के
+     चार ख़ानों में नहीं बैठतीं वे भी जुड़ती हैं, बस अपने अलग नाम से — और
+     पैसे के किसी जोड़ में नहीं गिनी जातीं। */
+  const other = r.rows.filter((x) =>
+    VY_PARTS.every((p) => p.k !== x.kind) && x.docType !== "UNCLASSIFIED");
+  const oby = {};
+  other.forEach((x) => { (oby[x.docType] = oby[x.docType] || []).push(x); });
+  const unk = r.rows.filter((x) => x.docType === "UNCLASSIFIED");
 
   msg.className = "ok";
   msg.innerHTML = `📊 पढ़ ली — <b>${r.rows.length}</b> काग़ज़` +
-    (r.skipped ? ` · <span class="muted">${r.skipped} और क़िस्म की लकीरें छोड़ दीं</span>` : "");
+    (r.itemRows ? ` · ${r.itemRows} सामान की लकीरें` : "");
 
   box.innerHTML = `
     <div class="tiles" style="margin:10px 0">
@@ -11452,6 +11627,39 @@ function renderVyPreview() {
         s: by[p.k].length + " काग़ज़", color: p.color,
         pct: by[p.k].length ? 100 : 4 })).join("")}
     </div>
+
+    ${other.length ? `
+      <div class="itemsHead"><span>📦 और क़िस्म के काग़ज़</span>
+        <span class="muted">${other.length}</span></div>
+      <div class="badge lo" style="display:block;line-height:1.7;margin-bottom:8px">
+        ये पहले <b>चुपचाप फेंक दिए जाते थे</b>। अब जुड़ेंगे और दिखेंगे — पर
+        बिक्री या बकाया के किसी जोड़ में <b>नहीं गिने जाएँगे</b>, जब तक आप
+        ख़ुद न कहें।</div>
+      <div class="pick" style="margin-bottom:10px">
+        ${Object.keys(oby).map((t) => `<span class="badge">${vyType(t).ic} ${
+          esc(vyType(t).nm)} <b>${oby[t].length}</b></span>`).join("")}
+      </div>` : ""}
+
+    ${unk.length ? `
+      <div class="itemsHead"><span>❓ इनकी क़िस्म समझ नहीं आई</span>
+        <span class="muted">${unk.length}</span></div>
+      <div class="docFix" style="margin-bottom:10px">
+        <small>ये भी जुड़ेंगी — <b>फेंकी नहीं जाएँगी</b> — और «🩺 व्यापार की
+          जाँच» में अलग दिखेंगी। व्यापार ने इन पर क्या लिखा था वह भी सँभाल
+          लिया गया है, इसलिए बाद में पहचानने के लिए फ़ाइल दुबारा नहीं डालनी
+          पड़ेगी।<br><br>${[...new Set(unk.map((x) => x.rawType || "(ख़ाली)"))]
+            .slice(0, 8).map((t) => `«${esc(t)}»`).join(" · ")}</small>
+      </div>` : ""}
+
+    ${(r.mismatch || (r.orphans || []).length) ? `
+      <div class="docFix" style="margin-bottom:10px">
+        <small>${r.mismatch ? `🧮 <b>${r.mismatch}</b> काग़ज़ों पर सामान का जोड़
+          काग़ज़ की रकम से नहीं मिला।` : ""}
+          ${(r.orphans || []).length ? ` 🕳️ <b>${r.orphans.length}</b> सामान की
+          लकीरों का काग़ज़ नहीं मिला।` : ""}
+          <br>ये रोकते नहीं — सब जुड़ेगा — पर «🩺 व्यापार की जाँच» में निशान
+          लगा रहेगा।</small>
+      </div>` : ""}
     <div class="itemsHead"><span>🏢 यह किस फ़र्म की रिपोर्ट है?</span>
       <span class="muted">${r.headName ? esc(r.headName) : "फ़ाइल में नहीं लिखा"}</span></div>
     <div class="fmBar">
@@ -11488,9 +11696,17 @@ async function saveVyapar(btn) {
       btn.textContent = `… ${Math.min(++done * 400, r.rows.length)} / ${r.rows.length}`;
     });
     for (const x of r.rows) {
-      const id = vyId(fid, x.ref);
+      const id = vyDocId(fid, x);
       const doc = {
         firmId: fid, kind: x.kind, date: x.date, party: x.party || null,
+        /* 🏷️ v68 — पूरी क़िस्म, और व्यापार ने जो लिखा था वह भी ज्यों-का-त्यों।
+           `rawType` इसलिए कि कल कोई अनजानी क़िस्म आए तो उसे पहचानने के लिए
+           फ़ाइल दुबारा न डालनी पड़े — जवाब पहले से सहेजा हुआ मिले। */
+        docType: x.docType || vyTypeOfKind(x.kind),
+        rawType: x.rawType || null,
+        fy: x.fy || vyFY(x.date),
+        itemSum: x.itemSum == null ? null : x.itemSum,
+        amountOk: x.amountOk == null ? null : x.amountOk,
         partyKey: pKey(x.party) || null, ref: x.ref || null,
         status: x.status || null, payType: x.payType || null,
         total: x.total == null ? null : x.total,
@@ -11566,7 +11782,12 @@ function renderVyapar() {
     `<button type="button" class="vyP${VY_VIEW === "party" ? " on" : ""}"
        onclick="setVyView('party')">
        <span class="ic">🧑</span><span class="nm">पार्टी</span>
-       <span class="ct">${vyParties().length}</span></button>`;
+       <span class="ct">${vyParties().length}</span></button>` +
+    `<button type="button" class="vyP${VY_VIEW === "health" ? " on" : ""}"
+       onclick="setVyView('health')">
+       <span class="ic">🩺</span><span class="nm">जाँच</span>
+       <span class="ct" style="color:${vyHealth().bad ? "#FF5A5F" : "#00C48C"}"
+         >${vyHealth().bad}</span></button>`;
 
   const chSum = vySum(by.challan), inSum = vySum(by.invoice);
   const gapSum = Math.max(0, chSum - inSum);
@@ -11626,8 +11847,110 @@ function renderVyapar() {
 
   const box = $("vyList");
   if (VY_VIEW === "party") return renderVyParties(box);
+  if (VY_VIEW === "health") return renderVyHealth(box);
   if (VY_VIEW === "home") return renderVyHome(box);
   renderVyDocs(box, VY_VIEW);
+}
+
+/* ══════════ 🩺 व्यापार की जाँच ══════════════════════════════════════
+
+   विक्रम जी: «एकदम महत्वपूर्ण चीज़ रहे… क्रॉस-वेरीफ़ाई भी होगा।»
+
+   जाँच का पहला काम **ग़लती ढूँढना नहीं, ग़लती छिपने न देना** है। v68 से
+   पहले तीन चीज़ें चुपचाप छिप जाती थीं:
+
+     • जिस पंक्ति की क़िस्म समझ न आए, वह पढ़ने में ही गिर जाती थी
+     • सामान का जोड़ काग़ज़ की रकम से मिलता है या नहीं — जाँचा ही नहीं जाता था
+     • जिस सामान का काग़ज़ न मिले, वह कहीं दिखता ही नहीं था
+
+   अब तीनों यहाँ हैं। 🛑 यह पन्ना कुछ **ठीक नहीं करता** — सिर्फ़ दिखाता है।
+   बैंकिंग ऐप में «अपने-आप सुधार दिया» जैसी चीज़ नहीं होती।             */
+
+/** @returns {{bad:number, unknown:Array, mismatch:Array, noFY:Array, noRef:Array, other:Object}} */
+function vyHealth(firmId) {
+  const rows = vyRows(null, firmId === undefined ? VY_FIRM : firmId);
+  const unknown = [], mismatch = [], noFY = [], noRef = [], other = {};
+  rows.forEach((x) => {
+    const t = x.docType || vyTypeOfKind(x.kind);
+    if (t === "UNCLASSIFIED") unknown.push(x);
+    else if (VY_PARTS.every((p) => p.k !== x.kind)) (other[t] = other[t] || []).push(x);
+    if (x.amountOk === false) mismatch.push(x);
+    /* 📅 «prefix में 25-26 लिखा है पर बिल 2026-27 का है» — विक्रम जी की
+       अपनी पकड़। FY हमेशा तारीख़ से निकलता है; यह सिर्फ़ चेतावनी है, रोक
+       नहीं, क्योंकि ग़लती व्यापार की सेटिंग में है, काग़ज़ में नहीं। */
+    const pf = String(x.ref || "").match(/(\d{2})[-\/](\d{2})/);
+    const fy = x.fy || vyFY(x.date);
+    if (pf && fy && (pf[1] + "-" + pf[2]) !== fy.slice(2)) noFY.push(x);
+    if (!x.ref) noRef.push(x);
+  });
+  return { bad: unknown.length + mismatch.length, rows: rows.length,
+           unknown, mismatch, noFY, noRef, other };
+}
+
+function renderVyHealth(box) {
+  const H = vyHealth();
+  const oKeys = Object.keys(H.other);
+  const card = (ic, nm, list, why, tone) => !list.length ? "" : `
+    <div class="bahiSec">${ic} ${nm} <small>${list.length}</small></div>
+    <div class="docFix" style="margin-top:8px"><small>${why}</small></div>
+    ${list.slice(0, 25).map((x) => `
+      <div class="mrow">
+        <div class="mx"><b>${esc(x.ref || "(नंबर नहीं)")}</b>
+          <span class="badge${tone ? " " + tone : ""}">${vyType(x.docType).ic} ${
+            esc(x.rawType || vyType(x.docType).nm)}</span>
+          <br><span class="muted">${esc(x.date || "—")} · ${
+            esc(unitShort(x.party) || x.party || "—")} · ${
+            x.total == null ? "—" : INR(x.total)}${
+            x.itemSum != null ? ` · सामान का जोड़ ${INR(x.itemSum)}` : ""}</span>
+        </div></div>`).join("")}
+    ${list.length > 25 ? `<div class="muted" style="padding:6px 0">… और ${
+      list.length - 25}</div>` : ""}`;
+
+  box.innerHTML = `
+    <div class="bahiChain ${H.bad ? "" : "ok"}">
+      <span>${H.bad ? "🩺 " + H.bad + " चीज़ें देखने लायक़" : "✅ कोई गड़बड़ नहीं मिली"}</span>
+      <span>${H.rows} काग़ज़ जाँचे</span>
+    </div>
+    <div class="docFix" style="margin-top:10px">
+      <small>🛑 यह पन्ना कुछ <b>ठीक नहीं करता</b> — सिर्फ़ दिखाता है। कोई
+        काग़ज़ यहाँ से मिटता या बदलता नहीं।</small>
+    </div>
+
+    ${card("❓", "क़िस्म समझ नहीं आई", H.unknown,
+      `व्यापार ने इन पर जो लिखा वह ऐप की किसी क़िस्म से नहीं मिला।
+       <b>ये पहले चुपचाप फेंक दिए जाते थे</b> — अब जुड़ते हैं और यहाँ दिखते
+       हैं। पैसे के किसी जोड़ में नहीं गिने जाते। मुझे बता दीजिए कि ये क्या
+       हैं, मैं पहचान जोड़ दूँगा।`, "")}
+
+    ${card("🧮", "सामान का जोड़ काग़ज़ की रकम से नहीं मिला", H.mismatch,
+      `काग़ज़ पर एक रकम लिखी है और उसके सामान जोड़ने पर दूसरी बनती है
+       (1% से ज़्यादा का फ़र्क़)। इसका मतलब हमेशा ग़लती नहीं — छूट, ढुलाई या
+       गोल-मोल रकम भी हो सकती है। <b>पर एक बार देख लेना ज़रूरी है।</b>`, "")}
+
+    ${card("📅", "नंबर का साल और तारीख़ का साल अलग", H.noFY,
+      `जैसे <b>TX/UBI/25-26/1276</b> पर तारीख़ 18-05-2026 है — यानी काग़ज़
+       2026-27 का है, पर नंबर में 25-26 लिखा है। <b>ऐप हमेशा तारीख़ को सही
+       मानता है</b>, इसलिए हिसाब ठीक है। ग़लती व्यापार की prefix सेटिंग में
+       है — वहाँ बदल दीजिए तो आगे साफ़ रहेगा।`, "")}
+
+    ${oKeys.length ? `
+      <div class="bahiSec">📦 और क़िस्म के काग़ज़
+        <small>${oKeys.reduce((a, k) => a + H.other[k].length, 0)}</small></div>
+      <div class="docFix" style="margin-top:8px"><small>
+        ये अब जुड़ते हैं (पहले नहीं जुड़ते थे) — पर बिक्री, बकाया या माल-गया
+        के किसी जोड़ में <b>नहीं गिने जाते</b>। जब आप कहेंगे तब जोड़ूँगा।
+      </small></div>
+      <div class="pick" style="margin:8px 0">
+        ${oKeys.map((t) => `<span class="badge">${vyType(t).ic} ${
+          esc(vyType(t).nm)} <b>${H.other[t].length}</b> · ${
+          INR(vySum(H.other[t]))}</span>`).join("")}
+      </div>` : ""}
+
+    ${H.noRef.length ? `
+      <div class="bahiSec">🏷️ बिना नंबर वाले काग़ज़ <small>${H.noRef.length}</small></div>
+      <div class="muted" style="padding:6px 0">इनकी पहचान तारीख़ + पार्टी +
+        क़िस्म + रकम से बनाई गई है, ताकि दो अलग काग़ज़ एक-दूसरे को न मिटाएँ।</div>` : ""}`;
+  gfx.fit(box);
 }
 
 /** 🏛️ घर — सबसे नए काग़ज़, चारों क़िस्म एक साथ, तारीख़ के क्रम में। */
@@ -11837,8 +12160,135 @@ function openVyDoc(id) {
         🏦 यह रकम बैंक की किसी क्रेडिट लकीर से नहीं मिली। उस खाते की statement
         डाली गई है क्या?</div>` : ""}
 
-    ${vyItemCards(x)}`;
+    ${vyItemCards(x)}
+
+    ${vyPaperCard(x)}`;
   openSheet("vySheet");
+}
+
+/* ══════════ 📎 असली काग़ज़ — Drive में, अपनी जगह पर ═══════════════════
+
+   विक्रम जी: «आप गूगल ड्राइव के अंदर महत्वपूर्ण ध्यान रखिए और चीज़ वहाँ पर
+   जाएगी। ऐसा नहीं है कि आप केवल ऐप में टैक्स इनवॉइस नंबर दे दूँगा उससे काम
+   हो जाएगा। मैं आने वाले टाइम के अंदर क्रॉस-वेरीफ़ाई भी कराऊँगा — GeM का
+   डेटा दूँगा तो किस बिल के अगेंस्ट में कौन-सा ऑर्डर है, वह एक-दूसरे से
+   क्रॉस-वेरीफ़ाई भी होगा।»
+
+   इसलिए हर काग़ज़ की **अपनी जगह और अपना नाम** पहले से तय है — PDF आने का
+   इंतज़ार किए बिना:
+
+       📁 VBE-व्यापार/
+          └── 📁 उज्ज्वल भारत इन्फोटेक/
+                └── 📁 2026-27/
+                      └── 📁 🧾 टैक्स इनवॉइस/
+                            📄 2026-27_UB_TI_1276_625 TPT PL.pdf
+
+   नाम में साल, फ़र्म, क़िस्म, नंबर और यूनिट — पाँचों हैं। इसलिए Drive के
+   अपने खोज-डिब्बे में «1276» या «625 TPT» लिखने पर काग़ज़ सीधे सामने आ
+   जाता है, ऐप खोले बिना।
+
+   🔗 और GeM का ऑर्डर नंबर उसी काग़ज़ पर लिखा रहता है (`gemContract`), इसलिए
+      कल GeM की रिपोर्ट आते ही मिलान **जोड़ने** का काम रह जाएगा, ढूँढने का
+      नहीं।                                                             */
+
+/** क़िस्म का छोटा कोड — फ़ाइल के नाम के लिए। */
+const VY_TCODE = { TAX_INVOICE: "TI", QUOTATION: "QT", DELIVERY_CHALLAN: "DC",
+  PAYMENT_IN: "PIN", PAYMENT_OUT: "POUT", PURCHASE_BILL: "PB",
+  PURCHASE_ORDER: "PO", SALE_ORDER: "SO", PROFORMA: "PRFO",
+  CREDIT_NOTE: "CRN", DEBIT_NOTE: "DBN", EXPENSE: "EXP", UNCLASSIFIED: "MISC" };
+
+/** इस काग़ज़ का Drive फ़ोल्डर — फ़र्म / वित्त-वर्ष / क़िस्म। */
+function vyDrivePath(x) {
+  const t = x.docType || vyTypeOfKind(x.kind);
+  return ["VBE-व्यापार", firmName(x.firmId), x.fy || vyFY(x.date) || "बिना-साल",
+          vyType(t).ic + " " + vyType(t).nm].join("/");
+}
+
+/** «2026-27_UB_TI_1276_625 TPT PL» — साल, फ़र्म, क़िस्म, नंबर, यूनिट। */
+function vyDriveName(x) {
+  const t = x.docType || vyTypeOfKind(x.kind);
+  const safe = (s) => String(s == null ? "" : s)
+    .replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+  const no = safe(String(x.ref || "").split(/[\/\-]/).slice(-1)[0]) || "बिना-नंबर";
+  return [x.fy || vyFY(x.date) || "बिना-साल",
+          (firmOf(x.firmId) || {}).short || "XX",
+          VY_TCODE[t] || "MISC", no,
+          safe(unitShort(x.party) || x.party).slice(0, 30)].filter(Boolean).join("_");
+}
+
+/** 📎 काग़ज़ + GeM — एक कार्ड, दोनों काम। */
+function vyPaperCard(x) {
+  const q = (s) => String(s == null ? "" : s).replace(/'/g, "&#39;");
+  return `
+    <div class="itemsHead" style="margin-top:16px"><span>📎 असली काग़ज़</span>
+      <span class="muted">${esc(vyDriveName(x))}</span></div>
+    ${x.driveUrl ? `
+      <div class="brdg" style="border-color:rgba(0,196,140,.5)">📄
+        <div>Drive में रखा है
+          <br><a href="${esc(x.driveUrl)}" target="_blank" rel="noopener">खोलकर देखिए</a>
+          <br><span class="muted">${esc(vyDrivePath(x))}</span></div></div>`
+      : `<div class="badge lo" style="display:block;line-height:1.7;margin-top:8px">
+          📄 इसका असली काग़ज़ (PDF या फ़ोटो) अभी Drive में नहीं है। नीचे से
+          लगा दीजिए — वह अपने-आप <b>${esc(vyDrivePath(x))}</b> में, ऊपर लिखे
+          नाम से चला जाएगा।</div>`}
+    <div class="pick" style="margin-top:8px">
+      <label class="mini" style="cursor:pointer">📎 काग़ज़ लगाइए
+        <input type="file" accept="application/pdf,image/*" hidden
+          onchange="vyAttach('${q(x._id)}', this)"></label>
+      <button type="button" class="mini" onclick="vySetGem('${q(x._id)}')">🏛️ GeM ऑर्डर नंबर</button>
+    </div>
+    ${x.gemContract ? `<div class="brdg" style="margin-top:8px">🏛️
+      <div>GeM ऑर्डर <b>${esc(x.gemContract)}</b>
+        <br><span class="muted">GeM की रिपोर्ट आने पर इसी से क्रॉस-वेरीफ़ाई होगा।</span>
+      </div></div>` : ""}
+    <div class="muted" id="vyPaperMsg" style="margin-top:6px"></div>`;
+}
+
+/** काग़ज़ Drive में — bot के ज़रिए, क्योंकि Drive तक पहुँच सिर्फ़ उसी की है। */
+async function vyAttach(id, input) {
+  const f = input && input.files && input.files[0];
+  input.value = "";
+  const x = vyAll().filter((y) => y._id === id)[0];
+  if (!f || !x) return;
+  const line = $("vyPaperMsg");
+  const say = (t, c) => { if (line) { line.className = c || "muted"; line.innerHTML = t; } };
+  say('<span class="thinking"></span> Drive में रख रहा हूँ…');
+  try {
+    const isPdf = /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name);
+    /* फ़ोटो छोटी कर दी जाती है (फ़ोन से भेजने में देर न लगे), पर PDF
+       ज्यों-की-त्यों जाती है — बिल का काग़ज़ दुबारा दबाना नहीं चाहिए। */
+    const dataUrl = isPdf ? await fileToDataUrl(f) : await shrinkImage(f, 1800, 0.85);
+    const up = await botCall("upload", { dataUrl, folder: vyDrivePath(x),
+      mime: isPdf ? "application/pdf" : "image/jpeg",
+      name: vyDriveName(x) + (isPdf ? ".pdf" : ".jpg") });
+    if (!up || !up.ok) throw new Error((up && up.error) || "नहीं चढ़ा");
+    await db.collection("vbe_vy").doc(id)
+      .set({ driveUrl: up.url, driveFileId: up.id }, { merge: true });
+    x.driveUrl = up.url; x.driveFileId = up.id;
+    await auditLog("vyapar_paper", null, { id, name: vyDriveName(x) });
+    saveCache();
+    say("✅ रख दिया — " + esc(vyDrivePath(x)), "ok");
+    openVyDoc(id);
+  } catch (e) {
+    say("❌ नहीं रखा — " + esc(e.message), "bad");
+  }
+}
+
+/** 🏛️ GeM का ऑर्डर नंबर — आगे क्रॉस-वेरीफ़ाई की कड़ी। */
+async function vySetGem(id) {
+  const x = vyAll().filter((y) => y._id === id)[0];
+  if (!x) return;
+  const v = prompt("GeM ऑर्डर / कॉन्ट्रैक्ट नंबर:", x.gemContract || "");
+  if (v === null) return;
+  const val = String(v).trim() || null;
+  try {
+    await db.collection("vbe_vy").doc(id).set({ gemContract: val }, { merge: true });
+    x.gemContract = val;
+    await auditLog("vyapar_gem", null, { id, gem: val });
+    saveCache();
+    openVyDoc(id);
+    toast(val ? "🏛️ GeM नंबर जुड़ गया" : "GeM नंबर हटा दिया");
+  } catch (e) { toast("नहीं सहेजा: " + e.message); }
 }
 
 /**
@@ -13483,7 +13933,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "797d9afcdc22";
+const APP_BUILD = "20d1409ce5b2";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
