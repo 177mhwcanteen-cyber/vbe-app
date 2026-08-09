@@ -6109,12 +6109,14 @@ async function saveEntry() {
     // only keeps the link.
     if (ENTRY_SHOTS.bill || ENTRY_SHOTS.receipt) {
       msg.textContent = "फोटो Drive में भेज रहा हूँ…";
+      const nm = { date: rec.billDate || when, amount: rec.billTotal,
+                   vendor: rec.vendor && rec.vendor.name, docId };
       if (ENTRY_SHOTS.bill) {
-        const up = await driveUpload(ENTRY_SHOTS.bill, docId + "_bill");
+        const up = await driveUpload(ENTRY_SHOTS.bill, driveName("bill", nm));
         if (up.ok) rec.billPhotoDriveUrl = up.url;
       }
       if (ENTRY_SHOTS.receipt) {
-        const up = await driveUpload(ENTRY_SHOTS.receipt, docId + "_receipt");
+        const up = await driveUpload(ENTRY_SHOTS.receipt, driveName("receipt", nm));
         if (up.ok) rec.paymentPhotoDriveUrl = up.url;
       }
     }
@@ -10263,6 +10265,58 @@ async function botCall(action, payload) {
 
 const driveUpload = (dataUrl, name) => botCall("upload", { dataUrl, name });
 
+/* ══════════ 🔎 Drive में फ़ाइल का नाम ख़ुद बोले ══════════════════════
+
+   विक्रम जी: «जब कभी भी मेरे को उत्तर चाहिए तो एक सेकंड में मेरे को डाटा
+   मिल जाए।»
+
+   Telegram से आने वाली फोटो का नाम v52 से ऐसा बनता है —
+
+       2026-08-07 ₹4500 RANA RAM EXP-26-27-0001 बिल.jpg
+
+   — यानी Drive के अपने खोज-डिब्बे में «राणा राम» या «4500» लिखने पर वह
+   सीधे सामने आ जाती है। पर **ऐप से** चढ़ने वाली फोटो का नाम पीछे छूट गया
+   था। Drive छानने पर यह मिला:
+
+       FST-26-27-0022_other.jpg        ← न तारीख़, न रकम, न दुकान
+       bill_JAMAL KHAN.jpg             ← न रसीद नंबर, न तारीख़
+
+   दूसरे वाले में तो रसीद नंबर ही नहीं — यानी वह फोटो किस बिल की है, यह
+   फ़ाइल देखकर कभी पता नहीं चलता। अब दोनों रास्तों का नाम एक जैसा बनता है।
+
+   ⚠️ रसीद नंबर हमेशा उपलब्ध नहीं होता (नया बिल सहेजने से पहले फोटो चढ़ती
+      है) — तब तारीख़ + रकम + दुकान से भी फ़ाइल खोजी जा सकती है।
+
+   🔒 दो फोटो का नाम फिर भी एक बन सकता है (एक ही बिल की तीन «other» फोटो)।
+      उसकी रोक Drive पर ही लगी है — Main.gs का driveFreeName_ «(2)», «(3)»
+      जोड़ देता है। यहाँ का नाम पढ़ने के लिए है, टकराव रोकने के लिए नहीं।  */
+const DRIVE_KIND_HI = { bill: "बिल", payment: "पेमेंट", receipt: "रसीद",
+                        delivery: "डिलीवरी", extra: "और फोटो", other: "काग़ज़",
+                        card: "कार्ड" };
+
+/**
+ * Drive के लिए पढ़ने लायक़ नाम — «2026-08-07 ₹4500 RANA RAM EXP-26-27-0001 बिल»
+ * @param {string} kind  bill | payment | receipt | delivery | extra | other
+ * @param {{date?:string|Date, amount?:number, vendor?:string, docId?:string}} o
+ */
+function driveName(kind, o) {
+  o = o || {};
+  const safe = (s) => String(s == null ? "" : s)
+    .replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+  const bits = [];
+  // 🕑 यहाँ toISOString() नहीं — वह UTC देता है, और शाम 7 बजे के बाद
+  //    भारत में तारीख़ एक दिन पीछे लिख जाती। फ़ोन की अपनी तारीख़ ही सही है।
+  const d = o.date ? new Date(o.date) : new Date();
+  bits.push(isNaN(d.getTime()) ? todayISO()
+    : d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate()));
+  if (o.amount != null && Number(o.amount) > 0) bits.push("₹" + Math.round(Number(o.amount)));
+  const v = safe(o.vendor).slice(0, 40);
+  if (v) bits.push(v);
+  if (o.docId) bits.push(safe(o.docId));
+  bits.push(DRIVE_KIND_HI[kind] || safe(kind) || "काग़ज़");
+  return bits.join(" ");
+}
+
 /* ══════════ 📂 बैंक की statement — Drive पर सुरक्षित ═════════════════
 
    विक्रम जी: «हर बार मेरे को ध्यान रखना पड़ता है कि जो statement बैंक से
@@ -13417,7 +13471,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "edbd439ea1c3";
+const APP_BUILD = "1df1620ce722";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -14557,7 +14611,8 @@ async function vcardFromPhoto(e) {
   m.className = "muted"; m.innerHTML = '<span class="thinking"></span> कार्ड सँभाल रहा हूँ…';
   try {
     VCARD_SHOT = await shrinkImage(f, 1600, 0.82);
-    const up = await driveUpload(VCARD_SHOT, "card_" + VCARD_PARTY.key);
+    const up = await driveUpload(VCARD_SHOT,
+      driveName("card", { vendor: VCARD_PARTY.name || VCARD_PARTY.key }));
     await saveVcard({ cardUrl: up.ok ? up.url : null });
     // saveVcard पूरा कार्ड दुबारा बनाता है — यानी ऊपर पकड़ा हुआ vcMsg अब
     // पन्ने पर है ही नहीं। इसलिए लिखने से पहले नया वाला उठाओ।
@@ -16012,8 +16067,14 @@ async function saveBillSheet() {
     if (BILL_SHOTS.bill) photos.push({ kind: "bill", dataUrl: BILL_SHOTS.bill });
     BILL_SHOTS.extra.forEach((u) => photos.push({ kind: "extra", dataUrl: u }));
     const urls = [];
+    /* 🩸 पहले नाम बस «bill_JAMAL KHAN» बनता था — न तारीख़, न रकम, न रसीद
+       नंबर। Drive में ऐसी फ़ाइल मिल तो जाती है, पर वह **किस बिल की** है यह
+       कभी पता नहीं चलता। पुराना बिल सुधर रहा हो तो रसीद नंबर पहले से है;
+       नया बन रहा हो तो तारीख़ + रकम + दुकान से भी खोजा जा सकता है।       */
+    const nm = { date: $("bsDate").value || todayISO(), amount: total,
+                 vendor, docId: BILL_EXP ? BILL_EXP._id : null };
     for (const p of photos) {
-      const up = await driveUpload(p.dataUrl, p.kind + "_" + (vendor || "bill"));
+      const up = await driveUpload(p.dataUrl, driveName(p.kind, nm));
       urls.push({ kind: p.kind, url: up && up.ok ? up.url : null, dataUrl: up && up.ok ? null : p.dataUrl });
     }
 
@@ -18396,7 +18457,9 @@ async function dupeAttach(id, btn) {
       const kind = (sh.r && sh.r.kind) || "other";
       let url = null;
       try {
-        const up = await driveUpload(sh.dataUrl, docId + "_" + kind);
+        const up = await driveUpload(sh.dataUrl, driveName(kind, {
+          date: e.billDate || null, amount: e.billTotal,
+          vendor: e.vendor && e.vendor.name, docId }));
         url = (up && up.ok) ? up.url : null;
       } catch (err) {}
       photos.push({ kind, url, at: (sh.r && sh.r.time) || null });
@@ -18612,7 +18675,10 @@ async function runOneJob(job) {
     const kind = (sh.r && sh.r.kind) || "other";
     let url = null;
     try {
-      const up = await driveUpload(sh.dataUrl, job.docId + "_" + kind);
+      const r = sh.r || {};
+      const up = await driveUpload(sh.dataUrl, driveName(kind, {
+        date: r.billDate || (sh.r && sh.r.time) || null,
+        amount: r.billTotal, vendor: r.vendor && r.vendor.name, docId: job.docId }));
       url = (up && up.ok) ? up.url : null;
     } catch (e) {}
     photos.push({ kind, url, at: (sh.r && sh.r.time) || null });
@@ -19016,13 +19082,13 @@ async function runDriveClean() {
     const all = driveOrphans();
     saveDriveClean({
       at: todayISO(), files: (r.files || []).length, folders: r.folders,
-      dupes: (r.dupes || []).length,
+      dupes: (r.dupes || []).length, clash: (r.nameClash || []).length,
       lost: all.filter((f) => drivePhotoOwner(f.name)).length,
       orph: all.filter((f) => !drivePhotoOwner(f.name)).length
     });
     await auditLog("drive_audit", null,
       { files: (r.files || []).length, folders: r.folders,
-        dupes: (r.dupes || []).length });
+        dupes: (r.dupes || []).length, clash: (r.nameClash || []).length });
   } catch (e) {
     DC = { error: e.message };
   } finally {
@@ -19190,6 +19256,7 @@ function renderDriveClean() {
     .filter((f) => f.own);
   const orph = all.filter((f) => !drivePhotoOwner(f.name));
   const dupes = DC.dupes || [];
+  const clash = DC.nameClash || [];
   const files = DC.files || [];
 
   box.innerHTML = lockCard() + `
@@ -19198,6 +19265,8 @@ function renderDriveClean() {
         <div class="bs">${DC.folders} फ़ोल्डर${DC.capped ? " · और भी हैं" : ""}</div></div>
       <div class="out"><div class="bk">🔁 दोहरी</div>
         <div class="bv">${dupes.length}</div><div class="bs">एक ही फ़ाइल दो बार</div></div>
+      <div class="out"><div class="bk">🏷️ नाम टकराए</div>
+        <div class="bv">${clash.length}</div><div class="bs">एक नाम, अलग फ़ाइलें</div></div>
       <div class="out"><div class="bk">🔗 कड़ी टूटी</div>
         <div class="bv">${lost.length}</div><div class="bs">बिल है, फोटो जुड़ी नहीं</div></div>
       <div class="out"><div class="bk">🕳️ बिन-दर्ज</div>
@@ -19284,6 +19353,30 @@ function renderDriveClean() {
             <br>${g.map((f) => `<a href="${esc(f.url)}" target="_blank"
               rel="noopener">${esc(f.path || "जड़")}</a>`).join(" · ")}</div>
         </div>`).join("")}` : ""}
+
+    ${clash.length ? `
+      <div class="bahiSec">🏷️ एक ही नाम, अलग-अलग फ़ाइलें
+        <small>${clash.length} जगह</small></div>
+      <div class="docFix" style="margin-top:8px">
+        <small>ये <b>दोहरी फ़ाइलें नहीं हैं</b> — हर एक अलग तस्वीर है, आकार
+          भी अलग है। दिक़्क़त यह है कि तीनों का <b>नाम हूबहू एक</b> है, इसलिए
+          «कौन-सी कौन है» फ़ाइल देखकर कभी पता नहीं चलता। <b>मिटाना कुछ
+          नहीं है</b> — नीचे हर एक को खोलकर देख लीजिए।
+          <br><br>यह ⚡ फ़ास्ट एंट्री से बनती थीं (एक ही बिल की कई फोटो को
+          एक ही नाम मिल जाता था)। <b>वह छेद अब बंद है</b> — नई फ़ाइल पर
+          «(2)», «(3)» अपने-आप लग जाता है।</small>
+      </div>
+      ${clash.slice(0, 20).map((g) => `
+        <div class="mrow">
+          <div class="amt out">${g.length}</div>
+          <div class="mx"><b>${esc(g[0].name)}</b>
+            <br><span class="muted">${esc(g[0].path || "जड़ में")}</span>
+            <br>${g.map((f, i) => `<a href="${esc(f.url)}" target="_blank"
+              rel="noopener">${i + 1}) ${Math.round((f.size || 0) / 1024)} KB</a>`
+            ).join(" · ")}</div>
+        </div>`).join("")}
+      ${clash.length > 20 ? `<div class="muted" style="padding:6px 0">… और ${
+        clash.length - 20}</div>` : ""}` : ""}
 
     ${(DC.empty || []).length ? `
       <div class="bahiSec">📂 खाली फ़ोल्डर <small>${DC.empty.length}</small></div>
@@ -22381,7 +22474,8 @@ async function addPayFromShot(dataUrl, msgEl) {
   const say = (t, c) => { if (msgEl) { msgEl.className = c || "muted"; msgEl.innerHTML = t; } };
   say('<span class="thinking"></span> रसीद सँभाल रहा हूँ…');
 
-  const up = await driveUpload(dataUrl, "receipt_" + Date.now());
+  const up = await driveUpload(dataUrl, driveName("receipt", {
+    date: $("bsDate").value || todayISO(), vendor: $("bsVendor").value.trim() }));
   const left = Math.max(0, (Number($("bsTotal").value) || 0) -
     BILL_PAYS.reduce((a, x) => a + (Number(x.amount) || 0), 0));
   const p = paymentFromReceipt({
@@ -22505,7 +22599,8 @@ async function bulkSave() {
     box.innerHTML = `<span class="thinking"></span> ${i + 1} / ${BULK.length} सहेज रहा हूँ…` +
       gfx.meter(((i + 1) / BULK.length) * 100, gfx.C.bill);
 
-    const up = await driveUpload(b.dataUrl, "receipt_" + utr);
+    const up = await driveUpload(b.dataUrl, driveName("receipt", {
+      date: b.date || todayISO(), amount: amt, vendor: b.name || null, docId: utr }));
     const pay = paymentFromReceipt({
       amount: amt, utr, toName: b.name || null, paidAt: b.date || todayISO()
     }, up && up.ok ? up.url : null);
