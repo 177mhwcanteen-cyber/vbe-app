@@ -2543,6 +2543,16 @@
     </div>
   </div>
 
+  <!-- 📄 हिसाब की रिपोर्ट — खाता-वाइज़ PDF -->
+  <div id="rpSheet" class="sheet" hidden>
+    <div class="sheetBox" style="max-width:560px">
+      <div class="grab"></div>
+      <div class="sheetHead"><h3>📄 हिसाब की रिपोर्ट</h3>
+        <button class="x" onclick="closeSheet('rpSheet')">✕</button></div>
+      <div id="rpBody"></div>
+    </div>
+  </div>
+
   <!-- 📖 बहीखाता — एक क्लिक पर पूरा खाता -->
   <!-- 🔗 बैंक की लकीर ↔ व्यापार का पेमेंट-इन
 
@@ -3047,7 +3057,8 @@
       <!-- 🔌 Google के मुफ़्त connector — Drive, Sheets, Gmail -->
       <div class="card" style="margin-bottom:12px">
         <div class="itemsHead" style="margin-top:0"><span>🔌 Google से जोड़</span>
-          <button type="button" class="primary mini" onclick="openDriveClean()">🧹 Drive की सफ़ाई</button>
+          <button type="button" class="primary mini" onclick="openReports()">📄 हिसाब की PDF</button>
+          <button type="button" class="mini" onclick="openDriveClean()">🧹 Drive की सफ़ाई</button>
         </div>
         <p class="muted" style="margin-bottom:10px">तीनों मुफ़्त हैं और आपके ही
           Google account में रहते हैं। 🔒 इनमें से कुछ भी AI को नहीं जाता।</p>
@@ -13472,7 +13483,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "c28cc3fd6365";
+const APP_BUILD = "797d9afcdc22";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -19060,6 +19071,119 @@ let ASKED_FOR = "";
 
    🔒 और सबसे ज़रूरी: यह सफ़ाई **देखकर बताती है, हटाती नहीं।** बैंकिंग ऐप
       में «अपने-आप हटा दिया» जैसी चीज़ नहीं होती।                        */
+
+/* ══════════ 📄 हिसाब की रिपोर्ट — खाता-वाइज़ PDF ════════════════════
+
+   विक्रम जी: «जो पैसा चला गया है उसका कभी मेरे से हिसाब माँगा जाए तो एक
+   मिनट के अंदर PDF खाता-वाइज़ अलग-अलग डाउनलोड करके उनको दे सकूँ… और किसी
+   पैसे का क्या सामान गया यह भी पता चल सके।»
+
+   🎯 «एक मिनट» तभी पूरा होगा जब PDF **पहले से बनी हुई** पड़ी हो। इसलिए वह
+      हर शनिवार अपने-आप बन जाती है (Report.gs का weeklyReports), और Drive
+      के «📄 हिसाब-रिपोर्ट» फ़ोल्डर में रहती है। माँगने पर सिर्फ़ भेजनी है।
+
+   यह पर्दा उस दूसरी हालत के लिए है: अभी-अभी statement डाली और एकदम ताज़ा
+   चाहिए। तब यहाँ से उसी वक़्त बन जाती है।
+
+   🔒 बनती Apps Script में है, यहाँ नहीं — क्योंकि 3,268 पंक्तियाँ फ़ोन से
+      वापस भेजना बेकार का बोझ है, और खाता नंबर छिपाने की लकीर वहीं एक जगह
+      रहनी चाहिए।                                                        */
+
+let RP_BUSY = "";
+
+function openReports() {
+  renderReports();
+  openSheet("rpSheet");
+}
+
+function renderReports(msg) {
+  const box = $("rpBody");
+  if (!box) return;
+  const bal = accBalances();
+  const ids = Object.keys(ACCOUNTS).sort((a, b) =>
+    String((ACCOUNTS[a] || {}).label || a).localeCompare(
+      String((ACCOUNTS[b] || {}).label || b), "hi"));
+
+  box.innerHTML = `
+    <div class="docFix">
+      <small>हर खाते का पूरा हिसाब एक PDF में — <b>किसे गया, कितना गया, और
+        उस पैसे से क्या आया</b>। ये PDF हर शनिवार अपने-आप बन जाती हैं और
+        आपकी Drive के <b>«📄 हिसाब-रिपोर्ट»</b> फ़ोल्डर में पड़ी रहती हैं,
+        इसलिए कोई हिसाब माँगे तो बनानी नहीं पड़ती — सीधे भेज दीजिए।
+        <br><br>अभी-अभी statement डाली हो और एकदम ताज़ा चाहिए, तो नीचे से
+        बना लीजिए।</small>
+    </div>
+    ${msg || ""}
+    <div class="pick" style="margin:10px 0">
+      <button type="button" class="mini primary"
+        onclick="buildAllReports(this)">📄 सब खातों की बना दीजिए (${ids.length})</button>
+    </div>
+    ${ids.length ? ids.map((id) => {
+      const a = ACCOUNTS[id] || {};
+      const b = bal[id];
+      return `
+        <div class="mrow" id="rp-${esc(id)}">
+          <div class="mx"><b>${esc(a.label || id)}</b>
+            ${a.identifierHint ? `<span class="badge">${esc(a.identifierHint)}</span>` : ""}
+            <br><span class="muted">${b
+              ? "बचा " + INR(b.balance) + " · " + esc(b.date) + " तक"
+              : "इस खाते की कोई पंक्ति नहीं"}</span>
+            <div class="pick" style="margin-top:6px">
+              <button type="button" class="mini primary"
+                onclick="buildReport('${esc(id)}',this)">📄 PDF बना दीजिए</button>
+            </div>
+            <div class="muted" id="rpm-${esc(id)}" style="margin-top:6px"></div>
+          </div>
+        </div>`;
+    }).join("") : `<div class="muted">अभी कोई खाता जुड़ा नहीं है।</div>`}`;
+}
+
+/** एक खाते की PDF — बनकर Drive में चली जाती है, लिंक यहीं दिख जाता है। */
+async function buildReport(accountId, btn, quiet) {
+  const line = $("rpm-" + accountId);
+  const say = (t, c) => { if (line) { line.className = c || "muted"; line.innerHTML = t; } };
+  if (RP_BUSY && RP_BUSY !== accountId) { say("एक बार में एक ही — रुकिए…"); return null; }
+  RP_BUSY = accountId;
+  const was = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "… बन रही है"; }
+  say('<span class="thinking"></span> बना रहा हूँ — इसमें आधा मिनट लग सकता है…');
+  try {
+    const r = await botCall("report", { accountId });
+    if (!r || !r.ok) throw new Error((r && r.error) || "जवाब नहीं आया");
+    say(`✅ बन गई — <b>${r.rows}</b> पंक्तियाँ` +
+      (r.noBill ? `, ${r.noBill} पर बिल नहीं लगा` : "") +
+      (r.capped ? " · ⚠️ सूची काटी गई है" : "") +
+      `<br><a href="${esc(r.url)}" target="_blank" rel="noopener">📄 ${esc(r.name)}</a>`, "ok");
+    if (!quiet) {
+      try { await auditLog("report_built", null, { accountId, rows: r.rows }); } catch (e) {}
+    }
+    return r;
+  } catch (e) {
+    /* 🛑 «नहीं बनी» और «बन गई पर अधूरी» दो अलग बातें हैं। यहाँ पहली वाली
+       साफ़ लिखी जाती है — चुपचाप हरा निशान कभी नहीं। */
+    say("❌ नहीं बनी — " + esc(e.message), "bad");
+    return null;
+  } finally {
+    RP_BUSY = "";
+    if (btn) { btn.disabled = false; btn.textContent = was; }
+  }
+}
+
+/** सब खातों की — एक-एक करके, ताकि Apps Script की हद पार न हो। */
+async function buildAllReports(btn) {
+  const ids = Object.keys(ACCOUNTS);
+  const was = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; }
+  let made = 0, none = 0;
+  for (let i = 0; i < ids.length; i++) {
+    if (btn) btn.textContent = `… ${i + 1} / ${ids.length}`;
+    const r = await buildReport(ids[i], null, true);
+    if (r) made++; else none++;
+  }
+  if (btn) { btn.disabled = false; btn.textContent = was; }
+  toast(`📄 ${made} रिपोर्ट बनीं${none ? ` · ${none} नहीं बनीं` : ""}`);
+  try { await auditLog("reports_built_all", null, { made, none }); } catch (e) {}
+}
 
 let DC = null, DC_BUSY = false;
 
