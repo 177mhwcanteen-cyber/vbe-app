@@ -3058,6 +3058,7 @@
       <div class="card" style="margin-bottom:12px">
         <div class="itemsHead" style="margin-top:0"><span>🔌 Google से जोड़</span>
           <button type="button" class="primary mini" onclick="openReports()">📄 हिसाब की PDF</button>
+          <button type="button" class="mini" onclick="driveOrganize(this)">🗂️ Drive व्यवस्थित</button>
           <button type="button" class="mini" onclick="openDriveClean()">🧹 Drive की सफ़ाई</button>
         </div>
         <p class="muted" style="margin-bottom:10px">तीनों मुफ़्त हैं और आपके ही
@@ -10407,6 +10408,15 @@ function rowsToCsv(rows, accLabelText) {
 
 const MAX_DRIVE_MB = 12;
 
+/** तारीख़ से वित्त-वर्ष — «2026-27»। 1 अप्रैल से 31 मार्च। */
+function fyOf(iso) {
+  const m = String(iso || "").match(/(\d{4})-(\d{2})/);
+  if (!m) return null;
+  const y = Number(m[1]), mo = Number(m[2]);
+  const s = mo >= 4 ? y : y - 1;
+  return s + "-" + String((s + 1) % 100).padStart(2, "0");
+}
+
 /**
  * इस import की फ़ाइल Drive पर रख दो — असली और साफ़ CSV, दोनों।
  * @returns {Promise<{ok:boolean, saved:Array, error?:string}>}
@@ -10414,7 +10424,11 @@ const MAX_DRIVE_MB = 12;
 async function keepStatementFile(file, rows, accountId, from, to) {
   const saved = [];
   const label = accLabel(accountId) || accountId || "खाता";
-  const folder = "Statements/" + label;
+  /* 📂 खाते के अंदर साल-वार। एक खाते की तीन साल की statement एक ही ढेर
+     में पड़ी हो तो «पिछले साल वाली» ढूँढना हर बार का काम बन जाता है।
+     साल statement की **अवधि** से लिया जाता है, आज की तारीख़ से नहीं —
+     अप्रैल की statement जुलाई में डाली जा सकती है। */
+  const folder = "Statements/" + label + "/" + (fyOf(from || to) || "बिना-साल");
   const stamp = (from || todayISO()) + "_to_" + (to || todayISO());
   try {
     if (file) {
@@ -13964,7 +13978,7 @@ function renderStatus() {
       सकती, उस पर भरोसा नहीं किया जा सकता।                              */
 
 /** इस ऐप की छाप — `scripts/stamp-app.sh` हर बार ख़ुद लिखता है। */
-const APP_BUILD = "4f0b87b8bce9";
+const APP_BUILD = "1cf5826fe8e0";
 
 /**
  * GitHub पर पड़ी पर्ची पढ़ो और अपनी छाप से मिलाओ।
@@ -19664,6 +19678,42 @@ async function buildAllReports(btn) {
   if (btn) { btn.disabled = false; btn.textContent = was; }
   toast(`📄 ${made} रिपोर्ट बनीं${none ? ` · ${none} नहीं बनीं` : ""}`);
   try { await auditLog("reports_built_all", null, { made, none }); } catch (e) {}
+}
+
+/* ══════════ 🗂️ Drive व्यवस्थित करो ═══════════════════════════════
+
+   विक्रम जी: «मेरी गूगल ड्राइव के अंदर जहाँ मेरे बैंक खाते हैं… उसको
+   व्यवस्थित करिए। मेरे को एकदम सिस्टमैटिक चीज़ चाहिए।»
+
+   रोज़ एक नया दिन-फ़ोल्डर जड़ में जुड़ता था — साल भर में 365, और उन्हीं
+   के बीच बैंक के काग़ज़ और बैकअप दबे पड़े रहते। अब:
+
+       📁 बिल/2026-08/2026-08-07/          रोज़ की फ़ोटो, महीने-वार
+       📁 Statements/<खाता>/2026-27/        बैंक के काग़ज़, साल-वार
+       📁 VBE-Backups/पुराने/               पुराने बैकअप, अलग
+       📄 _यह फ़ोल्डर क्या है.txt             जड़ में, सादे शब्दों में
+
+   🛑 यह सिर्फ़ **सरकाता** है। Drive में फ़ाइल सरकाने से उसका लिंक नहीं
+      बदलता (पहचान id है, जगह नहीं) — इसलिए ऐप में सहेजा हर पुराना लिंक
+      वैसा ही चलता रहता है। मिटता कुछ नहीं, नाम भी नहीं बदलता।         */
+async function driveOrganize(btn) {
+  const was = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "… लगा रहा हूँ"; }
+  try {
+    const r = await botCall("driveorg", {});
+    if (!r || !r.ok) throw new Error((r && r.error) || "जवाब नहीं आया");
+    const bits = [];
+    if (r.days) bits.push(`📅 ${r.days} दिन के फ़ोल्डर महीनों में`);
+    if (r.stmts) bits.push(`🏦 ${r.stmts} बैंक-काग़ज़ साल-वार`);
+    if (r.backups) bits.push(`💾 ${r.backups} पुराने बैकअप अलग`);
+    if (r.loose) bits.push(`📄 ${r.loose} खुली फ़ाइलें सँभलीं`);
+    toast(bits.length ? "🗂️ " + bits.join(" · ") : "🗂️ सब पहले से अपनी जगह पर है");
+    await auditLog("drive_organize", null,
+      { days: r.days, stmts: r.stmts, backups: r.backups, loose: r.loose });
+    if (DC) { DC = null; }        // सफ़ाई की पुरानी रिपोर्ट अब पुरानी हो गई
+  } catch (e) {
+    toast("नहीं हो पाया: " + e.message);
+  } finally { if (btn) { btn.disabled = false; btn.textContent = was; } }
 }
 
 let DC = null, DC_BUSY = false;
